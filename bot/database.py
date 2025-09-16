@@ -22,20 +22,46 @@ class EncryptionManager:
         self.cipher = Fernet(self.key)
     
     def _get_or_create_key(self) -> bytes:
-        """Get encryption key from environment or generate one"""
+        """Get encryption key from environment or generate one with security validation"""
         key_b64 = os.getenv('ENCRYPTION_KEY')
+        is_production = os.getenv('ENVIRONMENT', '').lower() == 'production'
+        
         if key_b64:
             try:
-                # Environment key should be a Fernet key (32 url-safe base64 bytes)
-                # Fernet.generate_key() already returns base64-encoded bytes
-                return key_b64.encode('utf-8')
+                # Validate that the environment key is a proper Fernet key
+                key_bytes = key_b64.encode('utf-8')
+                # Test key validity by creating a Fernet instance
+                test_cipher = Fernet(key_bytes)
+                # Perform a small encryption/decryption test
+                test_data = b"security_validation_test"
+                encrypted = test_cipher.encrypt(test_data)
+                decrypted = test_cipher.decrypt(encrypted)
+                if decrypted != test_data:
+                    raise ValueError("Key validation failed")
+                logger.info("Encryption key validated successfully")
+                return key_bytes
             except Exception as e:
-                logger.warning(f"Invalid encryption key in environment ({e}), generating new one")
+                error_msg = f"Invalid encryption key in environment: {e}"
+                logger.error(error_msg)
+                if is_production:
+                    raise ValueError(f"CRITICAL SECURITY ERROR: {error_msg}. Production deployment requires valid ENCRYPTION_KEY.")
+                logger.warning("Falling back to temporary key generation in development")
         
-        # Generate new key for this session
+        # Production environment must have encryption key
+        if is_production:
+            raise ValueError(
+                "CRITICAL SECURITY ERROR: ENCRYPTION_KEY environment variable is required in production. "
+                "Generate a key with: python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'"
+            )
+        
+        # Generate new key only in development
         key = Fernet.generate_key()
-        # Log guidance for environment setup WITHOUT exposing the key
-        logger.warning("Generated new encryption key for this session. To persist data across restarts, set ENCRYPTION_KEY environment variable with a Fernet key.")
+        logger.warning(
+            "Generated temporary encryption key for development session. "
+            "Data will not persist across restarts. "
+            "For production, set ENCRYPTION_KEY environment variable with: "
+            "python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'"
+        )
         return key
     
     def encrypt(self, data: str) -> str:
@@ -67,10 +93,32 @@ class Database:
         self.connected = False
     
     async def connect(self):
-        """Establish connection to MongoDB"""
+        """Establish connection to MongoDB with TLS security validation"""
         try:
             if not Config.MONGO_URI:
                 raise ValueError("MONGO_URI is not configured")
+            
+            # Security validation: Ensure TLS is enabled for production
+            is_production = os.getenv('ENVIRONMENT', '').lower() == 'production'
+            mongo_uri = Config.MONGO_URI.lower()
+            
+            has_tls = (
+                mongo_uri.startswith('mongodb+srv://') or  # Atlas always uses TLS
+                'tls=true' in mongo_uri or 
+                'ssl=true' in mongo_uri
+            )
+            
+            if is_production and not has_tls:
+                raise ValueError(
+                    "CRITICAL SECURITY ERROR: Production MongoDB connections must use TLS. "
+                    "Use mongodb+srv:// connection string or add tls=true parameter."
+                )
+            
+            if not has_tls:
+                logger.warning(
+                    "Database connection is not using TLS encryption. "
+                    "This is acceptable for development but NOT for production."
+                )
                 
             self.client = AsyncIOMotorClient(Config.MONGO_URI)
             self.db = self.client.ai_assistant_bot
@@ -82,7 +130,7 @@ class Database:
             # Test connection
             await self.client.admin.command('ping')
             self.connected = True
-            logger.info("Successfully connected to MongoDB")
+            logger.info("Successfully connected to MongoDB with security validation")
             
         except Exception as e:
             logger.error(f"Failed to connect to MongoDB: {e}")

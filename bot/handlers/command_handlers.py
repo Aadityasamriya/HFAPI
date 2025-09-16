@@ -15,6 +15,7 @@ except ImportError as e:
     raise
 from bot.database import db
 from bot.config import Config
+from bot.security_utils import escape_markdown, safe_markdown_format, check_rate_limit
 
 logger = logging.getLogger(__name__)
 
@@ -29,10 +30,22 @@ class CommandHandlers:
         user = update.effective_user
         user_id = user.id
         
+        # Check rate limit
+        is_allowed, wait_time = check_rate_limit(user_id)
+        if not is_allowed:
+            await update.message.reply_text(
+                f"⚠️ **Rate Limit Exceeded**\n\nPlease wait {wait_time} seconds before sending another command.",
+                parse_mode='Markdown'
+            )
+            return
+        
+        # Safely escape user's first name
+        safe_first_name = escape_markdown(user.first_name or "User")
+        
         welcome_text = f"""
 🤖 **Welcome to AI Assistant Pro** 🚀
 
-Hello {user.first_name}! I'm powered by the **latest 2024-2025 AI models** - more advanced than ChatGPT, Grok, or Gemini!
+Hello {safe_first_name}! I'm powered by the **latest 2024-2025 AI models** - more advanced than ChatGPT, Grok, or Gemini!
 
 **🔥 Latest AI Models I Use:**
 🧠 **Llama-3.2 & Qwen2.5** - Next-gen text AI (29+ languages)
@@ -80,6 +93,15 @@ Hello {user.first_name}! I'm powered by the **latest 2024-2025 AI models** - mor
         """
         user_id = update.effective_user.id
         
+        # Check rate limit
+        is_allowed, wait_time = check_rate_limit(user_id)
+        if not is_allowed:
+            await update.message.reply_text(
+                f"⚠️ **Rate Limit Exceeded**\n\nPlease wait {wait_time} seconds before sending another command.",
+                parse_mode='Markdown'
+            )
+            return
+        
         # Clear chat history from context
         if context.user_data is not None and 'chat_history' in context.user_data:
             context.user_data['chat_history'] = []
@@ -112,6 +134,16 @@ Your conversation history has been reset. You're starting fresh with a clean sla
         Professional settings menu with comprehensive options
         """
         user_id = update.effective_user.id
+        
+        # Check rate limit
+        is_allowed, wait_time = check_rate_limit(user_id)
+        if not is_allowed:
+            await update.message.reply_text(
+                f"⚠️ **Rate Limit Exceeded**\n\nPlease wait {wait_time} seconds before sending another command.",
+                parse_mode='Markdown'
+            )
+            return
+            
         api_key = await db.get_user_api_key(user_id)
         
         status_emoji = "✅" if api_key else "❌"
@@ -154,6 +186,17 @@ Your conversation history has been reset. You're starting fresh with a clean sla
         """
         Comprehensive help system with examples
         """
+        user_id = update.effective_user.id
+        
+        # Check rate limit
+        is_allowed, wait_time = check_rate_limit(user_id)
+        if not is_allowed:
+            await update.message.reply_text(
+                f"⚠️ **Rate Limit Exceeded**\n\nPlease wait {wait_time} seconds before sending another command.",
+                parse_mode='Markdown'
+            )
+            return
+            
         help_text = """
 💡 **AI Assistant Pro Help Guide** 📚
 
