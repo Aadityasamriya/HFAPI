@@ -16,18 +16,18 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "AI Assistant Bot"
+args = "Ready"
 
 [[workflows.workflow]]
-name = "AI Assistant Bot"
+name = "Ready"
 author = "agent"
-
-[workflows.workflow.metadata]
-outputType = "console"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python main.py"
+args = "echo \"✅ Railway Deployment Ready\""
+
+[workflows.workflow.metadata]
+outputType = "console"
 
 [deployment]
 deploymentTarget = "vm"
