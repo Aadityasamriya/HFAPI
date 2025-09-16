@@ -20,15 +20,21 @@ from bot.security_utils import escape_markdown, safe_markdown_format, check_rate
 logger = logging.getLogger(__name__)
 
 class CommandHandlers:
-    """Professional command handlers with rich UI"""
+    """Professional command handlers with comprehensive observability logging"""
     
     @staticmethod
     async def start_command(update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """
-        Professional welcome message with sophisticated UI
+        Professional welcome message with sophisticated UI and comprehensive logging
         """
         user = update.effective_user
         user_id = user.id
+        username = user.username or "No username"
+        full_name = f"{user.first_name or ''} {user.last_name or ''}".strip() or "Unknown"
+        
+        # Enhanced entry logging with user details
+        logger.info(f"\ud83d\ude80 START command invoked by user_id:{user_id} (@{username}) '{full_name}'")
+        logger.info(f"\ud83d\udccd Chat type: {update.effective_chat.type} | Chat ID: {update.effective_chat.id}")
         
         # Check rate limit
         is_allowed, wait_time = check_rate_limit(user_id)
@@ -78,20 +84,39 @@ Hello {safe_first_name}! I'm powered by the **latest 2024-2025 AI models** - mor
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await update.message.reply_text(
-            welcome_text,
-            reply_markup=reply_markup,
-            parse_mode='Markdown'
-        )
-        
-        logger.info(f"User {user_id} started the bot")
+        try:
+            await update.message.reply_text(
+                welcome_text,
+                reply_markup=reply_markup,
+                parse_mode='Markdown'
+            )
+            
+            # Enhanced success logging
+            logger.info(f"\u2705 START response sent successfully to user_id:{user_id} (@{username})")
+            logger.info(f"\ud83d\udce4 Welcome message delivered with {len(keyboard)} inline buttons")
+            
+        except Exception as e:
+            logger.error(f"\u274c START command failed for user_id:{user_id} (@{username}): {e}")
+            logger.error(f"\ud83d\udd0d Error type: {type(e).__name__}")
+            raise
+        finally:
+            logger.info(f"\ud83c\udfc1 START command completed for user_id:{user_id}")
     
     @staticmethod
     async def newchat_command(update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """
-        Clear chat history with professional confirmation
+        Clear chat history with professional confirmation and comprehensive logging
         """
-        user_id = update.effective_user.id
+        user = update.effective_user
+        user_id = user.id
+        username = user.username or "No username"
+        
+        # Enhanced entry logging
+        logger.info(f"\ud83d\udd04 NEWCHAT command invoked by user_id:{user_id} (@{username})")
+        
+        # Log current chat history status
+        current_history_size = len(context.user_data.get('chat_history', [])) if context.user_data else 0
+        logger.info(f"\ud83d\udcca Current chat history size: {current_history_size} messages")
         
         # Check rate limit
         is_allowed, wait_time = check_rate_limit(user_id)
@@ -120,20 +145,36 @@ Your conversation history has been reset. You're starting fresh with a clean sla
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await update.message.reply_text(
-            success_text,
-            reply_markup=reply_markup,
-            parse_mode='Markdown'
-        )
-        
-        logger.info(f"User {user_id} cleared chat history")
+        try:
+            await update.message.reply_text(
+                success_text,
+                reply_markup=reply_markup,
+                parse_mode='Markdown'
+            )
+            
+            # Enhanced success logging
+            logger.info(f"\u2705 NEWCHAT response sent successfully to user_id:{user_id} (@{username})")
+            logger.info(f"\ud83d\uddd1\ufe0f Chat history cleared: {current_history_size} messages removed")
+            
+        except Exception as e:
+            logger.error(f"\u274c NEWCHAT command failed for user_id:{user_id} (@{username}): {e}")
+            logger.error(f"\ud83d\udd0d Error type: {type(e).__name__}")
+            raise
+        finally:
+            logger.info(f"\ud83c\udfc1 NEWCHAT command completed for user_id:{user_id}")
     
     @staticmethod
     async def settings_command(update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """
-        Professional settings menu with comprehensive options
+        Professional settings menu with comprehensive options and detailed logging
         """
-        user_id = update.effective_user.id
+        user = update.effective_user
+        user_id = user.id
+        username = user.username or "No username"
+        
+        # Enhanced entry logging
+        logger.info(f"\u2699\ufe0f SETTINGS command invoked by user_id:{user_id} (@{username})")
+        logger.info(f"\ud83d\udd0d Checking API key status for user_id:{user_id}...")
         
         # Check rate limit
         is_allowed, wait_time = check_rate_limit(user_id)
@@ -144,8 +185,16 @@ Your conversation history has been reset. You're starting fresh with a clean sla
             )
             return
             
-        # Check API key from persistent database storage
-        api_key = await db.get_user_api_key(user_id)
+        # Check API key from persistent database storage with logging
+        try:
+            api_key = await db.get_user_api_key(user_id)
+            if api_key:
+                logger.info(f"\u2705 API key found for user_id:{user_id} (last 4 chars: ...{api_key[-4:] if len(api_key) >= 4 else 'short'})")
+            else:
+                logger.info(f"\u274c No API key found for user_id:{user_id}")
+        except Exception as e:
+            logger.error(f"\ud83d\udd0d Database error checking API key for user_id:{user_id}: {e}")
+            api_key = None
         
         status_emoji = "✅" if api_key else "❌"
         api_status = "Connected" if api_key else "Not Set"
@@ -177,18 +226,36 @@ Your conversation history has been reset. You're starting fresh with a clean sla
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await update.message.reply_text(
-            settings_text,
-            reply_markup=reply_markup,
-            parse_mode='Markdown'
-        )
+        try:
+            await update.message.reply_text(
+                settings_text,
+                reply_markup=reply_markup,
+                parse_mode='Markdown'
+            )
+            
+            # Enhanced success logging
+            logger.info(f"\u2705 SETTINGS response sent successfully to user_id:{user_id} (@{username})")
+            logger.info(f"\ud83d\udccb Settings menu displayed with {len(keyboard)} button options")
+            
+        except Exception as e:
+            logger.error(f"\u274c SETTINGS command failed for user_id:{user_id} (@{username}): {e}")
+            logger.error(f"\ud83d\udd0d Error type: {type(e).__name__}")
+            raise
+        finally:
+            logger.info(f"\ud83c\udfc1 SETTINGS command completed for user_id:{user_id}")
     
     @staticmethod
     async def help_command(update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """
-        Comprehensive help system with examples
+        Comprehensive help system with examples and detailed logging
         """
-        user_id = update.effective_user.id
+        user = update.effective_user
+        user_id = user.id
+        username = user.username or "No username"
+        
+        # Enhanced entry logging
+        logger.info(f"❓ HELP command invoked by user_id:{user_id} (@{username})")
+        logger.info(f"📚 Preparing comprehensive help documentation for user")
         
         # Check rate limit
         is_allowed, wait_time = check_rate_limit(user_id)

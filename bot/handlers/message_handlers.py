@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 class MessageHandlers:
-    """Advanced message processing with intelligent AI routing"""
+    """Advanced message processing with intelligent AI routing and comprehensive observability"""
     
     @staticmethod
     async def text_message_handler(update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -30,6 +30,10 @@ class MessageHandlers:
         """
         user = update.effective_user
         user_id = user.id
+        username = user.username or "No username"
+        
+        # Enhanced entry logging for text message processing
+        logger.info(f"📬 TEXT MESSAGE received from user_id:{user_id} (@{username})")
         
         # Safely extract message text, handling entity parsing errors
         message_text = None
@@ -82,9 +86,19 @@ class MessageHandlers:
             await MessageHandlers._handle_api_key_input(update, context, message_text)
             return
         
-        # Get user's API key from persistent database storage as specified
-        api_key = await db.get_user_api_key(user_id)
-        if not api_key:
+        # Get user's API key from persistent database storage with comprehensive logging
+        try:
+            logger.info(f"🔍 Database query: get_user_api_key for user_id:{user_id}")
+            api_key = await db.get_user_api_key(user_id)
+            if api_key:
+                logger.info(f"✅ API key found for user_id:{user_id} (length: {len(api_key)} chars)")
+            else:
+                logger.info(f"❌ No API key found for user_id:{user_id} - prompting setup")
+                await MessageHandlers._prompt_api_key_setup(update, context)
+                return
+        except Exception as e:
+            logger.error(f"🔍 Database error retrieving API key for user_id:{user_id}: {e}")
+            logger.error(f"🔍 Database error type: {type(e).__name__}")
             await MessageHandlers._prompt_api_key_setup(update, context)
             return
         
@@ -98,7 +112,8 @@ class MessageHandlers:
             # Analyze prompt and route to appropriate model
             intent, routing_info = router.route_prompt(message_text)
             
-            logger.info(f"User {user_id} prompt routed to {intent.value} with confidence {routing_info['confidence']}")
+            logger.info(f"🚦 ROUTING: user_id:{user_id} prompt -> {intent.value} (confidence: {routing_info['confidence']})")
+            logger.info(f"🤖 Selected model: {routing_info['recommended_model']}")
             
             # 2025: Enhanced processing with new intent types
             if intent == IntentType.IMAGE_GENERATION:
