@@ -5,7 +5,6 @@ Sophisticated AI orchestrator with intelligent model routing
 
 import asyncio
 import logging
-from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters
 
 from bot.config import Config
@@ -13,11 +12,16 @@ from bot.database import db
 from bot.handlers.command_handlers import command_handlers
 from bot.handlers.message_handlers import message_handlers
 
-# Configure logging
+# Configure logging with security
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
 )
+
+# Set sensitive loggers to WARNING to prevent token exposure
+logging.getLogger('httpx').setLevel(logging.WARNING)
+logging.getLogger('telegram').setLevel(logging.WARNING)
+
 logger = logging.getLogger(__name__)
 
 class AIAssistantBot:
@@ -25,6 +29,16 @@ class AIAssistantBot:
     
     def __init__(self):
         self.application = None
+    
+    async def post_init(self, app: Application) -> None:
+        """Post-initialization hook for database connection"""
+        await db.connect()
+        logger.info("Database connected via post_init")
+    
+    async def post_shutdown(self, app: Application) -> None:
+        """Post-shutdown hook for cleanup"""
+        await db.disconnect()
+        logger.info("Database disconnected via post_shutdown")
     
     async def initialize(self):
         """Initialize bot application and database"""
@@ -71,23 +85,22 @@ class AIAssistantBot:
         
         logger.info("All handlers registered successfully")
     
-    async def start_polling(self):
+    def start_polling(self):
         """Start the bot with polling"""
         try:
             logger.info("Starting AI Assistant Pro bot...")
             
-            # Start polling
-            await self.application.run_polling(
+            # Start polling using run_polling which handles the event loop
+            self.application.run_polling(
                 allowed_updates=Update.ALL_TYPES,
                 drop_pending_updates=True
             )
             
+        except KeyboardInterrupt:
+            logger.info("Bot stopped by user")
         except Exception as e:
             logger.error(f"Error during polling: {e}")
             raise
-        finally:
-            # Cleanup
-            await self.cleanup()
     
     async def cleanup(self):
         """Cleanup resources"""
@@ -98,31 +111,43 @@ class AIAssistantBot:
         except Exception as e:
             logger.error(f"Error during cleanup: {e}")
 
-async def main():
-    """Main entry point"""
-    bot = AIAssistantBot()
-    
-    # Initialize bot
-    initialized = await bot.initialize()
-    if not initialized:
-        logger.error("Failed to initialize bot. Exiting.")
-        return
-    
-    # Start bot
-    try:
-        await bot.start_polling()
-    except KeyboardInterrupt:
-        logger.info("Bot stopped by user")
-    except Exception as e:
-        logger.error(f"Bot crashed: {e}")
-    finally:
-        logger.info("Bot shutdown complete")
-
-if __name__ == "__main__":
+def main():
+    """Main entry point - synchronous version for Replit compatibility"""
     # Welcome message
     print("🤖 AI Assistant Pro - Starting Up...")
     print("🚀 Advanced Telegram Bot with Intelligent AI Routing")
     print("=" * 50)
     
-    # Run the bot
-    asyncio.run(main())
+    # Create bot instance
+    bot = AIAssistantBot()
+    
+    # Initialize and run bot
+    try:
+        # Validate configuration first
+        Config.validate_config()
+        logger.info("Configuration validated successfully")
+        
+        # Build application with lifecycle hooks
+        bot.application = Application.builder().token(Config.TELEGRAM_BOT_TOKEN).post_init(bot.post_init).post_shutdown(bot.post_shutdown).build()
+        
+        # Register handlers
+        bot._register_handlers()
+        logger.info("Bot handlers registered successfully")
+        
+        logger.info("Starting AI Assistant Pro bot...")
+        
+        # Start polling - this will handle its own event loop
+        bot.application.run_polling(
+            drop_pending_updates=True
+        )
+        
+    except KeyboardInterrupt:
+        logger.info("Bot stopped by user")
+    except Exception as e:
+        logger.error(f"Bot crashed: {e}")
+        raise
+    finally:
+        logger.info("Bot shutdown complete")
+
+if __name__ == "__main__":
+    main()

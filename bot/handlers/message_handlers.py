@@ -6,7 +6,6 @@ Handles intelligent routing, context management, and multi-modal responses
 import asyncio
 import io
 import logging
-from telegram import Update
 from telegram.ext import ContextTypes
 from telegram.constants import ChatAction
 
@@ -21,7 +20,7 @@ class MessageHandlers:
     """Advanced message processing with intelligent AI routing"""
     
     @staticmethod
-    async def text_message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    async def text_message_handler(update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """
         Main text message processor with intelligent AI routing
         """
@@ -73,7 +72,7 @@ class MessageHandlers:
             )
     
     @staticmethod
-    async def _handle_api_key_input(update: Update, context: ContextTypes.DEFAULT_TYPE, api_key: str) -> None:
+    async def _handle_api_key_input(update, context: ContextTypes.DEFAULT_TYPE, api_key: str) -> None:
         """Handle API key input from user"""
         user_id = update.effective_user.id
         
@@ -147,7 +146,7 @@ What would you like to explore first? 🤖✨
             )
     
     @staticmethod
-    async def _prompt_api_key_setup(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    async def _prompt_api_key_setup(update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Prompt user to set up their API key"""
         setup_text = """
 🔑 **API Key Required** 
@@ -172,7 +171,7 @@ Use `/start` for detailed setup instructions.
         )
     
     @staticmethod
-    async def _handle_text_generation(update: Update, context: ContextTypes.DEFAULT_TYPE, prompt: str, api_key: str, chat_history: list, routing_info: dict) -> None:
+    async def _handle_text_generation(update, context: ContextTypes.DEFAULT_TYPE, prompt: str, api_key: str, chat_history: list, routing_info: dict) -> None:
         """Handle intelligent text generation"""
         user_id = update.effective_user.id
         
@@ -225,7 +224,7 @@ Use `/start` for detailed setup instructions.
             )
     
     @staticmethod
-    async def _handle_code_generation(update: Update, context: ContextTypes.DEFAULT_TYPE, prompt: str, api_key: str, routing_info: dict) -> None:
+    async def _handle_code_generation(update, context: ContextTypes.DEFAULT_TYPE, prompt: str, api_key: str, routing_info: dict) -> None:
         """Handle specialized code generation"""
         user_id = update.effective_user.id
         
@@ -261,7 +260,7 @@ Use `/start` for detailed setup instructions.
             )
     
     @staticmethod
-    async def _handle_image_generation(update: Update, context: ContextTypes.DEFAULT_TYPE, prompt: str, api_key: str) -> None:
+    async def _handle_image_generation(update, context: ContextTypes.DEFAULT_TYPE, prompt: str, api_key: str) -> None:
         """Handle professional image generation"""
         user_id = update.effective_user.id
         
@@ -309,7 +308,7 @@ Use `/start` for detailed setup instructions.
             )
     
     @staticmethod
-    async def _handle_sentiment_analysis(update: Update, context: ContextTypes.DEFAULT_TYPE, prompt: str, api_key: str) -> None:
+    async def _handle_sentiment_analysis(update, context: ContextTypes.DEFAULT_TYPE, prompt: str, api_key: str) -> None:
         """Handle sentiment analysis requests"""
         user_id = update.effective_user.id
         
@@ -385,11 +384,11 @@ Use `/start` for detailed setup instructions.
             )
     
     @staticmethod
-    async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+    async def error_handler(update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Global error handler for the bot"""
         logger.error(f"Exception while handling an update: {context.error}")
         
-        if isinstance(update, Update) and update.effective_message:
+        if update and hasattr(update, 'effective_message') and update.effective_message:
             await update.effective_message.reply_text(
                 "🚫 **Unexpected Error**\n\nSomething went wrong. Our team has been notified. Please try again.",
                 parse_mode='Markdown'

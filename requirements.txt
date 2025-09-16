@@ -1,4 +1,4 @@
-python-telegram-bot[ext]
+python-telegram-bot[ext]==22.4
 huggingface_hub
 python-dotenv
 requests
@@ -7,3 +7,4 @@ PyMuPDF
 pymongo[srv]
 motor
 aiohttp
+cryptography

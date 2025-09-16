@@ -4,7 +4,7 @@ Rich UI with emojis and inline keyboards for superior user experience
 """
 
 import logging
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from telegram.constants import ChatAction
 from bot.database import db
@@ -16,7 +16,7 @@ class CommandHandlers:
     """Professional command handlers with rich UI"""
     
     @staticmethod
-    async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    async def start_command(update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """
         Professional welcome message with sophisticated UI
         """
@@ -62,7 +62,7 @@ Hello {user.first_name}! I'm your sophisticated AI companion powered by cutting-
         logger.info(f"User {user_id} started the bot")
     
     @staticmethod
-    async def newchat_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    async def newchat_command(update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """
         Clear chat history with professional confirmation
         """
@@ -95,7 +95,7 @@ Your conversation history has been reset. You're starting fresh with a clean sla
         logger.info(f"User {user_id} cleared chat history")
     
     @staticmethod
-    async def settings_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    async def settings_command(update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """
         Professional settings menu with comprehensive options
         """
@@ -138,7 +138,7 @@ Your conversation history has been reset. You're starting fresh with a clean sla
         )
     
     @staticmethod
-    async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    async def help_command(update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """
         Comprehensive help system with examples
         """
@@ -197,7 +197,7 @@ Your conversation history has been reset. You're starting fresh with a clean sla
         )
     
     @staticmethod
-    async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    async def button_handler(update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """
         Handle all inline keyboard button interactions
         """

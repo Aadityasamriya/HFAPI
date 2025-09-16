@@ -1,15 +1,58 @@
 """
 MongoDB database integration for user API key management
-Secure storage for Telegram user IDs and Hugging Face API keys
+Secure storage for Telegram user IDs and Hugging Face API keys with encryption
 """
 
 import asyncio
+import base64
+import os
+from cryptography.fernet import Fernet
 from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo.errors import DuplicateKeyError, PyMongoError
 from bot.config import Config
 import logging
 
 logger = logging.getLogger(__name__)
+
+class EncryptionManager:
+    """Handles encryption/decryption of sensitive data"""
+    
+    def __init__(self):
+        self.key = self._get_or_create_key()
+        self.cipher = Fernet(self.key)
+    
+    def _get_or_create_key(self) -> bytes:
+        """Get encryption key from environment or generate one"""
+        key_b64 = os.getenv('ENCRYPTION_KEY')
+        if key_b64:
+            try:
+                return base64.urlsafe_b64decode(key_b64)
+            except Exception:
+                logger.warning("Invalid encryption key in environment, generating new one")
+        
+        # Generate new key for this session
+        key = Fernet.generate_key()
+        logger.info("Generated new encryption key for this session")
+        return key
+    
+    def encrypt(self, data: str) -> str:
+        """Encrypt a string"""
+        if not data:
+            return data
+        return self.cipher.encrypt(data.encode()).decode()
+    
+    def decrypt(self, encrypted_data: str) -> str:
+        """Decrypt a string"""
+        if not encrypted_data:
+            return encrypted_data
+        try:
+            return self.cipher.decrypt(encrypted_data.encode()).decode()
+        except Exception as e:
+            logger.error(f"Failed to decrypt data: {e}")
+            return None
+
+# Global encryption manager
+encryption_manager = EncryptionManager()
 
 class Database:
     """MongoDB database manager for user data"""
@@ -49,7 +92,7 @@ class Database:
     
     async def save_user_api_key(self, user_id: int, api_key: str) -> bool:
         """
-        Save or update user's Hugging Face API key
+        Save or update user's Hugging Face API key with encryption
         
         Args:
             user_id (int): Telegram user ID
@@ -59,12 +102,15 @@ class Database:
             bool: True if successful, False otherwise
         """
         try:
+            # Encrypt the API key before storing
+            encrypted_key = encryption_manager.encrypt(api_key)
+            
             await self.users_collection.update_one(
                 {"user_id": user_id},
-                {"$set": {"hf_api_key": api_key}},
+                {"$set": {"hf_api_key": encrypted_key}},
                 upsert=True
             )
-            logger.info(f"API key saved for user {user_id}")
+            logger.info(f"Encrypted API key saved for user {user_id}")
             return True
             
         except PyMongoError as e:
@@ -73,18 +119,25 @@ class Database:
     
     async def get_user_api_key(self, user_id: int) -> str | None:
         """
-        Retrieve user's Hugging Face API key
+        Retrieve and decrypt user's Hugging Face API key
         
         Args:
             user_id (int): Telegram user ID
             
         Returns:
-            str: API key if found, None otherwise
+            str: Decrypted API key if found, None otherwise
         """
         try:
+            # Ensure connection
+            if not self.connected:
+                await self.connect()
+                
             user_doc = await self.users_collection.find_one({"user_id": user_id})
-            if user_doc:
-                return user_doc.get("hf_api_key")
+            if user_doc and user_doc.get("hf_api_key"):
+                encrypted_key = user_doc.get("hf_api_key")
+                # Decrypt the API key
+                decrypted_key = encryption_manager.decrypt(encrypted_key)
+                return decrypted_key
             return None
             
         except PyMongoError as e:
