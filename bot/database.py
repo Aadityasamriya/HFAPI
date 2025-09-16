@@ -90,14 +90,23 @@ class Database:
                 except Exception:
                     pass
             
-            # Generate a secure key using PBKDF2 with a deterministic salt based on MongoDB URI
-            # This ensures the same key is generated across restarts while being cryptographically secure
-            if not Config.MONGO_URI:
-                raise ValueError("Cannot generate encryption key without MONGO_URI")
+            # SECURITY FIX: Generate a secure key using proper cryptographic practices
+            # Use a dedicated encryption seed from environment, NOT database credentials
+            encryption_seed = os.getenv('ENCRYPTION_SEED')
+            if not encryption_seed:
+                # Secure fallback: Generate a random key and warn about persistence
+                logger.critical("🚨 CRITICAL SECURITY WARNING: No ENCRYPTION_SEED environment variable set!")
+                logger.critical("🚨 Using random key generation - encrypted data will NOT persist across restarts!")
+                logger.critical("🚨 Set ENCRYPTION_SEED environment variable for production use!")
                 
-            # Use PBKDF2 with MongoDB URI as password and a static salt for deterministic key generation
-            password = Config.MONGO_URI.encode('utf-8')
-            salt = b'telegram_bot_api_key_encryption_2024'  # Fixed salt for deterministic keys
+                # Use a random 256-bit key for this session
+                random_key = secrets.token_bytes(32)
+                logger.warning("🔐 Generated random 256-bit encryption key for this session only")
+                return random_key
+                
+            # Use PBKDF2 with the dedicated encryption seed (NOT database URI)
+            password = encryption_seed.encode('utf-8')
+            salt = b'telegram_bot_api_key_encryption_2024_v2'  # Fixed salt for deterministic keys
             
             kdf = PBKDF2HMAC(
                 algorithm=hashes.SHA256(),

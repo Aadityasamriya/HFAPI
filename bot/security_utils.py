@@ -199,6 +199,7 @@ def safe_markdown_format(text: str, preserve_code: bool = True) -> str:
     """Convenience function to safely format Markdown text"""
     return markdown_sanitizer.safe_markdown_format(text, preserve_code)
 
-def check_rate_limit(user_id: int) -> tuple[bool, Optional[int]]:
+def check_rate_limit(user_id: int) -> tuple[bool, int]:
     """Convenience function to check rate limit"""
-    return rate_limiter.is_allowed(user_id)
+    is_allowed, wait_time = rate_limiter.is_allowed(user_id)
+    return is_allowed, wait_time or 0
