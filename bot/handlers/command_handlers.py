@@ -4,9 +4,15 @@ Rich UI with emojis and inline keyboards for superior user experience
 """
 
 import logging
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ContextTypes
-from telegram.constants import ChatAction
+
+try:
+    from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+    from telegram.ext import ContextTypes
+    from telegram.constants import ChatAction
+except ImportError as e:
+    print(f"Telegram library import error: {e}")
+    print("Please ensure python-telegram-bot is installed: pip install python-telegram-bot[ext]==22.4")
+    raise
 from bot.database import db
 from bot.config import Config
 

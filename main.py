@@ -5,8 +5,14 @@ Sophisticated AI orchestrator with intelligent model routing
 
 import asyncio
 import logging
-from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters
+
+try:
+    from telegram import Update
+    from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters
+except ImportError as e:
+    print(f"Telegram library import error: {e}")
+    print("Please ensure python-telegram-bot is installed: pip install python-telegram-bot[ext]==22.4")
+    exit(1)
 
 from bot.config import Config
 from bot.database import db
