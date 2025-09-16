@@ -1,0 +1,17 @@
+python-telegram-bot[ext]
+huggingface_hub
+python-dotenv
+requests
+Pillow
+PyMuPDF
+pymongo[srv]
+aiohttp
+asyncio
+aiohttp
+huggingface_hub
+Pillow
+pymongo[srv]
+PyMuPDF
+python-dotenv
+python-telegram-bot[ext]
+requests
