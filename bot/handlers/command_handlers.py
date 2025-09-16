@@ -575,7 +575,7 @@ Ready to experience the future of AI? 🤖✨
         """Redisplay settings menu"""
         # This would call the settings_command logic
         user_id = query.from_user.id
-        api_key = context.user_data.get('api_key') if context.user_data else None
+        api_key = await db.get_user_api_key(user_id)
         
         status_emoji = "✅" if api_key else "❌"
         api_status = "Connected" if api_key else "Not Set"

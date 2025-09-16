@@ -5,13 +5,15 @@ Analyzes user prompts to determine the best Hugging Face model to use
 
 import re
 import logging
-from typing import Dict, List, Tuple, Any
+import hashlib
+from typing import Dict, List, Tuple, Any, Optional
 from enum import Enum
+from collections import defaultdict
 
 logger = logging.getLogger(__name__)
 
 class IntentType(Enum):
-    """Available intent types for model routing"""
+    """2025 Enhanced intent types for model routing"""
     TEXT_GENERATION = "text_generation"
     CODE_GENERATION = "code_generation"
     IMAGE_GENERATION = "image_generation"
@@ -19,6 +21,10 @@ class IntentType(Enum):
     QUESTION_ANSWERING = "question_answering"
     TRANSLATION = "translation"
     CREATIVE_WRITING = "creative_writing"
+    DATA_ANALYSIS = "data_analysis"          # 2025: New intent
+    DOCUMENT_PROCESSING = "document_processing"  # 2025: New intent
+    MULTI_MODAL = "multi_modal"              # 2025: New intent
+    CONVERSATION = "conversation"            # 2025: New intent
 
 class IntelligentRouter:
     """
@@ -29,38 +35,73 @@ class IntelligentRouter:
     def __init__(self):
         self.intent_patterns = self._initialize_patterns()
         self.intent_priorities = self._initialize_priorities()
+        # 2025: Expanded programming languages and frameworks
         self.programming_languages = {
+            # Core languages
             'python', 'javascript', 'typescript', 'java', 'c++', 'c#', 'php', 
             'ruby', 'go', 'rust', 'swift', 'kotlin', 'dart', 'scala', 'r',
-            'sql', 'html', 'css', 'react', 'vue', 'angular', 'node', 'django',
-            'flask', 'laravel', 'spring', 'android', 'ios'
+            'sql', 'html', 'css', 'bash', 'shell', 'powershell', 'lua', 'perl',
+            # 2025: New languages
+            'zig', 'v', 'nim', 'crystal', 'elixir', 'haskell', 'ocaml', 'f#',
+            'julia', 'fortran', 'cobol', 'assembly', 'wasm', 'webassembly',
+            # Frameworks & libraries  
+            'react', 'vue', 'angular', 'svelte', 'node', 'deno', 'bun',
+            'django', 'flask', 'fastapi', 'laravel', 'spring', 'express',
+            'next', 'nuxt', 'gatsby', 'remix', 'astro', 'solid', 'qwik',
+            # Mobile & platforms
+            'android', 'ios', 'flutter', 'react-native', 'xamarin', 'ionic',
+            # 2025: AI/ML frameworks
+            'pytorch', 'tensorflow', 'jax', 'huggingface', 'transformers',
+            'langchain', 'llamaindex', 'openai', 'anthropic', 'cohere'
+        }
+        self.intent_cache = {}  # 2025: Cache for performance
+        self.complexity_weights = {
+            'technical_terms': 2.0,
+            'code_snippets': 3.0,
+            'specific_frameworks': 2.5,
+            'creative_words': 1.5,
+            'emotional_words': 1.8
         }
     
     def _initialize_patterns(self) -> Dict[IntentType, List[str]]:
         """Initialize regex patterns for intent detection"""
         return {
+            # 2025: Enhanced image generation patterns with latest AI models
             IntentType.IMAGE_GENERATION: [
-                r'\b(?:draw|paint|sketch|illustrate|create|generate|make|design|show|visualize)\s+(?:a|an)?\s*(?:beautiful|stunning|amazing|gorgeous|lovely|pretty|professional|artistic|detailed)?\s*(?:sunset|sunrise|landscape|portrait|scene|picture|image|drawing|artwork|illustration|photo|graphic|visual|logo|icon|banner|poster|wallpaper|avatar)',
-                r'\b(?:create|generate|make|design|produce)\s+(?:a|an)?\s*(?:image|picture|photo|artwork|drawing|illustration|graphic|logo|icon|visual|art)',
-                r'\b(?:show|visualize|picture|display)\s+(?:me)?\s*(?:a|an)?\s*(?:image|picture|visual|artwork)',
-                r'\b(?:draw|paint|sketch|illustrate)\b(?!.*(?:function|code|program|script|class|method|algorithm))',
-                r'(?:can you|could you|please|i want|i need).*(?:draw|paint|sketch|create|make|generate|design).*(?:image|picture|artwork|visual|art|graphic)',
-                r'\b(?:logo|icon|banner|poster|wallpaper|avatar|art|artistic|visual|painting|drawing|sketch|illustration|graphic|artwork|photography|render|composition)\b',
-                r'(?:dalle|midjourney|stable.?diffusion|text.?to.?image|flux|ai.?art|image.?generation)',
-                r'(?:digital.?art|concept.?art|fantasy.?art|photorealistic|hyperrealistic|stylized)',
+                r'\b(?:draw|paint|sketch|illustrate|create|generate|make|design|show|visualize|render|produce)\s+(?:a|an|some)?\s*(?:beautiful|stunning|amazing|gorgeous|lovely|pretty|professional|artistic|detailed|realistic|abstract|minimalist|modern|vintage|futuristic)?\s*(?:sunset|sunrise|landscape|portrait|scene|picture|image|drawing|artwork|illustration|photo|graphic|visual|logo|icon|banner|poster|wallpaper|avatar|meme|infographic|diagram|chart|mockup)',
+                r'\b(?:create|generate|make|design|produce|craft|build)\s+(?:a|an|some)?\s*(?:image|picture|photo|artwork|drawing|illustration|graphic|logo|icon|visual|art|design|mockup|prototype|concept)',
+                r'\b(?:show|visualize|picture|display|demonstrate)\s+(?:me)?\s*(?:a|an|some)?\s*(?:image|picture|visual|artwork|design|mockup|example)',
+                r'\b(?:draw|paint|sketch|illustrate|design)\b(?!.*(?:function|code|program|script|class|method|algorithm|database|query))',
+                r'(?:can you|could you|please|i want|i need|help me).*(?:draw|paint|sketch|create|make|generate|design|visualize).*(?:image|picture|artwork|visual|art|graphic|logo|icon|design)',
+                r'\b(?:logo|icon|banner|poster|wallpaper|avatar|art|artistic|visual|painting|drawing|sketch|illustration|graphic|artwork|photography|render|composition|mockup|wireframe|diagram|infographic|meme|sticker|emoji)\b',
+                r'(?:dalle|midjourney|stable.?diffusion|text.?to.?image|flux|ai.?art|image.?generation|firefly|leonardo|runway)',
+                r'(?:digital.?art|concept.?art|fantasy.?art|photorealistic|hyperrealistic|stylized|pixel.?art|vector.?art|3d.?render|ui.?mockup|app.?design)',
+                # 2025: New patterns for modern image generation
+                r'(?:design|create).*(?:ui|ux|interface|dashboard|website|app|mobile)',
+                r'\b(?:meme|funny|cute|cartoon|anime|manga|realistic|portrait)\b.*(?:image|picture|art)',
+                r'(?:product.?shot|brand.?identity|social.?media.?post|thumbnail|cover.?image)',
+                r'(?:architectural|interior|fashion|food|nature|abstract).*(?:design|image|photo)',
             ],
             
+            # 2025: Enhanced code generation patterns with latest frameworks
             IntentType.CODE_GENERATION: [
-                r'\b(?:write|create|generate|code|program|implement|build|develop|design)\s+(?:a|an|some)?\s*(?:function|class|method|script|program|application|app|module|component|service|api|library)',
-                r'\b(?:python|javascript|java|c\+\+|typescript|php|ruby|go|rust|swift|kotlin|c#|dart|scala|r)\s+(?:code|function|script|program|class|method)',
-                r'\b(?:algorithm|function|class|method|API|library|framework|module|component|microservice|backend|frontend)',
-                r'(?:how to|help me|show me|teach me|guide me).*(?:code|program|implement|write|build|develop)',
-                r'\b(?:debug|fix|error|bug|issue|optimize|refactor|improve).*(?:code|function|script|program)',
-                r'\b(?:react|vue|angular|django|flask|express|laravel|spring|rails|next|nuxt|svelte)',
-                r'(?:github|stackoverflow|programming|coding|development|software|engineering)',
-                r'\b(?:sql|database|query|table|schema|mongodb|postgresql|mysql|sqlite)',
-                r'(?:rest.?api|graphql|microservices|web.?service|backend|full.?stack)',
-                r'(?:machine.?learning|ai|neural.?network|data.?science|automation)',
+                r'\b(?:write|create|generate|code|program|implement|build|develop|design|craft|architect)\s+(?:a|an|some)?\s*(?:function|class|method|script|program|application|app|module|component|service|api|library|microservice|webhook|middleware|plugin|extension)',
+                r'\b(?:python|javascript|java|c\+\+|typescript|php|ruby|go|rust|swift|kotlin|c#|dart|scala|r|zig|nim|elixir|haskell|julia)\s+(?:code|function|script|program|class|method|application|api)',
+                r'\b(?:algorithm|function|class|method|API|library|framework|module|component|microservice|backend|frontend|fullstack|devops|cicd|pipeline)',
+                r'(?:how to|help me|show me|teach me|guide me|walk me through).*(?:code|program|implement|write|build|develop|deploy|setup|configure)',
+                r'\b(?:debug|fix|error|bug|issue|optimize|refactor|improve|test|unit.?test|integration.?test).*(?:code|function|script|program|application)',
+                r'\b(?:react|vue|angular|svelte|solid|qwik|django|flask|fastapi|laravel|spring|rails|express|nest|next|nuxt|gatsby|remix|astro)',
+                r'(?:github|gitlab|stackoverflow|programming|coding|development|software|engineering|devops|ci.?cd)',
+                r'\b(?:sql|database|query|table|schema|mongodb|postgresql|mysql|sqlite|redis|elasticsearch|graphql)',
+                r'(?:rest.?api|graphql|microservices|web.?service|backend|full.?stack|serverless|lambda|cloud.?function)',
+                r'(?:machine.?learning|ai|neural.?network|data.?science|automation|pytorch|tensorflow|huggingface|langchain)',
+                # 2025: New patterns for modern development
+                r'(?:docker|kubernetes|terraform|ansible|jenkins|github.?actions|aws|azure|gcp|vercel|netlify)',
+                r'(?:websocket|realtime|streaming|event.?driven|pub.?sub|message.?queue|kafka|rabbitmq)',
+                r'(?:blockchain|web3|smart.?contract|defi|nft|cryptocurrency|ethereum|solidity)',
+                r'(?:mobile.?app|ios|android|flutter|react.?native|expo|xamarin|ionic)',
+                r'(?:game.?dev|unity|unreal|godot|pygame|phaser|three.js|webgl)',
+                r'(?:data.?pipeline|etl|batch.?processing|stream.?processing|data.?lake|data.?warehouse)',
             ],
             
             IntentType.SENTIMENT_ANALYSIS: [
@@ -91,22 +132,58 @@ class IntelligentRouter:
             
             IntentType.TRANSLATION: [
                 r'\b(?:translate|translation|convert)\s+(?:this|the|from|to)',
-                r'(?:from|to)\s+(?:english|spanish|french|german|chinese|japanese|korean|arabic|portuguese|italian|russian)',
+                r'(?:from|to)\s+(?:english|spanish|french|german|chinese|japanese|korean|arabic|portuguese|italian|russian|hindi|bengali|urdu|turkish|vietnamese|thai|dutch|swedish|norwegian|finnish|polish)',
                 r'\b(?:language|linguistic|multilingual)',
                 r'(?:what does.*mean in|how do you say.*in)',
+            ],
+            
+            # 2025: New intent patterns
+            IntentType.DATA_ANALYSIS: [
+                r'\b(?:analyze|analysis|examine|study|investigate|process|parse)\s+(?:data|dataset|csv|excel|json|statistics|metrics|trends)',
+                r'(?:data.?science|data.?analysis|statistical.?analysis|exploratory.?data.?analysis|eda)',
+                r'\b(?:visualize|chart|graph|plot|dashboard|report)\s+(?:data|statistics|metrics|results)',
+                r'(?:correlation|regression|clustering|classification|prediction|forecast)',
+                r'\b(?:pandas|numpy|matplotlib|seaborn|plotly|tableau|powerbi)',
+                r'(?:sql.?query|database.?analysis|data.?mining|business.?intelligence)',
+            ],
+            
+            IntentType.DOCUMENT_PROCESSING: [
+                r'\b(?:read|parse|extract|process|analyze)\s+(?:document|pdf|doc|docx|text|file|report)',
+                r'(?:document.?analysis|text.?extraction|content.?parsing|file.?processing)',
+                r'\b(?:summarize|summary|abstract|extract.?key.?points)\s+(?:from|this|document|text|article)',
+                r'(?:ocr|optical.?character.?recognition|text.?from.?image)',
+                r'\b(?:contract|invoice|receipt|form|application)\s+(?:processing|analysis|extraction)',
+            ],
+            
+            IntentType.MULTI_MODAL: [
+                r'(?:image.?and.?text|text.?and.?image|visual.?and.?text|multimodal|multi.?modal)',
+                r'(?:describe.?this.?image|what.?do.?you.?see|analyze.?this.?picture)',
+                r'(?:combine|merge|integrate)\s+(?:image|visual|text|code|data)',
+                r'(?:vision.?language|vlm|visual.?question.?answering|image.?captioning)',
+            ],
+            
+            IntentType.CONVERSATION: [
+                r'(?:let\'s.?chat|casual.?conversation|just.?talking|friendly.?chat)',
+                r'(?:how.?are.?you|what\'s.?up|tell.?me.?about.?yourself)',
+                r'(?:opinion|thoughts|what.?do.?you.?think|personal.?view)',
+                r'(?:conversation|chat|talk|discuss)(?!.*(?:code|image|analysis))',
             ]
         }
     
     def _initialize_priorities(self) -> Dict[IntentType, int]:
-        """Initialize priority weights for intent types"""
+        """2025 Enhanced priority weights for intent types"""
         return {
-            IntentType.CODE_GENERATION: 10,      # Highest priority - very specific patterns
-            IntentType.IMAGE_GENERATION: 9,      # High priority - specific visual requests
-            IntentType.SENTIMENT_ANALYSIS: 8,    # High priority - specific analysis requests
-            IntentType.CREATIVE_WRITING: 7,      # Medium-high priority - creative requests
-            IntentType.TRANSLATION: 6,           # Medium priority - language requests
-            IntentType.QUESTION_ANSWERING: 5,    # Lower priority - broad category
-            IntentType.TEXT_GENERATION: 1,       # Lowest priority - fallback
+            IntentType.CODE_GENERATION: 10,         # Highest priority - very specific patterns
+            IntentType.IMAGE_GENERATION: 9,         # High priority - specific visual requests
+            IntentType.DATA_ANALYSIS: 8,            # 2025: High priority - data processing
+            IntentType.SENTIMENT_ANALYSIS: 8,       # High priority - specific analysis requests
+            IntentType.DOCUMENT_PROCESSING: 7,      # 2025: Medium-high priority - document tasks
+            IntentType.CREATIVE_WRITING: 7,         # Medium-high priority - creative requests
+            IntentType.MULTI_MODAL: 6,              # 2025: Medium priority - complex multimodal
+            IntentType.TRANSLATION: 6,              # Medium priority - language requests
+            IntentType.CONVERSATION: 5,             # 2025: Medium priority - conversational AI
+            IntentType.QUESTION_ANSWERING: 4,       # Lower priority - broad category
+            IntentType.TEXT_GENERATION: 1,          # Lowest priority - fallback
         }
     
     def analyze_prompt_complexity(self, prompt: str) -> Dict[str, Any]:

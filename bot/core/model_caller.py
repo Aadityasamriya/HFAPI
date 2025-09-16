@@ -10,8 +10,10 @@ import base64
 import json
 import logging
 import re
-from typing import Dict, List, Optional, Tuple, Any
+import time
+from typing import Dict, List, Optional, Tuple, Any, Union
 from bot.config import Config
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 logger = logging.getLogger(__name__)
 
@@ -62,9 +64,13 @@ def _safe_log_error(level, message: str, *args, **kwargs):
 class ModelCaller:
     """Handles all Hugging Face API interactions with intelligent routing"""
     
-    def __init__(self):
+    def __init__(self, provider: str = "auto", bill_to: Optional[str] = None):
         self.session = None
         self.timeout = aiohttp.ClientTimeout(total=Config.REQUEST_TIMEOUT)
+        self.provider = provider  # 2025 feature: provider selection
+        self.bill_to = bill_to    # 2025 feature: organization billing
+        self.request_count = 0
+        self.last_request_time = 0
     
     async def __aenter__(self):
         """Async context manager entry"""
@@ -90,17 +96,37 @@ class ModelCaller:
         Returns:
             Tuple[bool, Any]: (success, response_data)
         """
-        # Use different endpoints based on type for 2025 API changes  
+        # 2025 API Update: Enhanced endpoint routing with provider support
         if endpoint_type == "text2img":
             url = f"https://api-inference.huggingface.co/models/{model_name}"
+        elif endpoint_type == "chat":
+            # 2025: Chat completion endpoint for conversation models
+            url = f"https://api-inference.huggingface.co/models/{model_name}/v1/chat/completions"
         else:
-            # All text models (including chat-style models) use the standard inference endpoint
+            # Standard inference endpoint for all other models
             url = f"https://api-inference.huggingface.co/models/{model_name}"
             
+        # 2025 API: Enhanced headers with provider and cache control
         headers = {
             "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "x-use-cache": "false",  # 2025: Disable caching for non-deterministic models
+            "x-wait-for-model": "true",  # 2025: Wait for cold models to load
         }
+        
+        # 2025: Add provider header if specified
+        if self.provider and self.provider != "auto":
+            headers["x-provider"] = self.provider
+        
+        # 2025: Add organization billing if specified  
+        if self.bill_to:
+            headers["x-bill-to"] = self.bill_to
+        
+        # 2025: Add payload provider selection
+        if "parameters" not in payload:
+            payload["parameters"] = {}
+        if self.provider != "auto":
+            payload["parameters"]["provider"] = self.provider
         
         try:
             if not self.session:
@@ -223,6 +249,7 @@ class ModelCaller:
         
         return "\n".join(formatted_messages)
     
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10), retry=retry_if_exception_type(aiohttp.ClientError))
     async def generate_text(self, prompt: str, api_key: str, chat_history: Optional[List[Dict]] = None, model_override: Optional[str] = None, special_params: Optional[Dict] = None) -> Tuple[bool, str]:
         """
         Generate text using latest 2024-2025 language models with intelligent fallbacks
@@ -244,7 +271,7 @@ class ModelCaller:
         # Format the prompt with chat history
         formatted_prompt = self._format_chat_history(chat_history, prompt)
         
-        # Advanced parameters for latest models
+        # 2025 Enhanced parameters for latest models with provider-specific optimizations
         payload = {
             "inputs": formatted_prompt,
             "parameters": {
@@ -252,9 +279,19 @@ class ModelCaller:
                 "temperature": special_params.get('temperature', 0.7),
                 "do_sample": True,
                 "top_p": special_params.get('top_p', 0.9),
+                "top_k": special_params.get('top_k', 50),  # 2025: Top-k sampling
                 "repetition_penalty": special_params.get('repetition_penalty', 1.05),
+                "length_penalty": special_params.get('length_penalty', 1.0),  # 2025: Length penalty
+                "num_return_sequences": 1,
                 "return_full_text": False,
-                "pad_token_id": 50256  # For better generation with latest models
+                "pad_token_id": 50256,
+                "eos_token_id": 50256,
+                "use_cache": False,  # 2025: Disable caching for fresh responses
+                "typical_p": special_params.get('typical_p', 0.95)  # 2025: Typical sampling
+            },
+            "options": {
+                "wait_for_model": True,  # 2025: Always wait for model loading
+                "use_gpu": True,  # 2025: Prefer GPU inference
             }
         }
         
@@ -307,6 +344,7 @@ class ModelCaller:
         error_message = result if isinstance(result, str) else "Failed to generate text with all available models."
         return False, f"Text generation failed: {error_message}"
     
+    @retry(stop=stop_after_attempt(2), wait=wait_exponential(multiplier=1, min=3, max=15))
     async def generate_code(self, prompt: str, api_key: str, language: str = "python", special_params: Optional[Dict] = None) -> Tuple[bool, str]:
         """
         Generate code using latest StarCoder2-15B and enhanced models

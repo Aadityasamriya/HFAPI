@@ -64,7 +64,7 @@ class MessageHandlers:
             
             logger.info(f"User {user_id} prompt routed to {intent.value} with confidence {routing_info['confidence']}")
             
-            # Process based on intent
+            # 2025: Enhanced processing with new intent types
             if intent == IntentType.IMAGE_GENERATION:
                 await MessageHandlers._handle_image_generation(update, context, message_text, api_key, routing_info)
             
@@ -73,6 +73,18 @@ class MessageHandlers:
             
             elif intent == IntentType.SENTIMENT_ANALYSIS:
                 await MessageHandlers._handle_sentiment_analysis(update, context, message_text, api_key, routing_info)
+            
+            elif intent == IntentType.DATA_ANALYSIS:
+                await MessageHandlers._handle_data_analysis(update, context, message_text, api_key, routing_info)
+            
+            elif intent == IntentType.DOCUMENT_PROCESSING:
+                await MessageHandlers._handle_document_processing(update, context, message_text, api_key, routing_info)
+            
+            elif intent == IntentType.MULTI_MODAL:
+                await MessageHandlers._handle_multi_modal(update, context, message_text, api_key, routing_info)
+            
+            elif intent == IntentType.CONVERSATION:
+                await MessageHandlers._handle_conversation(update, context, message_text, api_key, chat_history, routing_info)
             
             else:  # Text generation and other intents
                 await MessageHandlers._handle_text_generation(update, context, message_text, api_key, chat_history, routing_info)
@@ -462,6 +474,76 @@ Use `/start` for detailed setup instructions.
                 "🚫 **Unexpected Error**\n\nSomething went wrong. Our team has been notified. Please try again.",
                 parse_mode='Markdown'
             )
+
+    # 2025: New advanced handler methods for enhanced AI capabilities
+    @staticmethod
+    async def _handle_data_analysis(update, context, prompt: str, api_key: str, routing_info: dict) -> None:
+        """Handle data analysis requests with advanced AI models"""
+        await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=ChatAction.TYPING)
+        
+        enhanced_prompt = f"""🔬 **Data Analysis Request:** {prompt}
+
+Please provide detailed analysis including key insights, patterns, and actionable recommendations."""
+        
+        async with ModelCaller(provider="auto") as model_caller:
+            success, result = await model_caller.generate_text(enhanced_prompt, api_key, special_params={'temperature': 0.3, 'max_new_tokens': 1500})
+            
+            if success:
+                await update.message.reply_text(f"📊 **Data Analysis Results**\n\n{result}\n\n*🎯 Analyzed with advanced 2025 AI models*", parse_mode='Markdown')
+            else:
+                await update.message.reply_text("❌ **Analysis Failed** - Please try again with more specific data context.", parse_mode='Markdown')
+
+    @staticmethod
+    async def _handle_document_processing(update, context, prompt: str, api_key: str, routing_info: dict) -> None:
+        """Handle document processing requests"""
+        await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=ChatAction.TYPING)
+        
+        enhanced_prompt = f"📄 **Document Processing:** {prompt}\n\nProvide structured processing with key information extraction and summary."
+        
+        async with ModelCaller(provider="auto") as model_caller:
+            success, result = await model_caller.generate_text(enhanced_prompt, api_key, special_params={'temperature': 0.2})
+            
+            if success:
+                await update.message.reply_text(f"📋 **Document Processing Results**\n\n{result}", parse_mode='Markdown')
+            else:
+                await update.message.reply_text("❌ **Processing Failed** - Please try again with clearer context.", parse_mode='Markdown')
+
+    @staticmethod 
+    async def _handle_multi_modal(update, context, prompt: str, api_key: str, routing_info: dict) -> None:
+        """Handle multi-modal AI requests"""
+        await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=ChatAction.TYPING)
+        
+        async with ModelCaller(provider="auto") as model_caller:
+            success, result = await model_caller.generate_text(f"🔄 **Multi-Modal AI:** {prompt}", api_key, special_params={'temperature': 0.6})
+            
+            if success:
+                await update.message.reply_text(f"🎭 **Multi-Modal Response**\n\n{result}\n\n*🌟 Generated with 2025 multi-modal AI*", parse_mode='Markdown')
+            else:
+                await update.message.reply_text("❌ **Multi-Modal Processing Failed**", parse_mode='Markdown')
+
+    @staticmethod
+    async def _handle_conversation(update, context, prompt: str, api_key: str, chat_history: list, routing_info: dict) -> None:
+        """Handle natural conversation with enhanced context awareness"""
+        await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=ChatAction.TYPING)
+        
+        async with ModelCaller(provider="auto") as model_caller:
+            success, result = await model_caller.generate_text(prompt, api_key, chat_history, special_params={'temperature': 0.8})
+            
+            if success:
+                # Update chat history for better context
+                if context.user_data is not None:
+                    if 'chat_history' not in context.user_data:
+                        context.user_data['chat_history'] = []
+                    context.user_data['chat_history'].append({'role': 'user', 'content': prompt})
+                    context.user_data['chat_history'].append({'role': 'assistant', 'content': result})
+                    
+                    # Keep only recent history
+                    if len(context.user_data['chat_history']) > Config.MAX_CHAT_HISTORY * 2:
+                        context.user_data['chat_history'] = context.user_data['chat_history'][-Config.MAX_CHAT_HISTORY * 2:]
+                
+                await update.message.reply_text(result, parse_mode='Markdown')
+            else:
+                await update.message.reply_text("❌ **Conversation Error** - Let me try that again.", parse_mode='Markdown')
 
 # Export message handlers
 message_handlers = MessageHandlers()
