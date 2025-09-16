@@ -48,14 +48,14 @@ class AIAssistantBot:
         self.application = None
         logger.info("🤖 AIAssistantBot instance created")
     
-    async def _perform_startup_health_checks(self):
+    async def _perform_startup_health_checks(self, app: Application):
         """Perform comprehensive startup health checks"""
         logger.info("🩺 Starting comprehensive health checks...")
         
         try:
             # Health check 1: Bot token validation with getMe()
             logger.info("🔍 Validating bot token with getMe()...")
-            bot_info = await self.application.bot.get_me()
+            bot_info = await app.bot.get_me()
             logger.info(f"✅ Bot authenticated: @{bot_info.username} (ID: {bot_info.id})")
             logger.info(f"📋 Bot details: {bot_info.first_name} | Can join groups: {bot_info.can_join_groups}")
             
@@ -66,7 +66,7 @@ class AIAssistantBot:
         try:
             # Health check 2: Clear any existing webhook
             logger.info("🧹 Clearing any existing webhook for polling mode...")
-            webhook_result = await self.application.bot.delete_webhook(drop_pending_updates=True)
+            webhook_result = await app.bot.delete_webhook(drop_pending_updates=True)
             if webhook_result:
                 logger.info("✅ Webhook cleared successfully")
             else:
@@ -87,7 +87,7 @@ class AIAssistantBot:
                 BotCommand("help", "❓ Get help")
             ]
             
-            await self.application.bot.set_my_commands(commands)
+            await app.bot.set_my_commands(commands)
             logger.info(f"✅ Bot commands configured: {len(commands)} commands set")
             
         except Exception as e:
@@ -108,7 +108,7 @@ class AIAssistantBot:
                 logger.info("✅ Database already connected - skipping duplicate connection")
                 
             # Perform health checks after database is ready
-            await self._perform_startup_health_checks()
+            await self._perform_startup_health_checks(app)
             logger.info("🎯 Post-initialization completed successfully")
             
         except Exception as e:
