@@ -30,7 +30,23 @@ class MessageHandlers:
         """
         user = update.effective_user
         user_id = user.id
-        message_text = update.message.text
+        
+        # Safely extract message text, handling entity parsing errors
+        try:
+            message_text = update.message.text
+        except Exception as entity_error:
+            # Handle entity parsing errors gracefully
+            logger.warning(f"Entity parsing error for user {user_id}: {entity_error}")
+            # Try to get raw text content without entities
+            try:
+                message_text = update.message.text_markdown_v2_urled if hasattr(update.message, 'text_markdown_v2_urled') else str(update.message)
+                if not message_text or message_text == str(update.message):
+                    # Fallback to basic text extraction
+                    message_text = getattr(update.message, 'text', 'Unable to parse message text')
+            except Exception:
+                message_text = 'Unable to parse message text due to formatting issues'
+            
+            logger.info(f"Successfully recovered message text for user {user_id} after entity error")
         
         # Check rate limit for text messages
         is_allowed, wait_time = check_rate_limit(user_id)
@@ -467,6 +483,25 @@ Use `/start` for detailed setup instructions.
     @staticmethod
     async def error_handler(update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Global error handler for the bot"""
+        error_message = str(context.error)
+        
+        # Handle entity parsing errors specifically
+        if "Can't parse entities" in error_message or "entity" in error_message.lower():
+            logger.warning(f"Entity parsing error detected: {error_message}")
+            if update and hasattr(update, 'effective_message') and update.effective_message:
+                try:
+                    await update.effective_message.reply_text(
+                        "⚠️ **Message Format Issue**\n\nYour message contains formatting that I can't process properly. Please try sending your message again without special formatting.",
+                        parse_mode='Markdown'
+                    )
+                except Exception:
+                    # Fallback without parse_mode if even that fails
+                    await update.effective_message.reply_text(
+                        "⚠️ Message Format Issue - Please try sending your message again without special formatting."
+                    )
+            return
+        
+        # Log other errors
         _safe_log_error(logger.error, f"Exception while handling an update: {context.error}")
         
         if update and hasattr(update, 'effective_message') and update.effective_message:
