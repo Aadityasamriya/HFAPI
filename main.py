@@ -1,5 +1,5 @@
 """
-AI Assistant Pro - Advanced Telegram Bot
+Hugging Face By AadityaLabs AI - Advanced Telegram Bot
 Sophisticated AI orchestrator with intelligent model routing
 """
 
@@ -41,12 +41,12 @@ logger = logging.getLogger(__name__)
 logger.info("📊 Enhanced logging levels configured for observability")
 logger.info("🔍 HTTP logs set to WARNING for security, Telegram logs at INFO")
 
-class AIAssistantBot:
+class HuggingFaceBot:
     """Main bot application class with comprehensive observability"""
     
     def __init__(self):
         self.application = None
-        logger.info("🤖 AIAssistantBot instance created")
+        logger.info("🤖 HuggingFaceBot instance created")
     
     async def _perform_startup_health_checks(self, app: Application):
         """Perform comprehensive startup health checks"""
@@ -83,9 +83,7 @@ class AIAssistantBot:
             commands = [
                 BotCommand("start", "🚀 Welcome and setup"),
                 BotCommand("newchat", "🔄 Clear chat history"),
-                BotCommand("history", "📚 View conversation history"),
                 BotCommand("settings", "⚙️ Bot settings"),
-                BotCommand("help", "❓ Get help"),
                 BotCommand("resetdb", "🗑️ Reset database")
             ]
             
@@ -173,9 +171,7 @@ class AIAssistantBot:
         # Command handlers
         self.application.add_handler(CommandHandler("start", command_handlers.start_command))
         self.application.add_handler(CommandHandler("newchat", command_handlers.newchat_command))
-        self.application.add_handler(CommandHandler("history", command_handlers.history_command))
         self.application.add_handler(CommandHandler("settings", command_handlers.settings_command))
-        self.application.add_handler(CommandHandler("help", command_handlers.help_command))
         self.application.add_handler(CommandHandler("resetdb", command_handlers.resetdb_command))
         
         # Callback query handler for inline keyboards
@@ -202,7 +198,7 @@ class AIAssistantBot:
     def start_polling(self):
         """Start the bot with polling"""
         try:
-            logger.info("Starting AI Assistant Pro bot...")
+            logger.info("Starting Hugging Face By AadityaLabs AI bot...")
             
             if self.application is None:
                 raise RuntimeError("Application not initialized")
@@ -231,12 +227,12 @@ class AIAssistantBot:
 def main():
     """Main entry point - synchronous version for Replit compatibility"""
     # Welcome message
-    print("🤖 AI Assistant Pro - Starting Up...")
+    print("🤖 Hugging Face By AadityaLabs AI - Starting Up...")
     print("🚀 Advanced Telegram Bot with Intelligent AI Routing")
     print("=" * 50)
     
     # Create bot instance
-    bot = AIAssistantBot()
+    bot = HuggingFaceBot()
     
     # Initialize and run bot
     try:
@@ -253,7 +249,7 @@ def main():
         bot._register_handlers()
         logger.info("Bot handlers registered successfully")
         
-        logger.info("🚀 Starting AI Assistant Pro bot...")
+        logger.info("🚀 Starting Hugging Face By AadityaLabs AI bot...")
         logger.info("🎯 Initializing Telegram polling with enhanced observability...")
         logger.info("📡 Bot is now LIVE and listening for messages...")
         logger.info("✨ AI Models: FLUX.1, StarCoder2-15B, Llama-3.2, Qwen2.5")
@@ -284,7 +280,7 @@ def main():
         raise
     finally:
         logger.info("🔄 Bot shutdown sequence complete")
-        logger.info("👋 AI Assistant Pro has stopped")
+        logger.info("👋 Hugging Face By AadityaLabs AI has stopped")
 
 if __name__ == "__main__":
     main()

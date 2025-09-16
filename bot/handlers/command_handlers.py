@@ -50,38 +50,41 @@ class CommandHandlers:
         safe_first_name = escape_markdown(user.first_name or "User")
         
         welcome_text = f"""
-🤖 **Welcome to AI Assistant Pro** 🚀
+🤖 **Welcome to Hugging Face By AadityaLabs AI** 🚀
 
-Hello {safe_first_name}! I'm powered by the **latest 2024-2025 AI models** - more advanced than ChatGPT, Grok, or Gemini!
+Hello {safe_first_name}! I'm **Hugging Face By AadityaLabs AI** - powered by the **most advanced 2024-2025 AI models** available!
 
-**🔥 Latest AI Models I Use:**
+**🔥 Revolutionary AI Models I Use:**
 🧠 **Llama-3.2 & Qwen2.5** - Next-gen text AI (29+ languages)
-💻 **StarCoder2-15B** - Revolutionary coding assistant  
-🎨 **FLUX.1** - Breakthrough image generation
+💻 **StarCoder2-15B** - State-of-the-art coding assistant  
+🎨 **FLUX.1** - Breakthrough image generation technology
 📊 **Advanced Emotion AI** - 28 emotion categories
 🌐 **Universal Translation** - Professional multilingual support
 
-**🎯 Superior Features:**
-✨ **Intelligent Model Routing** - I choose the perfect AI for each task
+**🎯 Why Choose Hugging Face By AadityaLabs AI:**
+✨ **Intelligent Model Routing** - I automatically select the perfect AI for each task
 ⚡ **Lightning Fast** - Optimized for speed and quality
-🛡️ **Privacy First** - Your data stays secure and private
+🛡️ **Privacy First** - Your data stays secure and encrypted
 🆓 **Completely Free** - Generous Hugging Face quotas
+🏆 **Superior to ChatGPT** - Access to newest 2024-2025 models
 
-**⚡ Quick Start (2 minutes):**
-1️⃣ Get your free Hugging Face API key
-2️⃣ Start chatting with the world's newest AI
-3️⃣ Experience AI that's truly superior!
+**⚡ Quick 5-Minute Setup Tutorial:**
 
-*Ready to experience the future of AI?* 🚀✨
+**Step 1** (1 min): Click "🔑 Set API Key" below
+**Step 2** (2 min): Get free Hugging Face token
+**Step 3** (1 min): Paste it back here
+**Step 4** (30 sec): Start chatting with advanced AI
+**Step 5** (30 sec): Experience the future of AI!
+
+*Ready to access AI more advanced than ChatGPT?* 🚀✨
         """
         
         keyboard = [
-            [InlineKeyboardButton("🔑 Set API Key", callback_data="set_api_key")],
+            [InlineKeyboardButton("🔑 Set API Key (Step 1)", callback_data="set_api_key")],
             [
-                InlineKeyboardButton("⚙️ Settings", callback_data="settings"),
-                InlineKeyboardButton("💡 Help", callback_data="help")
-            ],
-            [InlineKeyboardButton("🚀 Quick Start Guide", callback_data="quick_start")]
+                InlineKeyboardButton("⚙️ Settings & Help", callback_data="settings"),
+                InlineKeyboardButton("🚀 Quick Start Guide", callback_data="quick_start")
+            ]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
@@ -201,14 +204,14 @@ Your conversation history has been reset. You're starting fresh with a clean sla
         api_status = "Connected" if api_key else "Not Set"
         
         settings_text = f"""
-⚙️ **AI Assistant Settings** 🛠️
+⚙️ **Hugging Face By AadityaLabs AI Settings** 🛠️
 
 **Current Status:**
 🔑 API Key: {status_emoji} {api_status}
-🤖 Models: Premium Hugging Face Collection
+🤖 Models: Premium Hugging Face Collection (Latest 2024-2025)
 🧠 Intelligence: Adaptive Model Routing
-💾 Storage: Persistent database (as specified)
-📊 Chat History: Persistent storage with last 15 messages in active session
+💾 Storage: Persistent encrypted database
+📊 Chat History: Secure persistent storage with context awareness
 
 **Available Actions:**
         """
@@ -216,14 +219,17 @@ Your conversation history has been reset. You're starting fresh with a clean sla
         keyboard = [
             [InlineKeyboardButton("🔄 Change API Key", callback_data="set_api_key")],
             [
+                InlineKeyboardButton("📚 View History", callback_data="history"),
+                InlineKeyboardButton("💡 Help & Guide", callback_data="help")
+            ],
+            [
                 InlineKeyboardButton("📊 Usage Stats", callback_data="usage_stats"),
                 InlineKeyboardButton("🎯 Model Info", callback_data="model_info")
             ],
             [
                 InlineKeyboardButton("🗑️ Reset My Data", callback_data="confirm_reset"),
-                InlineKeyboardButton("💡 Help", callback_data="help")
-            ],
-            [InlineKeyboardButton("🔙 Main Menu", callback_data="main_menu")]
+                InlineKeyboardButton("🔙 Main Menu", callback_data="main_menu")
+            ]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
@@ -268,7 +274,7 @@ Your conversation history has been reset. You're starting fresh with a clean sla
             return
             
         help_text = """
-💡 **AI Assistant Pro Help Guide** 📚
+💡 **Hugging Face By AadityaLabs AI Help Guide** 📚
 
 **🎯 Smart Commands:**
 • `/start` - Welcome & setup
@@ -443,6 +449,9 @@ Your conversations are stored securely in our encrypted database. This will remo
             
             elif data == "help":
                 await CommandHandlers._handle_help_display(query, context)
+            
+            elif data == "history":
+                await CommandHandlers._handle_history_display(query, context)
             
             elif data == "confirm_reset":
                 await CommandHandlers._handle_reset_confirmation(query, context)
@@ -923,14 +932,14 @@ Ready to experience the future of AI? 🤖✨
         api_status = "Connected" if api_key else "Not Set"
         
         settings_text = f"""
-⚙️ **AI Assistant Settings** 🛠️
+⚙️ **Hugging Face By AadityaLabs AI Settings** 🛠️
 
 **Current Status:**
 🔑 API Key: {status_emoji} {api_status}
-🤖 Models: Premium Hugging Face Collection
+🤖 Models: Premium Hugging Face Collection (Latest 2024-2025)
 🧠 Intelligence: Adaptive Model Routing
-💾 Storage: Persistent database (as specified)
-📊 Chat History: Persistent storage with last 15 messages in active session
+💾 Storage: Persistent encrypted database
+📊 Chat History: Secure persistent storage with context awareness
 
 **Available Actions:**
         """
@@ -938,12 +947,16 @@ Ready to experience the future of AI? 🤖✨
         keyboard = [
             [InlineKeyboardButton("🔄 Change API Key", callback_data="set_api_key")],
             [
+                InlineKeyboardButton("📚 View History", callback_data="history"),
+                InlineKeyboardButton("💡 Help & Guide", callback_data="help")
+            ],
+            [
                 InlineKeyboardButton("📊 Usage Stats", callback_data="usage_stats"),
                 InlineKeyboardButton("🎯 Model Info", callback_data="model_info")
             ],
             [
                 InlineKeyboardButton("🗑️ Reset My Data", callback_data="confirm_reset"),
-                InlineKeyboardButton("💡 Help", callback_data="help")
+                InlineKeyboardButton("🔙 Main Menu", callback_data="main_menu")
             ]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -958,7 +971,7 @@ Ready to experience the future of AI? 🤖✨
     async def _handle_help_display(query, context) -> None:
         """Redisplay help menu"""
         help_text = """
-💡 **AI Assistant Pro Help Guide** 📚
+💡 **Hugging Face By AadityaLabs AI Help Guide** 📚
 
 **🎯 Smart Commands:**
 • `/start` - Welcome & setup
@@ -1741,6 +1754,64 @@ The conversation has been permanently removed from your history.
             logger.error(f"Error deleting conversation for user_id:{user_id}, conv:{conversation_id}: {e}")
             await query.edit_message_text(
                 "❌ **Delete Error**\n\nSorry, there was a problem deleting this conversation. Please try again.",
+                parse_mode='Markdown'
+            )
+
+    @staticmethod
+    async def _handle_history_display(query, context) -> None:
+        """Display conversation history overview"""
+        user_id = query.from_user.id
+        
+        try:
+            # Get conversation history from database
+            conversations = await db.get_user_conversations(user_id, limit=10)
+            
+            if not conversations:
+                history_text = """
+📚 **Your Conversation History** 
+
+You don't have any saved conversations yet.
+
+**Start your first conversation:**
+🚀 Click below to begin chatting with Hugging Face By AadityaLabs AI!
+
+💡 **Note:** Your conversations are automatically saved for easy access later.
+                """
+                keyboard = [
+                    [InlineKeyboardButton("🚀 Start New Conversation", callback_data="start_conversation")],
+                    [InlineKeyboardButton("⚙️ Back to Settings", callback_data="settings")]
+                ]
+            else:
+                history_text = f"""
+📚 **Your Conversation History** 
+
+You have {len(conversations)} saved conversation(s). Click any conversation to view or continue it:
+
+**📝 Recent Conversations:**
+                """
+                
+                keyboard = []
+                for i, conv in enumerate(conversations[:5]):  # Show up to 5 recent conversations
+                    summary = conv.get('summary', f'Conversation {i+1}')[:50] + "..." if len(conv.get('summary', '')) > 50 else conv.get('summary', f'Conversation {i+1}')
+                    keyboard.append([InlineKeyboardButton(f"📄 {summary}", callback_data=f"view_conv_{conv['id']}")])
+                
+                keyboard.extend([
+                    [InlineKeyboardButton("🔄 Refresh History", callback_data="history_refresh")],
+                    [InlineKeyboardButton("⚙️ Back to Settings", callback_data="settings")]
+                ])
+            
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            await query.edit_message_text(
+                history_text,
+                reply_markup=reply_markup,
+                parse_mode='Markdown'
+            )
+            
+        except Exception as e:
+            logger.error(f"Error displaying history for user_id:{user_id}: {e}")
+            await query.edit_message_text(
+                "❌ **History Error**\n\nSorry, there was a problem loading your conversation history. Please try again.",
                 parse_mode='Markdown'
             )
 

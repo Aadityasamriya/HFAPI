@@ -1,5 +1,5 @@
 """
-Advanced message handlers for AI Assistant Pro
+Advanced message handlers for Hugging Face By AadityaLabs AI
 Handles intelligent routing, context management, and multi-modal responses
 """
 
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 class MessageHandlers:
-    """Advanced message processing with intelligent AI routing and comprehensive observability"""
+    """Advanced message processing for Hugging Face By AadityaLabs AI with intelligent AI routing and comprehensive observability"""
     
     @staticmethod
     async def _save_conversation_if_ready(user_id: int, chat_history: list, context=None) -> bool:
