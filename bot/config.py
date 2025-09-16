@@ -13,7 +13,6 @@ class Config:
     
     # Telegram Bot Configuration
     TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
-    OWNER_ID = os.getenv('OWNER_ID')
     
     # Database Configuration
     MONGO_URI = os.getenv('MONGO_URI')
@@ -86,15 +85,10 @@ class Config:
         is_production = os.getenv('ENVIRONMENT', '').lower() == 'production'
         if is_production:
             if cls.MONGO_URI and not ('tls=true' in cls.MONGO_URI or cls.MONGO_URI.startswith('mongodb+srv://')):
-                logger.error("SECURITY WARNING: Production database should use TLS encryption")
-            if not os.getenv('ENCRYPTION_KEY'):
-                logger.error("SECURITY WARNING: ENCRYPTION_KEY not set in production")
-        
-        # Optional settings warnings
-        if not cls.OWNER_ID:
-            logger.info("OWNER_ID not provided - admin features will be disabled")
+                logger.warning("SECURITY WARNING: Production database should use TLS encryption")
         
         logger.info("✅ Configuration validation completed successfully")
         logger.info(f"🤖 Using {len([m for m in dir(cls) if 'MODEL' in m and not m.startswith('_')])} AI models")
+        logger.info("💡 API keys are now session-based - no persistent storage required")
         
         return True

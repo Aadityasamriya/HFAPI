@@ -144,7 +144,7 @@ Your conversation history has been reset. You're starting fresh with a clean sla
             )
             return
             
-        api_key = await db.get_user_api_key(user_id)
+        api_key = context.user_data.get('api_key') if context.user_data else None
         
         status_emoji = "✅" if api_key else "❌"
         api_status = "Connected" if api_key else "Not Set"
@@ -312,9 +312,11 @@ Your conversation history has been reset. You're starting fresh with a clean sla
 4️⃣ Copy your token (starts with hf_)
 5️⃣ Send it here as your next message
 
-🛡️ **Security:** Your API key is encrypted & stored securely. Privacy guaranteed!
+🛡️ **Security:** Your API key is stored only in your current session. No permanent storage - maximum privacy!
 
 💸 **Cost:** Completely FREE for personal use! Hugging Face offers generous quotas for all latest models.
+
+🔒 **Privacy First:** API keys are session-based only - they're never stored permanently anywhere!
 
 ✨ **You're about to access AI technology that rivals ChatGPT, but with the newest 2024-2025 models!**
         """
@@ -365,24 +367,25 @@ Are you sure you want to proceed?
     
     @staticmethod
     async def _handle_data_reset(query, context) -> None:
-        """Handle actual data reset"""
+        """Handle session data reset"""
         user_id = query.from_user.id
-        success = await db.reset_user_database(user_id)
         
-        if success:
-            text = """
-✅ **Data Reset Complete** 
+        # Clear session data only
+        if context.user_data:
+            context.user_data.clear()
+        
+        text = """
+✅ **Session Data Cleared** 
 
-Your data has been successfully removed from our system.
+Your session data has been cleared, including:
+• API key (if set)
+• Chat history
+• Preferences
 
 🔄 To continue using AI Assistant Pro, you'll need to set up your API key again.
-            """
-        else:
-            text = """
-❌ **Reset Failed** 
 
-There was an issue resetting your data. Please try again or contact support.
-            """
+💡 **Note:** We don't store any data permanently - everything is session-based for your privacy!
+        """
         
         keyboard = [
             [InlineKeyboardButton("🔑 Set New API Key", callback_data="set_api_key")],
@@ -559,7 +562,7 @@ Ready to experience the future of AI? 🤖✨
         """Redisplay settings menu"""
         # This would call the settings_command logic
         user_id = query.from_user.id
-        api_key = await db.get_user_api_key(user_id)
+        api_key = context.user_data.get('api_key') if context.user_data else None
         
         status_emoji = "✅" if api_key else "❌"
         api_status = "Connected" if api_key else "Not Set"

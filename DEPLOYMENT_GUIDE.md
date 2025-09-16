@@ -28,9 +28,6 @@ MONGO_URI=mongodb+srv://username:password@cluster.mongodb.net/your_database?retr
 
 ### **For Production (Highly Recommended)**
 ```bash
-# Security - Generate with: python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'
-ENCRYPTION_KEY=your_encryption_key_here
-
 # Optional - For admin features
 OWNER_ID=your_telegram_user_id
 

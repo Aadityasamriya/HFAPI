@@ -6,16 +6,89 @@ Handles intelligent routing, context management, and multi-modal responses
 import asyncio
 import io
 import logging
+import os
+import re
 from telegram.ext import ContextTypes
 from telegram.constants import ChatAction
 
 from bot.database import db
 from bot.core.router import router, IntentType
-from bot.core.model_caller import ModelCaller
+from bot.core.model_caller import ModelCaller, _redact_sensitive_data, _safe_log_error
 from bot.config import Config
 from bot.security_utils import escape_markdown, safe_markdown_format, check_rate_limit
 
 logger = logging.getLogger(__name__)
+
+def _is_persistence_enabled(context: ContextTypes.DEFAULT_TYPE) -> bool:
+    """
+    Check if Application persistence is enabled
+    
+    Args:
+        context: Telegram context object
+        
+    Returns:
+        bool: True if persistence is enabled
+    """
+    try:
+        # Check if persistence is enabled by examining the context's application
+        app = getattr(context, 'application', None)
+        if app and hasattr(app, 'persistence'):
+            return app.persistence is not None
+        return False
+    except Exception:
+        # If we can't determine, assume persistence is enabled for safety
+        return True
+
+def _safe_store_api_key(context: ContextTypes.DEFAULT_TYPE, api_key: str) -> bool:
+    """
+    Safely store API key with persistence protection
+    
+    Args:
+        context: Telegram context object
+        api_key: The API key to store
+        
+    Returns:
+        bool: True if stored successfully, False if blocked by persistence
+    """
+    if not context.user_data:
+        return False
+        
+    # CRITICAL SECURITY CHECK: Never store API keys if persistence is enabled
+    if _is_persistence_enabled(context):
+        logger.error(
+            "SECURITY ALERT: API key storage blocked - Application persistence is enabled. "
+            "This prevents accidental permanent storage of sensitive credentials."
+        )
+        return False
+    
+    # Only store in session if persistence is disabled
+    context.user_data['api_key'] = api_key
+    return True
+
+def _safe_get_api_key(context: ContextTypes.DEFAULT_TYPE) -> str:
+    """
+    Safely retrieve API key with persistence validation
+    
+    Args:
+        context: Telegram context object
+        
+    Returns:
+        str: API key or empty string if not available/unsafe
+    """
+    if not context.user_data:
+        return ""
+        
+    # CRITICAL SECURITY CHECK: Clear any persisted API keys
+    if _is_persistence_enabled(context):
+        api_key = context.user_data.get('api_key')
+        if api_key:
+            logger.warning(
+                "SECURITY ALERT: Found API key with persistence enabled - clearing immediately"
+            )
+            context.user_data.pop('api_key', None)
+        return ""
+    
+    return context.user_data.get('api_key', "")
 
 class MessageHandlers:
     """Advanced message processing with intelligent AI routing"""
@@ -43,8 +116,8 @@ class MessageHandlers:
             await MessageHandlers._handle_api_key_input(update, context, message_text)
             return
         
-        # Get user's API key
-        api_key = await db.get_user_api_key(user_id)
+        # Get user's API key from session with security validation
+        api_key = _safe_get_api_key(context)
         if not api_key:
             await MessageHandlers._prompt_api_key_setup(update, context)
             return
@@ -75,7 +148,7 @@ class MessageHandlers:
                 await MessageHandlers._handle_text_generation(update, context, message_text, api_key, chat_history, routing_info)
             
         except Exception as e:
-            logger.error(f"Error processing message for user {user_id}: {e}")
+            _safe_log_error(logger.error, f"Error processing message for user {user_id}: {e}")
             # Safely escape any error details that might be included
             safe_error_msg = safe_markdown_format(
                 "🚫 **Processing Error**\n\nI encountered an issue processing your request. Please try again or contact support if the problem persists."
@@ -111,17 +184,27 @@ class MessageHandlers:
                 )
             
             if success:
-                # Save API key
-                save_success = await db.save_user_api_key(user_id, api_key)
-                
-                if save_success:
-                    if context.user_data is not None:
+                # Store API key in session with persistence protection
+                if context.user_data is not None:
+                    if _safe_store_api_key(context, api_key):
                         context.user_data['waiting_for_api_key'] = False
-                    
-                    success_text = """
+                    else:
+                        # Persistence is enabled - cannot store API key
+                        await update.message.reply_text(
+                            "🔒 **Security Protection Activated**\n\n"
+                            "API key storage has been blocked because Application persistence is enabled. "
+                            "This is a security feature to prevent accidental permanent storage of your credentials.\n\n"
+                            "**To use the bot:**\n"
+                            "• Contact administrator to disable persistence\n"
+                            "• Or restart bot without persistence enabled",
+                            parse_mode='Markdown'
+                        )
+                        return
+                
+                success_text = """
 ✅ **API Key Configured Successfully!** 🎉
 
-Your Hugging Face API key has been securely stored and validated.
+Your Hugging Face API key has been validated and stored for this session.
 
 🚀 **You're ready to go!** Try asking me:
 • "Explain machine learning"
@@ -135,18 +218,15 @@ Your Hugging Face API key has been securely stored and validated.
 • 💬 Context-aware conversations
 • 🔄 Automatic model selection
 
+🔒 **Privacy Note:** Your API key is stored only for this session with advanced security protection and will be cleared when you restart the bot.
+
 What would you like to explore first? 🤖✨
-                    """
-                    
-                    await update.message.reply_text(
-                        success_text,
-                        parse_mode='Markdown'
-                    )
-                else:
-                    await update.message.reply_text(
-                        "❌ **Storage Error**\n\nYour API key is valid but couldn't be saved. Please try again.",
-                        parse_mode='Markdown'
-                    )
+                """
+                
+                await update.message.reply_text(
+                    success_text,
+                    parse_mode='Markdown'
+                )
             else:
                 await update.message.reply_text(
                     "❌ **API Key Invalid**\n\nThe provided API key couldn't be verified. Please check:\n\n• Key is copied correctly\n• Token has 'Read' permissions\n• Account is in good standing\n\nTry again with a valid key.",
@@ -154,7 +234,7 @@ What would you like to explore first? 🤖✨
                 )
                 
         except Exception as e:
-            logger.error(f"Error validating API key for user {user_id}: {e}")
+            _safe_log_error(logger.error, f"Error validating API key for user {user_id}: {e}")
             await update.message.reply_text(
                 "🔄 **Validation Error**\n\nCouldn't verify your API key due to a network issue. Please try again.",
                 parse_mode='Markdown'
@@ -239,7 +319,7 @@ Use `/start` for detailed setup instructions.
                 )
                 
         except Exception as e:
-            logger.error(f"Error in text generation for user {user_id}: {e}")
+            _safe_log_error(logger.error, f"Error in text generation for user {user_id}: {e}")
             await update.message.reply_text(
                 "🚫 **Processing Error**\n\nFailed to generate response. Please try again.",
                 parse_mode='Markdown'
@@ -284,7 +364,7 @@ Use `/start` for detailed setup instructions.
                 )
                 
         except Exception as e:
-            logger.error(f"Error in code generation for user {user_id}: {e}")
+            _safe_log_error(logger.error, f"Error in code generation for user {user_id}: {e}")
             await update.message.reply_text(
                 "🚫 **Code Generation Error**\n\nFailed to generate code. Please try again.",
                 parse_mode='Markdown'
@@ -337,7 +417,7 @@ Use `/start` for detailed setup instructions.
                 )
                 
         except Exception as e:
-            logger.error(f"Error in image generation for user {user_id}: {e}")
+            _safe_log_error(logger.error, f"Error in image generation for user {user_id}: {e}")
             await processing_msg.edit_text(
                 "🚫 **Image Generation Error**\n\nFailed to create image. Please try again.",
                 parse_mode='Markdown'
@@ -439,7 +519,7 @@ Use `/start` for detailed setup instructions.
                 )
                 
         except Exception as e:
-            logger.error(f"Error in sentiment analysis for user {user_id}: {e}")
+            _safe_log_error(logger.error, f"Error in sentiment analysis for user {user_id}: {e}")
             await update.message.reply_text(
                 "🚫 **Analysis Error**\n\nFailed to analyze sentiment. Please try again.",
                 parse_mode='Markdown'
@@ -448,7 +528,7 @@ Use `/start` for detailed setup instructions.
     @staticmethod
     async def error_handler(update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Global error handler for the bot"""
-        logger.error(f"Exception while handling an update: {context.error}")
+        _safe_log_error(logger.error, f"Exception while handling an update: {context.error}")
         
         if update and hasattr(update, 'effective_message') and update.effective_message:
             await update.effective_message.reply_text(

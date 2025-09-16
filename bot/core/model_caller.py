@@ -9,10 +9,55 @@ import io
 import base64
 import json
 import logging
+import re
 from typing import Dict, List, Optional, Tuple, Any
 from bot.config import Config
 
 logger = logging.getLogger(__name__)
+
+def _redact_sensitive_data(text: str) -> str:
+    """
+    Redact sensitive data from log messages to prevent token leakage
+    
+    Args:
+        text (str): Text that might contain sensitive information
+        
+    Returns:
+        str: Sanitized text with tokens redacted
+    """
+    if not isinstance(text, str):
+        text = str(text)
+    
+    # Redact Hugging Face tokens (hf_xxxx)
+    text = re.sub(r'hf_[a-zA-Z0-9]{20,}', 'hf_[REDACTED]', text)
+    
+    # Redact Authorization headers
+    text = re.sub(r'Bearer\s+[a-zA-Z0-9_.-]{20,}', 'Bearer [REDACTED]', text, flags=re.IGNORECASE)
+    text = re.sub(r'"Authorization":\s*"Bearer\s+[^"]+"', '"Authorization": "Bearer [REDACTED]"', text, flags=re.IGNORECASE)
+    
+    # Redact API keys in various formats
+    text = re.sub(r'api[_-]?key["\s]*[:=]["\s]*[a-zA-Z0-9_.-]{20,}', 'api_key: [REDACTED]', text, flags=re.IGNORECASE)
+    
+    return text
+
+def _safe_log_error(level, message: str, *args, **kwargs):
+    """
+    Safely log an error message with sensitive data redacted
+    
+    Args:
+        level: Logging level method (logger.error, logger.warning, etc.)
+        message (str): Log message that might contain sensitive data
+        *args: Additional args for logging
+        **kwargs: Additional kwargs for logging (exc_info will be disabled for security)
+    """
+    # Disable exc_info to prevent token leakage in tracebacks
+    kwargs.pop('exc_info', None)
+    
+    # Redact sensitive data from message and args
+    safe_message = _redact_sensitive_data(message)
+    safe_args = tuple(_redact_sensitive_data(str(arg)) for arg in args)
+    
+    level(safe_message, *safe_args, **kwargs)
 
 class ModelCaller:
     """Handles all Hugging Face API interactions with intelligent routing"""
@@ -102,22 +147,22 @@ class ModelCaller:
                 
                 elif response.status == 401:  # Unauthorized
                     error_text = await response.text()
-                    logger.error(f"Unauthorized access for model {model_name}: {error_text}")
+                    _safe_log_error(logger.error, f"Unauthorized access for model {model_name}: {error_text}")
                     return False, "Invalid API key. Please check your Hugging Face API key."
                 
                 elif response.status == 404:  # Model not found
                     error_text = await response.text()
-                    logger.error(f"Model not found: {model_name} - {error_text}")
+                    _safe_log_error(logger.error, f"Model not found: {model_name} - {error_text}")
                     return False, f"Model '{model_name}' not found or not accessible. This may be due to 2025 API changes."
                 
                 elif response.status == 400:  # Bad request - often API format issues
                     error_text = await response.text()
-                    logger.error(f"Bad request for model {model_name}: {error_text}")
+                    _safe_log_error(logger.error, f"Bad request for model {model_name}: {error_text}")
                     return False, f"Invalid request format for model '{model_name}'. This model may require a different API endpoint."
                 
                 else:
                     error_text = await response.text()
-                    logger.error(f"API call failed with status {response.status}: {error_text}")
+                    _safe_log_error(logger.error, f"API call failed with status {response.status}: {error_text}")
                     return False, f"API error (HTTP {response.status}): {error_text}"
                     
         except asyncio.TimeoutError:
@@ -129,7 +174,7 @@ class ModelCaller:
             return False, "Request timed out after multiple attempts. The model may be overloaded."
         
         except aiohttp.ClientConnectorError as e:
-            logger.error(f"Connection error calling model {model_name}: {e}")
+            _safe_log_error(logger.error, f"Connection error calling model {model_name}: {e}")
             if retries < Config.MAX_RETRIES:
                 logger.info(f"Retrying {model_name} due to connection error (attempt {retries + 1})")
                 await asyncio.sleep(Config.RETRY_DELAY * 2)  # Longer wait for connection issues
@@ -137,15 +182,16 @@ class ModelCaller:
             return False, "Network connection error. Please check your internet connection and try again."
         
         except aiohttp.ContentTypeError as e:
-            logger.error(f"Content type error calling model {model_name}: {e}")
+            _safe_log_error(logger.error, f"Content type error calling model {model_name}: {e}")
             return False, "Invalid response format from API. Please try again with a different model."
         
         except json.JSONDecodeError as e:
-            logger.error(f"JSON decode error calling model {model_name}: {e}")
+            _safe_log_error(logger.error, f"JSON decode error calling model {model_name}: {e}")
             return False, "Invalid JSON response from API. Please try again."
         
         except Exception as e:
-            logger.error(f"Unexpected error calling model {model_name}: {e}", exc_info=True)
+            # Use safe logging to prevent token leakage in tracebacks
+            _safe_log_error(logger.error, f"Unexpected error calling model {model_name}: {e}")
             return False, f"Unexpected error occurred. Please try again later."
     
     def _format_chat_history(self, chat_history: List[Dict], new_prompt: str) -> str:
