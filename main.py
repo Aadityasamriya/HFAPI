@@ -41,14 +41,16 @@ class AIAssistantBot:
         """Post-initialization hook for database connection"""
         try:
             if not db.connected:
+                logger.info("🔗 Connecting to database...")
                 await db.connect()
-                logger.info("Database connected via post_init")
+                logger.info("✅ Database connected via post_init")
             else:
-                logger.info("Database already connected - skipping post_init connection")
+                logger.info("✅ Database already connected - skipping post_init connection")
         except Exception as e:
-            logger.error(f"Error in post_init: {e}")
-            # Don't fail the entire bot if database connection fails in post_init
-            pass
+            logger.error(f"CRITICAL ERROR: Database connection failed in post_init: {e}")
+            logger.error("Database is required for API key storage and bot functionality")
+            # This is critical - don't let the bot continue without database
+            raise RuntimeError(f"Failed to connect to database: {e}. Bot cannot operate without database.")
     
     async def post_shutdown(self, app: Application) -> None:
         """Post-shutdown hook for cleanup"""
@@ -150,35 +152,16 @@ def main():
         Config.validate_config()
         logger.info("Configuration validated successfully")
         
-        # Build application without lifecycle hooks to avoid blocking issues
+        # Build application with lifecycle hooks for proper database connection
         if not Config.TELEGRAM_BOT_TOKEN:
             raise ValueError("TELEGRAM_BOT_TOKEN is required")
-        bot.application = Application.builder().token(Config.TELEGRAM_BOT_TOKEN).build()
+        bot.application = Application.builder().token(Config.TELEGRAM_BOT_TOKEN).post_init(bot.post_init).post_shutdown(bot.post_shutdown).build()
         
         # Register handlers
         bot._register_handlers()
         logger.info("Bot handlers registered successfully")
         
         logger.info("Starting AI Assistant Pro bot...")
-        
-        # Connect to database before starting polling - REQUIRED for bot functionality
-        logger.info("🔗 Initializing database connection...")
-        try:
-            if not db.connected:
-                # Database connection is critical - fail fast if it fails
-                async def init_db():
-                    await db.connect()
-                    logger.info("✅ Database connected successfully")
-                
-                asyncio.run(init_db())
-            else:
-                logger.info("✅ Database already connected")
-        except Exception as e:
-            logger.error(f"CRITICAL ERROR: Database connection failed: {e}")
-            logger.error("Database is required for API key storage and bot functionality")
-            logger.error("Please check your MONGO_URI and database configuration")
-            raise RuntimeError(f"Failed to connect to database: {e}. Bot cannot operate without database.")
-        
         logger.info("🎯 Initializing Telegram polling...")
         logger.info("🚀 AI Assistant Pro is now running! Bot will run indefinitely...")
         logger.info("✨ Using latest 2024-2025 AI models: FLUX.1, StarCoder2-15B, Llama-3.2, Qwen2.5")
