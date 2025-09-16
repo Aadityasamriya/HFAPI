@@ -96,6 +96,9 @@ class Database:
             self.connected = True
             logger.info("✅ Successfully connected to MongoDB with security validation and performance optimizations")
             
+            # Ensure proper indexing after successful connection
+            await self._ensure_indexes()
+            
         except Exception as e:
             logger.error(f"Failed to connect to MongoDB: {e}")
             self.connected = False
@@ -120,6 +123,138 @@ class Database:
                 self.connected = False
                 self.client = None
                 self.db = None
+    
+    async def _ensure_indexes(self):
+        """Ensure proper indexing on user_id for performance"""
+        try:
+            if self.db is None:
+                raise ValueError("Database not connected")
+            
+            # Create index on user_id for fast lookups and uniqueness
+            await self.db.users.create_index("user_id", unique=True)
+            logger.info("✅ Database indexes created successfully")
+            
+        except PyMongoError as e:
+            logger.error(f"Failed to create database indexes: {e}")
+            # Don't raise - indexes are performance optimization
+        except Exception as e:
+            logger.error(f"Unexpected error creating indexes: {e}")
+    
+    async def save_user_api_key(self, user_id: int, api_key: str) -> bool:
+        """
+        Save or update user's Hugging Face API key in MongoDB
+        
+        Args:
+            user_id (int): Telegram user ID
+            api_key (str): Hugging Face API key
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            if not self.connected or self.db is None:
+                raise ValueError("Database not connected")
+            
+            if not isinstance(user_id, int):
+                raise ValueError("user_id must be an integer")
+            
+            if not isinstance(api_key, str) or not api_key.strip():
+                raise ValueError("api_key must be a non-empty string")
+            
+            # Use upsert to insert or update the user document
+            result = await self.db.users.update_one(
+                {"user_id": user_id},
+                {"$set": {"user_id": user_id, "hf_api_key": api_key.strip()}},
+                upsert=True
+            )
+            
+            if result.acknowledged:
+                action = "updated" if result.matched_count > 0 else "created"
+                logger.info(f"✅ Successfully {action} API key for user {user_id}")
+                return True
+            else:
+                logger.error(f"Failed to save API key for user {user_id} - operation not acknowledged")
+                return False
+                
+        except PyMongoError as e:
+            logger.error(f"MongoDB error saving API key for user {user_id}: {e}")
+            return False
+        except Exception as e:
+            logger.error(f"Unexpected error saving API key for user {user_id}: {e}")
+            return False
+    
+    async def get_user_api_key(self, user_id: int) -> str | None:
+        """
+        Retrieve user's Hugging Face API key from MongoDB
+        
+        Args:
+            user_id (int): Telegram user ID
+            
+        Returns:
+            str | None: API key if found, None otherwise
+        """
+        try:
+            if not self.connected or self.db is None:
+                raise ValueError("Database not connected")
+            
+            if not isinstance(user_id, int):
+                raise ValueError("user_id must be an integer")
+            
+            # Find user document by user_id
+            user_doc = await self.db.users.find_one({"user_id": user_id})
+            
+            if user_doc and "hf_api_key" in user_doc:
+                api_key = user_doc["hf_api_key"]
+                if isinstance(api_key, str) and api_key.strip():
+                    logger.info(f"✅ Retrieved API key for user {user_id}")
+                    return api_key.strip()
+            
+            logger.info(f"No API key found for user {user_id}")
+            return None
+                
+        except PyMongoError as e:
+            logger.error(f"MongoDB error retrieving API key for user {user_id}: {e}")
+            return None
+        except Exception as e:
+            logger.error(f"Unexpected error retrieving API key for user {user_id}: {e}")
+            return None
+    
+    async def reset_user_database(self, user_id: int) -> bool:
+        """
+        Delete user's entire document from MongoDB
+        
+        Args:
+            user_id (int): Telegram user ID
+            
+        Returns:
+            bool: True if successful or user didn't exist, False on error
+        """
+        try:
+            if not self.connected or self.db is None:
+                raise ValueError("Database not connected")
+            
+            if not isinstance(user_id, int):
+                raise ValueError("user_id must be an integer")
+            
+            # Delete the user document
+            result = await self.db.users.delete_one({"user_id": user_id})
+            
+            if result.acknowledged:
+                if result.deleted_count > 0:
+                    logger.info(f"✅ Successfully deleted user data for user {user_id}")
+                else:
+                    logger.info(f"No data found to delete for user {user_id}")
+                return True
+            else:
+                logger.error(f"Failed to delete user data for user {user_id} - operation not acknowledged")
+                return False
+                
+        except PyMongoError as e:
+            logger.error(f"MongoDB error deleting user data for user {user_id}: {e}")
+            return False
+        except Exception as e:
+            logger.error(f"Unexpected error deleting user data for user {user_id}: {e}")
+            return False
 
 # Global database instance
 db = Database()
