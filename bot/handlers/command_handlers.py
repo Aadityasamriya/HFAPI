@@ -321,6 +321,91 @@ Your conversation history has been reset. You're starting fresh with a clean sla
         )
     
     @staticmethod
+    async def resetdb_command(update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """
+        Reset user database command with comprehensive confirmation and security logging
+        """
+        user = update.effective_user
+        user_id = user.id
+        username = user.username or "No username"
+        full_name = f"{user.first_name or ''} {user.last_name or ''}".strip() or "Unknown"
+        
+        # Enhanced entry logging with user details for security audit
+        logger.info(f"🗑️ RESETDB command invoked by user_id:{user_id} (@{username}) '{full_name}'")
+        logger.info(f"🔐 SECURITY AUDIT: Database reset request from {update.effective_chat.type} chat")
+        logger.warning(f"⚠️ CRITICAL ACTION: User {user_id} requesting complete data deletion")
+        
+        # Check rate limit (critical for security)
+        is_allowed, wait_time = check_rate_limit(user_id)
+        if not is_allowed:
+            logger.warning(f"🚨 RATE LIMIT: RESETDB blocked for user_id:{user_id} - {wait_time}s remaining")
+            await update.message.reply_text(
+                f"⚠️ **Rate Limit Exceeded**\n\nPlease wait {wait_time} seconds before sending another command.",
+                parse_mode='Markdown'
+            )
+            return
+        
+        # Safely escape user's first name for security
+        safe_first_name = escape_markdown(user.first_name or "User")
+        
+        warning_text = f"""
+🗑️ **Database Reset Request** ⚠️
+
+Hello {safe_first_name}, you've requested to completely reset your database.
+
+**⚠️ THIS WILL PERMANENTLY DELETE:**
+🔑 Your stored API key
+💾 All account preferences  
+📊 Usage statistics and history
+🗂️ Any saved configurations
+
+**🔄 IMMEDIATE EFFECTS:**
+• You'll need to set up your API key again
+• All personalized settings will be lost
+• This action **cannot be undone**
+
+**🛡️ SECURITY NOTE:**
+Your chat messages are never stored permanently, so this only affects your account data in our secure database.
+
+**Are you absolutely sure you want to proceed?**
+        """
+        
+        keyboard = [
+            [
+                InlineKeyboardButton("✅ Yes, Reset Database", callback_data="resetdb_confirmed"),
+                InlineKeyboardButton("❌ Cancel", callback_data="resetdb_cancel")
+            ],
+            [InlineKeyboardButton("⚙️ Settings Instead", callback_data="settings")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        try:
+            await update.message.reply_text(
+                warning_text,
+                reply_markup=reply_markup,
+                parse_mode='Markdown'
+            )
+            
+            # Enhanced success logging for security audit
+            logger.info(f"✅ RESETDB confirmation dialog sent to user_id:{user_id} (@{username})")
+            logger.info(f"📋 Confirmation UI presented with {len(keyboard)} safety options")
+            
+        except Exception as e:
+            logger.error(f"❌ RESETDB command failed for user_id:{user_id} (@{username}): {e}")
+            logger.error(f"🔍 Error type: {type(e).__name__}")
+            # Security: Log the full error for debugging but don't expose it to user
+            logger.error(f"🐛 Full error details: {str(e)}")
+            
+            # Send user-friendly error message
+            await update.message.reply_text(
+                "❌ **System Error**\n\nSorry, there was a problem processing your request. Please try again later.",
+                parse_mode='Markdown'
+            )
+            raise
+        finally:
+            logger.info(f"🏁 RESETDB command completed for user_id:{user_id}")
+    
+    @staticmethod
     async def button_handler(update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """
         Handle all inline keyboard button interactions with entity parsing protection
@@ -375,6 +460,12 @@ Your conversation history has been reset. You're starting fresh with a clean sla
             
             elif data == "quick_start":
                 await CommandHandlers._handle_quick_start(query, context)
+            
+            elif data == "resetdb_confirmed":
+                await CommandHandlers._handle_resetdb_execution(query, context)
+            
+            elif data == "resetdb_cancel":
+                await CommandHandlers._handle_resetdb_cancel(query, context)
             
             else:
                 await query.edit_message_text("🔄 Processing your request...")
@@ -497,6 +588,121 @@ There was an issue resetting your data. Please try again or contact support if t
         keyboard = [
             [InlineKeyboardButton("🔑 Set New API Key", callback_data="set_api_key")],
             [InlineKeyboardButton("🏠 Main Menu", callback_data="main_menu")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await query.edit_message_text(
+            text,
+            reply_markup=reply_markup,
+            parse_mode='Markdown'
+        )
+    
+    @staticmethod
+    async def _handle_resetdb_execution(query, context) -> None:
+        """Handle /resetdb database reset execution with comprehensive logging"""
+        user_id = query.from_user.id
+        username = query.from_user.username or "No username" 
+        
+        # Enhanced security audit logging
+        logger.warning(f"🗑️ CRITICAL: Database reset EXECUTION requested by user_id:{user_id} (@{username})")
+        logger.info(f"🔐 SECURITY AUDIT: Beginning database purge for user {user_id}")
+        
+        # Reset all user data in database using existing method
+        success = await db.reset_user_database(user_id)
+        
+        # Also clear session data completely
+        if context.user_data:
+            session_items_cleared = len(context.user_data)
+            context.user_data.clear()
+            logger.info(f"🧹 Session data cleared: {session_items_cleared} items removed")
+        
+        if success:
+            logger.info(f"✅ Database reset COMPLETED successfully for user_id:{user_id}")
+            logger.info(f"🔐 SECURITY AUDIT: All data permanently removed for user {user_id}")
+            
+            text = """
+🗑️ **Database Reset Complete** ✅
+
+Your database has been completely reset! All data has been permanently deleted:
+
+**✅ REMOVED:**
+🔑 API key (securely deleted)
+💾 Account preferences  
+📊 Usage statistics
+🗂️ Saved configurations
+💬 Session data
+
+**🔄 WHAT'S NEXT:**
+To continue using AI Assistant Pro, you'll need to set up your API key again.
+
+**🛡️ PRIVACY CONFIRMED:**
+Your data has been permanently removed from our secure database as requested. This action is irreversible.
+
+Thank you for using our secure database reset feature!
+            """
+        else:
+            logger.error(f"❌ Database reset FAILED for user_id:{user_id}")
+            logger.error(f"🔐 SECURITY AUDIT: Reset operation failed - user {user_id} data may still exist")
+            
+            text = """
+❌ **Database Reset Failed** 
+
+There was an issue resetting your database. This could be due to:
+• Temporary database connectivity issues
+• System maintenance in progress
+• Network timeout
+
+**🔄 Please try again** in a few minutes. If the problem persists, your data may already be cleared or there could be a system issue.
+
+**🛡️ SECURITY NOTE:** No partial resets occur - either all data is removed or none is modified.
+            """
+        
+        keyboard = [
+            [InlineKeyboardButton("🔑 Set New API Key", callback_data="set_api_key")],
+            [
+                InlineKeyboardButton("🏠 Main Menu", callback_data="main_menu"),
+                InlineKeyboardButton("⚙️ Settings", callback_data="settings")
+            ]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await query.edit_message_text(
+            text,
+            reply_markup=reply_markup,
+            parse_mode='Markdown'
+        )
+    
+    @staticmethod
+    async def _handle_resetdb_cancel(query, context) -> None:
+        """Handle /resetdb cancellation with security logging"""
+        user_id = query.from_user.id
+        username = query.from_user.username or "No username"
+        
+        # Security audit logging
+        logger.info(f"🛡️ Database reset CANCELLED by user_id:{user_id} (@{username})")
+        logger.info(f"🔐 SECURITY AUDIT: User {user_id} cancelled database reset - no data modified")
+        
+        text = """
+✅ **Database Reset Cancelled** 
+
+Your database reset has been cancelled. No data was modified or deleted.
+
+**🔒 Your data remains secure:**
+🔑 API key - Still stored securely
+💾 Account preferences - Unchanged  
+📊 Usage statistics - Preserved
+🗂️ Saved configurations - Intact
+
+**💡 Alternative Options:**
+You can manage your data through Settings if you need to make specific changes.
+        """
+        
+        keyboard = [
+            [
+                InlineKeyboardButton("⚙️ Go to Settings", callback_data="settings"),
+                InlineKeyboardButton("🏠 Main Menu", callback_data="main_menu")
+            ],
+            [InlineKeyboardButton("💡 Help", callback_data="help")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         

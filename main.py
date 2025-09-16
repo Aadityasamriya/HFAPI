@@ -25,9 +25,9 @@ logging.basicConfig(
     level=logging.INFO
 )
 
-# Enhanced logging levels for better observability
-# Set to INFO instead of WARNING to capture useful telemetry
-logging.getLogger('httpx').setLevel(logging.INFO)
+# Enhanced logging levels for better observability  
+# Set httpx to WARNING to prevent token leakage in logs
+logging.getLogger('httpx').setLevel(logging.WARNING)
 logging.getLogger('telegram').setLevel(logging.INFO)
 logging.getLogger('telegram.ext').setLevel(logging.INFO)
 
@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 
 # Enhanced observability logging (after logger is defined)
 logger.info("📊 Enhanced logging levels configured for observability")
-logger.info("🔍 Telegram/HTTP logs set to INFO for telemetry visibility")
+logger.info("🔍 HTTP logs set to WARNING for security, Telegram logs at INFO")
 
 class AIAssistantBot:
     """Main bot application class with comprehensive observability"""
@@ -84,7 +84,8 @@ class AIAssistantBot:
                 BotCommand("start", "🚀 Welcome and setup"),
                 BotCommand("newchat", "🔄 Clear chat history"), 
                 BotCommand("settings", "⚙️ Bot settings"),
-                BotCommand("help", "❓ Get help")
+                BotCommand("help", "❓ Get help"),
+                BotCommand("resetdb", "🗑️ Reset database")
             ]
             
             await app.bot.set_my_commands(commands)
@@ -173,6 +174,7 @@ class AIAssistantBot:
         self.application.add_handler(CommandHandler("newchat", command_handlers.newchat_command))
         self.application.add_handler(CommandHandler("settings", command_handlers.settings_command))
         self.application.add_handler(CommandHandler("help", command_handlers.help_command))
+        self.application.add_handler(CommandHandler("resetdb", command_handlers.resetdb_command))
         
         # Callback query handler for inline keyboards
         self.application.add_handler(CallbackQueryHandler(command_handlers.button_handler))
