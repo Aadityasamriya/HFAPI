@@ -256,43 +256,70 @@ Your conversation history has been reset. You're starting fresh with a clean sla
     @staticmethod
     async def button_handler(update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """
-        Handle all inline keyboard button interactions
+        Handle all inline keyboard button interactions with entity parsing protection
         """
-        query = update.callback_query
-        await query.answer()
-        
-        user_id = query.from_user.id
-        data = query.data
-        
-        if data == "set_api_key":
-            await CommandHandlers._handle_api_key_setup(query, context)
-        
-        elif data == "settings":
-            await CommandHandlers._handle_settings_display(query, context)
-        
-        elif data == "help":
-            await CommandHandlers._handle_help_display(query, context)
-        
-        elif data == "confirm_reset":
-            await CommandHandlers._handle_reset_confirmation(query, context)
-        
-        elif data == "reset_confirmed":
-            await CommandHandlers._handle_data_reset(query, context)
-        
-        elif data == "usage_stats":
-            await CommandHandlers._handle_usage_stats(query, context)
-        
-        elif data == "model_info":
-            await CommandHandlers._handle_model_info(query, context)
-        
-        elif data == "examples":
-            await CommandHandlers._handle_examples(query, context)
-        
-        elif data == "quick_start":
-            await CommandHandlers._handle_quick_start(query, context)
-        
-        else:
-            await query.edit_message_text("🔄 Processing your request...")
+        try:
+            query = update.callback_query
+            await query.answer()
+            
+            # Safely extract user data with entity parsing protection
+            try:
+                user_id = query.from_user.id
+                data = query.data
+            except Exception as entity_error:
+                logger.warning(f"Entity parsing error in button handler: {entity_error}")
+                # Try alternative extraction methods
+                try:
+                    raw_query = update.to_dict().get('callback_query', {})
+                    user_id = raw_query.get('from', {}).get('id', 0)
+                    data = raw_query.get('data', '')
+                except Exception:
+                    logger.error("Failed to extract callback query data, ignoring request")
+                    return
+                    
+            if not data:
+                logger.warning("Empty callback data received")
+                return
+            
+            # Process the button click
+            if data == "set_api_key":
+                await CommandHandlers._handle_api_key_setup(query, context)
+            
+            elif data == "settings":
+                await CommandHandlers._handle_settings_display(query, context)
+            
+            elif data == "help":
+                await CommandHandlers._handle_help_display(query, context)
+            
+            elif data == "confirm_reset":
+                await CommandHandlers._handle_reset_confirmation(query, context)
+            
+            elif data == "reset_confirmed":
+                await CommandHandlers._handle_data_reset(query, context)
+            
+            elif data == "usage_stats":
+                await CommandHandlers._handle_usage_stats(query, context)
+            
+            elif data == "model_info":
+                await CommandHandlers._handle_model_info(query, context)
+            
+            elif data == "examples":
+                await CommandHandlers._handle_examples(query, context)
+            
+            elif data == "quick_start":
+                await CommandHandlers._handle_quick_start(query, context)
+            
+            else:
+                await query.edit_message_text("🔄 Processing your request...")
+                
+        except Exception as e:
+            logger.error(f"Error in button handler: {e}")
+            # Try to respond to user even if there's an error
+            try:
+                if hasattr(update, 'callback_query') and update.callback_query:
+                    await update.callback_query.edit_message_text("❌ **Button Error**\n\nSorry, there was an issue processing your button click. Please try again.")
+            except Exception:
+                pass  # If even error response fails, just log and continue
     
     @staticmethod
     async def _handle_api_key_setup(query, context) -> None:
