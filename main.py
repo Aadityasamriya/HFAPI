@@ -5,6 +5,7 @@ Sophisticated AI orchestrator with intelligent model routing
 
 import asyncio
 import logging
+from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters
 
 from bot.config import Config
@@ -52,6 +53,8 @@ class AIAssistantBot:
             logger.info("Database connected successfully")
             
             # Create application
+            if not Config.TELEGRAM_BOT_TOKEN:
+                raise ValueError("TELEGRAM_BOT_TOKEN is required")
             self.application = Application.builder().token(Config.TELEGRAM_BOT_TOKEN).build()
             
             # Register handlers
@@ -66,6 +69,9 @@ class AIAssistantBot:
     
     def _register_handlers(self):
         """Register all bot handlers"""
+        if self.application is None:
+            raise RuntimeError("Application not initialized")
+            
         # Command handlers
         self.application.add_handler(CommandHandler("start", command_handlers.start_command))
         self.application.add_handler(CommandHandler("newchat", command_handlers.newchat_command))
@@ -89,6 +95,9 @@ class AIAssistantBot:
         """Start the bot with polling"""
         try:
             logger.info("Starting AI Assistant Pro bot...")
+            
+            if self.application is None:
+                raise RuntimeError("Application not initialized")
             
             # Start polling using run_polling which handles the event loop
             self.application.run_polling(
@@ -128,6 +137,8 @@ def main():
         logger.info("Configuration validated successfully")
         
         # Build application with lifecycle hooks
+        if not Config.TELEGRAM_BOT_TOKEN:
+            raise ValueError("TELEGRAM_BOT_TOKEN is required")
         bot.application = Application.builder().token(Config.TELEGRAM_BOT_TOKEN).post_init(bot.post_init).post_shutdown(bot.post_shutdown).build()
         
         # Register handlers

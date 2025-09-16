@@ -69,7 +69,7 @@ Hello {user.first_name}! I'm your sophisticated AI companion powered by cutting-
         user_id = update.effective_user.id
         
         # Clear chat history from context
-        if 'chat_history' in context.user_data:
+        if context.user_data is not None and 'chat_history' in context.user_data:
             context.user_data['chat_history'] = []
         
         success_text = """

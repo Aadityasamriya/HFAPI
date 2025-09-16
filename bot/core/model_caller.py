@@ -115,7 +115,7 @@ class ModelCaller:
         
         return "\n".join(formatted_messages)
     
-    async def generate_text(self, prompt: str, api_key: str, chat_history: List[Dict] = None, model_override: str = None) -> Tuple[bool, str]:
+    async def generate_text(self, prompt: str, api_key: str, chat_history: Optional[List[Dict]] = None, model_override: Optional[str] = None) -> Tuple[bool, str]:
         """
         Generate text using advanced language models
         

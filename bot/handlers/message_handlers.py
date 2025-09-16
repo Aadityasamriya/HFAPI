@@ -29,7 +29,7 @@ class MessageHandlers:
         message_text = update.message.text
         
         # Check if bot is waiting for API key
-        if context.user_data.get('waiting_for_api_key', False):
+        if context.user_data is not None and context.user_data.get('waiting_for_api_key', False):
             await MessageHandlers._handle_api_key_input(update, context, message_text)
             return
         
@@ -44,7 +44,7 @@ class MessageHandlers:
         
         try:
             # Get or initialize chat history
-            chat_history = context.user_data.get('chat_history', [])
+            chat_history = context.user_data.get('chat_history', []) if context.user_data is not None else []
             
             # Analyze prompt and route to appropriate model
             intent, routing_info = router.route_prompt(message_text)
@@ -101,7 +101,8 @@ class MessageHandlers:
                 save_success = await db.save_user_api_key(user_id, api_key)
                 
                 if save_success:
-                    context.user_data['waiting_for_api_key'] = False
+                    if context.user_data is not None:
+                        context.user_data['waiting_for_api_key'] = False
                     
                     success_text = """
 ✅ **API Key Configured Successfully!** 🎉
@@ -163,7 +164,8 @@ To use AI Assistant Pro, you need to configure your Hugging Face API key.
 Use `/start` for detailed setup instructions.
         """
         
-        context.user_data['waiting_for_api_key'] = True
+        if context.user_data is not None:
+            context.user_data['waiting_for_api_key'] = True
         
         await update.message.reply_text(
             setup_text,
@@ -188,13 +190,14 @@ Use `/start` for detailed setup instructions.
                     prompt, 
                     api_key, 
                     chat_history[:-1],  # Exclude the current message
-                    routing_info.get('recommended_model')
+                    routing_info.get('recommended_model') or Config.DEFAULT_TEXT_MODEL
                 )
             
             if success and response:
                 # Update chat history with assistant response
                 chat_history.append({'role': 'assistant', 'content': response})
-                context.user_data['chat_history'] = chat_history
+                if context.user_data is not None:
+                    context.user_data['chat_history'] = chat_history
                 
                 # Format response with smart features info
                 formatted_response = f"🤖 **AI Response** ({routing_info['primary_intent'].value})\n\n{response}"

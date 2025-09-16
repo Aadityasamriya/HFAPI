@@ -5,7 +5,7 @@ Analyzes user prompts to determine the best Hugging Face model to use
 
 import re
 import logging
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Any
 from enum import Enum
 
 logger = logging.getLogger(__name__)
@@ -89,7 +89,7 @@ class IntelligentRouter:
             ]
         }
     
-    def analyze_prompt_complexity(self, prompt: str) -> Dict[str, any]:
+    def analyze_prompt_complexity(self, prompt: str) -> Dict[str, Any]:
         """
         Analyze prompt characteristics for better model selection
         
@@ -103,7 +103,7 @@ class IntelligentRouter:
             'length': len(prompt),
             'word_count': len(prompt.split()),
             'has_code_blocks': bool(re.search(r'```|`[^`]+`', prompt)),
-            'has_technical_terms': any(term in prompt.lower() for term in self.programming_languages),
+            'has_technical_terms': any(term in prompt.lower() for term in list(self.programming_languages)),
             'has_questions': bool(re.search(r'\?', prompt)),
             'complexity_score': 0,
             'requires_context': False,
