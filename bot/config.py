@@ -36,10 +36,16 @@ class Config:
     @classmethod
     def validate_config(cls):
         """Validate that all required environment variables are set"""
-        required_vars = ['TELEGRAM_BOT_TOKEN', 'OWNER_ID', 'MONGO_URI']
+        required_vars = ['TELEGRAM_BOT_TOKEN', 'MONGO_URI']
         missing_vars = [var for var in required_vars if not getattr(cls, var)]
         
         if missing_vars:
             raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
+        
+        # OWNER_ID is optional - log if not provided
+        if not cls.OWNER_ID:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info("OWNER_ID not provided - admin features will be disabled")
         
         return True
