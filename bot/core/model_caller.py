@@ -90,12 +90,11 @@ class ModelCaller:
         Returns:
             Tuple[bool, Any]: (success, response_data)
         """
-        # Use different endpoints based on type for 2025 API changes
-        if endpoint_type == "chat":
-            url = f"https://api-inference.huggingface.co/models/{model_name}/v1/chat/completions"
-        elif endpoint_type == "text2img":
+        # Use different endpoints based on type for 2025 API changes  
+        if endpoint_type == "text2img":
             url = f"https://api-inference.huggingface.co/models/{model_name}"
         else:
+            # All text models (including chat-style models) use the standard inference endpoint
             url = f"https://api-inference.huggingface.co/models/{model_name}"
             
         headers = {
@@ -371,7 +370,7 @@ class ModelCaller:
         # Try fallback models with different strategies
         fallback_models = [
             (Config.FALLBACK_CODE_MODEL, f"# Generate {language} code for: {prompt}\n\n"),
-            (Config.CODE_INSTRUCT_MODEL, f"Write {language} code to {prompt}"),
+            (Config.ADVANCED_CODE_MODEL, f"Write {language} code to {prompt}"),
             (Config.ADVANCED_TEXT_MODEL, f"Please write {language} code that does the following: {prompt}")
         ]
         
@@ -402,7 +401,7 @@ class ModelCaller:
     
     async def generate_image(self, prompt: str, api_key: str, special_params: Optional[Dict] = None) -> Tuple[bool, bytes]:
         """
-        Generate image using state-of-the-art FLUX.1 model
+        Generate image with smart fallbacks - prefer reliable models for serverless
         
         Args:
             prompt (str): Image generation prompt
@@ -413,52 +412,70 @@ class ModelCaller:
             Tuple[bool, bytes]: (success, image_bytes)
         """
         special_params = special_params or {}
-        model_name = Config.DEFAULT_IMAGE_MODEL  # FLUX.1-schnell
         
-        # Enhanced prompt for FLUX.1 - more detailed and artistic
-        style_enhancers = "professional photography, high quality, detailed, sharp focus, vibrant colors"
-        enhanced_prompt = f"{prompt}, {style_enhancers}"
+        # Smart serverless-aware model selection (prefer stable models)
+        is_complex_request = len(prompt) > 100 or any(word in prompt.lower() for word in ['detailed', 'complex', 'professional', 'artistic', 'photorealistic'])
         
-        # FLUX.1-schnell optimized parameters (4 steps for speed)
-        payload = {
-            "inputs": enhanced_prompt,
-            "parameters": {
-                "guidance_scale": special_params.get('guidance_scale', 7.5),
-                "num_inference_steps": special_params.get('num_inference_steps', 4),  # FLUX.1-schnell optimized
-                "width": special_params.get('width', 1024),
-                "height": special_params.get('height', 1024),
-                "seed": -1  # Random seed for variety
+        if is_complex_request:
+            model_name = Config.DEFAULT_IMAGE_MODEL  # FLUX.1-schnell for complex requests
+            # FLUX.1-schnell specific payload (guidance-free diffusion)
+            payload = {
+                "inputs": f"{prompt}, high quality, detailed, sharp focus",
+                "parameters": {
+                    "num_inference_steps": special_params.get('num_inference_steps', 4),  # FLUX.1-schnell optimized
+                    "width": special_params.get('width', 1024),
+                    "height": special_params.get('height', 1024)
+                    # Note: FLUX.1-schnell doesn't use guidance_scale (guidance-free)
+                }
             }
-        }
-        
-        success, result = await self._make_api_call(model_name, payload, api_key, endpoint_type="text2img")
-        
-        if success and isinstance(result, bytes):
-            return True, result
-        
-        # Try fallback image models with appropriate configurations
-        fallback_models = [
-            (Config.FALLBACK_IMAGE_MODEL, {
-                "inputs": enhanced_prompt,
+        else:
+            # Use more reliable fallback model for simple requests
+            model_name = Config.FALLBACK_IMAGE_MODEL  # SD 3.5 - more serverless-compatible
+            payload = {
+                "inputs": prompt,
                 "parameters": {
                     "guidance_scale": special_params.get('guidance_scale', 7.5),
                     "num_inference_steps": special_params.get('num_inference_steps', 20),
                     "width": special_params.get('width', 512),
                     "height": special_params.get('height', 512)
                 }
-            }),
-            (Config.ALTERNATIVE_IMAGE_MODEL, {
-                "inputs": prompt,  # Simpler prompt for fallback
+            }
+        
+        success, result = await self._make_api_call(model_name, payload, api_key, endpoint_type="text2img")
+        
+        if success and isinstance(result, bytes):
+            return True, result
+        
+        # Smart fallback system with serverless-optimized models
+        fallback_models = [
+            # Most reliable serverless model first
+            (Config.FALLBACK_IMAGE_MODEL, {
+                "inputs": prompt,
                 "parameters": {
                     "guidance_scale": 7.5,
-                    "num_inference_steps": 15
+                    "num_inference_steps": 15,
+                    "width": 512,
+                    "height": 512
                 }
+            }),
+            # Simplified FLUX.1 (if primary was SD)
+            (Config.DEFAULT_IMAGE_MODEL if model_name != Config.DEFAULT_IMAGE_MODEL else Config.ADVANCED_IMAGE_MODEL, {
+                "inputs": prompt,
+                "parameters": {
+                    "num_inference_steps": 4,  # Minimal steps for faster generation
+                    "width": 512,
+                    "height": 512
+                }
+            }),
+            # Last resort - simplest possible payload
+            ("runwayml/stable-diffusion-v1-5", {
+                "inputs": prompt
             })
         ]
         
         for fallback_model, fallback_payload in fallback_models:
             if model_name != fallback_model:
-                logger.info(f"Trying fallback image model {fallback_model}")
+                logger.info(f"Trying serverless-optimized fallback model {fallback_model}")
                 fallback_success, fallback_result = await self._make_api_call(
                     fallback_model, fallback_payload, api_key, endpoint_type="text2img"
                 )
@@ -508,9 +525,9 @@ class ModelCaller:
                 }
         
         # Try fallback sentiment model
-        if not success and model_name != Config.SIMPLE_SENTIMENT_MODEL:
-            logger.info(f"Trying fallback sentiment model {Config.SIMPLE_SENTIMENT_MODEL}")
-            fallback_success, fallback_result = await self._make_api_call(Config.SIMPLE_SENTIMENT_MODEL, payload, api_key)
+        if not success and model_name != Config.FALLBACK_SENTIMENT_MODEL:
+            logger.info(f"Trying fallback sentiment model {Config.FALLBACK_SENTIMENT_MODEL}")
+            fallback_success, fallback_result = await self._make_api_call(Config.FALLBACK_SENTIMENT_MODEL, payload, api_key)
             
             if fallback_success and isinstance(fallback_result, list):
                 return True, {

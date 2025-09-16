@@ -225,7 +225,7 @@ class IntelligentRouter:
             'confidence': confidence,
             'all_intents': intent_scores,
             'analysis': analysis,
-            'recommended_model': self._get_recommended_model(primary_intent, analysis),
+            'recommended_model': self._get_recommended_model(primary_intent, analysis, prompt),
             'special_parameters': self._get_special_parameters(primary_intent, analysis)
         }
         
@@ -233,48 +233,52 @@ class IntelligentRouter:
         
         return primary_intent, routing_info
     
-    def _get_recommended_model(self, intent: IntentType, analysis: Dict) -> str:
-        """Get recommended model based on intent and analysis with advanced 2024-2025 models"""
+    def _get_recommended_model(self, intent: IntentType, analysis: Dict, original_prompt: str = "") -> str:
+        """Get recommended model based on intent and analysis with 2024-2025 STATE-OF-THE-ART models"""
         from bot.config import Config
         
         # Advanced model selection based on complexity and context
         if intent == IntentType.TEXT_GENERATION:
-            # Use advanced model for complex requests
-            if analysis.get('complexity_score', 0) > 3 or analysis.get('requires_context'):
-                return Config.ADVANCED_TEXT_MODEL  # Qwen2.5-7B for complex tasks
+            # Use smaller model by default for serverless compatibility, larger only for very complex requests
+            if analysis.get('complexity_score', 0) > 5 or analysis.get('requires_context'):
+                return Config.DEFAULT_TEXT_MODEL  # Qwen2.5-72B for highly complex tasks
             else:
-                return Config.DEFAULT_TEXT_MODEL  # Llama-3.2-3B for general use
+                return Config.ADVANCED_TEXT_MODEL  # Qwen2.5-7B for general use (fast & reliable)
         
         elif intent == IntentType.CODE_GENERATION:
-            # Latest StarCoder2 for all code generation
-            return Config.DEFAULT_CODE_MODEL  # StarCoder2-15B
+            # Use smaller model by default for serverless compatibility
+            if analysis.get('complexity_score', 0) > 6:
+                return Config.DEFAULT_CODE_MODEL  # StarCoder2-15B for complex code
+            else:
+                return Config.ADVANCED_CODE_MODEL  # StarCoder2-7B for simpler code
         
         elif intent == IntentType.IMAGE_GENERATION:
-            # State-of-the-art FLUX.1 for image generation
-            return Config.DEFAULT_IMAGE_MODEL  # FLUX.1-schnell
+            # Use FLUX.1 models (SUPERIOR to Stable Diffusion, better text rendering)
+            return Config.DEFAULT_IMAGE_MODEL  # FLUX.1-schnell (commercial license, 4-step generation)
         
         elif intent == IntentType.SENTIMENT_ANALYSIS:
-            # Check if emotion detection is needed
+            # Check if emotion detection is needed - use the original prompt parameter
             emotion_keywords = ['emotion', 'feeling', 'mood', 'angry', 'happy', 'sad', 'excited']
-            if any(keyword in analysis.get('analysis', {}).get('content', '').lower() for keyword in emotion_keywords):
-                return Config.EMOTION_MODEL  # Advanced emotion detection
+            prompt_text = original_prompt.lower()
+            if any(keyword in prompt_text for keyword in emotion_keywords):
+                return Config.EMOTION_MODEL  # Multi-class emotion detection
             else:
-                return Config.DEFAULT_SENTIMENT_MODEL  # Standard sentiment
+                return Config.DEFAULT_SENTIMENT_MODEL  # Latest sentiment model (124M tweets trained)
         
         elif intent == IntentType.CREATIVE_WRITING:
-            # Use advanced text model for creative tasks
-            return Config.ADVANCED_TEXT_MODEL  # Qwen2.5-7B for creativity
+            # Use large model for creative tasks requiring high quality
+            return Config.DEFAULT_TEXT_MODEL  # Qwen2.5-72B for superior creative writing
         
         elif intent == IntentType.QUESTION_ANSWERING:
-            # Use advanced model for complex Q&A
-            return Config.ADVANCED_TEXT_MODEL  # Qwen2.5-7B for knowledge
+            # Use large model for complex Q&A requiring deep knowledge
+            return Config.DEFAULT_TEXT_MODEL  # Qwen2.5-72B for superior knowledge (131K context)
         
         elif intent == IntentType.TRANSLATION:
-            # Use multilingual model for translation
-            return Config.ADVANCED_TEXT_MODEL  # Qwen2.5 supports 29+ languages
+            # Use large multilingual model for accurate translation
+            return Config.DEFAULT_TEXT_MODEL  # Qwen2.5-72B supports 29+ languages with superior accuracy
         
-        # Default fallback
-        return Config.DEFAULT_TEXT_MODEL
+        # Default fallback to our most powerful model
+        return Config.DEFAULT_TEXT_MODEL  # Qwen2.5-72B (SUPERIOR to ChatGPT/Grok/Gemini)
     
     def _get_special_parameters(self, intent: IntentType, analysis: Dict) -> Dict:
         """Get optimized parameters for 2024-2025 models"""
