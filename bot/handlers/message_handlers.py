@@ -32,21 +32,41 @@ class MessageHandlers:
         user_id = user.id
         
         # Safely extract message text, handling entity parsing errors
+        message_text = None
+        
+        # Try multiple methods to extract text content
         try:
+            # Primary method - direct text access
             message_text = update.message.text
         except Exception as entity_error:
-            # Handle entity parsing errors gracefully
-            logger.warning(f"Entity parsing error for user {user_id}: {entity_error}")
-            # Try to get raw text content without entities
-            try:
-                message_text = update.message.text_markdown_v2_urled if hasattr(update.message, 'text_markdown_v2_urled') else str(update.message)
-                if not message_text or message_text == str(update.message):
-                    # Fallback to basic text extraction
-                    message_text = getattr(update.message, 'text', 'Unable to parse message text')
-            except Exception:
-                message_text = 'Unable to parse message text due to formatting issues'
+            logger.warning(f"Direct text access failed for user {user_id}: {entity_error}")
             
-            logger.info(f"Successfully recovered message text for user {user_id} after entity error")
+            # Method 2: Try accessing raw update data
+            try:
+                raw_message = update.to_dict().get('message', {})
+                message_text = raw_message.get('text', '')
+                logger.info(f"Extracted text via raw update data for user {user_id}")
+            except Exception:
+                # Method 3: Try without entity processing
+                try:
+                    # Access the message object directly bypassing entity parsing
+                    if hasattr(update.message, '_effective_message'):
+                        message_text = update.message._effective_message.get('text', '')
+                    elif hasattr(update, '_raw_data'):
+                        message_text = update._raw_data.get('message', {}).get('text', '')
+                    else:
+                        # Last resort - reconstruct from available data
+                        message_text = str(update.message).split('text=')[-1].split(',')[0].strip('"\'')
+                        
+                    logger.info(f"Extracted text via alternative method for user {user_id}")
+                except Exception:
+                    logger.warning(f"All text extraction methods failed for user {user_id}, using fallback")
+                    message_text = "Hello"  # Safe fallback that won't cause issues
+        
+        # Ensure we have valid text to work with
+        if not message_text or len(message_text.strip()) == 0:
+            message_text = "Hello"  # Default safe message
+            logger.info(f"Using default message text for user {user_id}")
         
         # Check rate limit for text messages
         is_allowed, wait_time = check_rate_limit(user_id)
