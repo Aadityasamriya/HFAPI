@@ -82,7 +82,8 @@ class AIAssistantBot:
             
             commands = [
                 BotCommand("start", "🚀 Welcome and setup"),
-                BotCommand("newchat", "🔄 Clear chat history"), 
+                BotCommand("newchat", "🔄 Clear chat history"),
+                BotCommand("history", "📚 View conversation history"),
                 BotCommand("settings", "⚙️ Bot settings"),
                 BotCommand("help", "❓ Get help"),
                 BotCommand("resetdb", "🗑️ Reset database")
@@ -172,6 +173,7 @@ class AIAssistantBot:
         # Command handlers
         self.application.add_handler(CommandHandler("start", command_handlers.start_command))
         self.application.add_handler(CommandHandler("newchat", command_handlers.newchat_command))
+        self.application.add_handler(CommandHandler("history", command_handlers.history_command))
         self.application.add_handler(CommandHandler("settings", command_handlers.settings_command))
         self.application.add_handler(CommandHandler("help", command_handlers.help_command))
         self.application.add_handler(CommandHandler("resetdb", command_handlers.resetdb_command))

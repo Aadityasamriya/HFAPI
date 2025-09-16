@@ -16,12 +16,128 @@ from bot.core.router import router, IntentType
 from bot.core.model_caller import ModelCaller, _redact_sensitive_data, _safe_log_error
 from bot.config import Config
 from bot.security_utils import escape_markdown, safe_markdown_format, check_rate_limit
+from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
 
 class MessageHandlers:
     """Advanced message processing with intelligent AI routing and comprehensive observability"""
+    
+    @staticmethod
+    async def _save_conversation_if_ready(user_id: int, chat_history: list, context=None) -> bool:
+        """
+        Save conversation to persistent storage if it meets criteria for saving
+        
+        Args:
+            user_id (int): User ID for the conversation
+            chat_history (list): Current chat history with user/assistant messages
+            context: Bot context (optional)
+        
+        Returns:
+            bool: True if conversation was saved, False otherwise
+        """
+        try:
+            # Only save conversations with meaningful exchanges (at least 2 messages: user + assistant)
+            if not chat_history or len(chat_history) < 2:
+                return False
+            
+            # Check if conversation has at least one user-assistant exchange
+            has_exchange = False
+            user_messages = 0
+            assistant_messages = 0
+            
+            for msg in chat_history:
+                if msg.get('role') == 'user':
+                    user_messages += 1
+                elif msg.get('role') == 'assistant':
+                    assistant_messages += 1
+            
+            has_exchange = user_messages >= 1 and assistant_messages >= 1
+            
+            if not has_exchange:
+                logger.debug(f"Conversation not ready for saving - user:{user_messages}, assistant:{assistant_messages}")
+                return False
+            
+            # Generate conversation summary from the first user message
+            first_user_msg = None
+            for msg in chat_history:
+                if msg.get('role') == 'user':
+                    first_user_msg = msg.get('content', '')
+                    break
+            
+            if not first_user_msg:
+                logger.warning(f"No user message found in chat_history for user {user_id}")
+                return False
+            
+            # Create a meaningful summary (first 100 chars of first user message)
+            summary = first_user_msg.strip()[:100]
+            if len(first_user_msg) > 100:
+                # Try to break at word boundary
+                word_boundary = summary.rfind(' ')
+                if word_boundary > 50:  # Don't make it too short
+                    summary = summary[:word_boundary]
+                summary += "..."
+            
+            # If summary is too short or generic, enhance it
+            if len(summary.strip()) < 10 or summary.lower().strip() in ['hello', 'hi', 'hey']:
+                # Try to get more context from the conversation
+                context_parts = []
+                for msg in chat_history[:4]:  # Look at first few messages
+                    content = msg.get('content', '').strip()
+                    if content and msg.get('role') == 'user' and len(content) > 10:
+                        context_parts.append(content[:50])
+                
+                if context_parts:
+                    summary = " | ".join(context_parts)[:100]
+                else:
+                    summary = "Conversation with AI Assistant"
+            
+            # Ensure summary is clean for display
+            summary = summary.replace('\n', ' ').replace('\r', ' ').strip()
+            if not summary:
+                summary = "Conversation with AI Assistant"
+            
+            # Prepare conversation data with timestamps
+            now = datetime.utcnow()
+            
+            # Add timestamps to messages that don't have them
+            messages_with_timestamps = []
+            for i, msg in enumerate(chat_history):
+                msg_with_timestamp = msg.copy()
+                if 'timestamp' not in msg_with_timestamp:
+                    # Estimate timestamps for older messages (slightly earlier)
+                    estimated_time = now - timedelta(minutes=len(chat_history) - i)
+                    msg_with_timestamp['timestamp'] = estimated_time
+                messages_with_timestamps.append(msg_with_timestamp)
+            
+            conversation_data = {
+                'messages': messages_with_timestamps,
+                'summary': summary,
+                'started_at': messages_with_timestamps[0].get('timestamp', now),
+                'last_message_at': messages_with_timestamps[-1].get('timestamp', now),
+                'message_count': len(messages_with_timestamps)
+            }
+            
+            # Save to database
+            success = await db.save_conversation(user_id, conversation_data)
+            
+            if success:
+                logger.info(f"💾 Successfully saved conversation for user {user_id}: {len(summary)} char summary ({len(messages_with_timestamps)} messages)")
+                
+                # Clear the session history since it's now saved persistently
+                if context and context.user_data is not None:
+                    context.user_data['chat_history'] = []
+                    logger.info(f"🔄 Cleared session chat_history for user {user_id} - conversation saved persistently")
+                
+                return True
+            else:
+                logger.error(f"Failed to save conversation for user {user_id}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Error saving conversation for user {user_id}: {e}")
+            return False
     
     @staticmethod
     async def text_message_handler(update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -261,8 +377,8 @@ Use `/start` for detailed setup instructions.
         """Handle intelligent text generation"""
         user_id = update.effective_user.id
         
-        # Update chat history with user message
-        chat_history.append({'role': 'user', 'content': prompt})
+        # Update chat history with user message (include timestamp)
+        chat_history.append({'role': 'user', 'content': prompt, 'timestamp': datetime.utcnow()})
         
         # Limit chat history size
         if len(chat_history) > Config.MAX_CHAT_HISTORY * 2:  # *2 for user + assistant pairs
@@ -280,7 +396,7 @@ Use `/start` for detailed setup instructions.
             
             if success and response:
                 # Update chat history with assistant response
-                chat_history.append({'role': 'assistant', 'content': response})
+                chat_history.append({'role': 'assistant', 'content': response, 'timestamp': datetime.utcnow()})
                 if context.user_data is not None:
                     context.user_data['chat_history'] = chat_history
                 
@@ -298,6 +414,17 @@ Use `/start` for detailed setup instructions.
                     formatted_response,
                     parse_mode='Markdown'
                 )
+                
+                # Save conversation to persistent storage after successful exchange
+                try:
+                    saved = await MessageHandlers._save_conversation_if_ready(user_id, chat_history, context)
+                    if saved:
+                        logger.info(f"💾 Conversation saved to persistent storage for user {user_id}")
+                    else:
+                        logger.debug(f"Conversation not yet ready for saving for user {user_id}")
+                except Exception as save_error:
+                    logger.error(f"Failed to save conversation for user {user_id}: {save_error}")
+                    # Don't fail the response if saving fails
                 
                 logger.info(f"Successfully generated text for user {user_id}")
                 
@@ -590,18 +717,34 @@ Please provide detailed analysis including key insights, patterns, and actionabl
             success, result = await model_caller.generate_text(prompt, api_key, chat_history, special_params={'temperature': 0.8})
             
             if success:
-                # Update chat history for better context
+                # Update chat history for better context (include timestamps)
                 if context.user_data is not None:
                     if 'chat_history' not in context.user_data:
                         context.user_data['chat_history'] = []
-                    context.user_data['chat_history'].append({'role': 'user', 'content': prompt})
-                    context.user_data['chat_history'].append({'role': 'assistant', 'content': result})
+                    
+                    # Add timestamped messages
+                    now = datetime.utcnow()
+                    context.user_data['chat_history'].append({'role': 'user', 'content': prompt, 'timestamp': now})
+                    context.user_data['chat_history'].append({'role': 'assistant', 'content': result, 'timestamp': now})
                     
                     # Keep only recent history
                     if len(context.user_data['chat_history']) > Config.MAX_CHAT_HISTORY * 2:
                         context.user_data['chat_history'] = context.user_data['chat_history'][-Config.MAX_CHAT_HISTORY * 2:]
                 
                 await update.message.reply_text(result, parse_mode='Markdown')
+                
+                # Save conversation to persistent storage after successful exchange
+                user_id = update.effective_user.id
+                try:
+                    chat_history = context.user_data.get('chat_history', [])
+                    saved = await MessageHandlers._save_conversation_if_ready(user_id, chat_history, context)
+                    if saved:
+                        logger.info(f"💾 Conversation saved to persistent storage for user {user_id}")
+                    else:
+                        logger.debug(f"Conversation not yet ready for saving for user {user_id}")
+                except Exception as save_error:
+                    logger.error(f"Failed to save conversation for user {user_id}: {save_error}")
+                    # Don't fail the response if saving fails
             else:
                 await update.message.reply_text("❌ **Conversation Error** - Let me try that again.", parse_mode='Markdown')
 

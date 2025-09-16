@@ -363,14 +363,28 @@ class Database:
                 self.db = None
     
     async def _ensure_indexes(self):
-        """Ensure proper indexing on user_id for performance"""
+        """Ensure proper indexing for performance on users and conversations"""
         try:
             if self.db is None:
                 raise ValueError("Database not connected")
             
-            # Create index on user_id for fast lookups and uniqueness
+            # Create index on user_id for users collection (fast lookups and uniqueness)
             await self.db.users.create_index("user_id", unique=True)
-            logger.info("✅ Database indexes created successfully")
+            
+            # Create indexes for conversations collection
+            # Primary index: user_id for fast user-based queries
+            await self.db.conversations.create_index("user_id")
+            
+            # Secondary index: user_id + last_message_at for sorted history browsing
+            await self.db.conversations.create_index([
+                ("user_id", 1),
+                ("last_message_at", -1)
+            ])
+            
+            # Index for conversation timestamp queries
+            await self.db.conversations.create_index("created_at")
+            
+            logger.info("✅ Database indexes created successfully (users + conversations)")
             
         except PyMongoError as e:
             logger.error(f"Failed to create database indexes: {e}")
@@ -515,6 +529,281 @@ class Database:
         except Exception as e:
             logger.error(f"Unexpected error deleting user data for user {user_id}: {e}")
             return False
+    
+    async def save_conversation(self, user_id: int, conversation_data: dict) -> bool:
+        """
+        Save a complete conversation with metadata for persistent chat history
+        
+        Args:
+            user_id (int): Telegram user ID
+            conversation_data (dict): Conversation data with metadata
+                Expected format:
+                {
+                    'messages': [{'role': 'user/assistant', 'content': str, 'timestamp': datetime}],
+                    'summary': str,
+                    'started_at': datetime,
+                    'last_message_at': datetime,
+                    'message_count': int
+                }
+        
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            if not self.connected or self.db is None:
+                raise ValueError("Database not connected")
+            
+            if not isinstance(user_id, int):
+                raise ValueError("user_id must be an integer")
+            
+            if not isinstance(conversation_data, dict):
+                raise ValueError("conversation_data must be a dictionary")
+            
+            # Validate required fields
+            required_fields = ['messages', 'summary', 'started_at', 'last_message_at', 'message_count']
+            for field in required_fields:
+                if field not in conversation_data:
+                    raise ValueError(f"Missing required field: {field}")
+            
+            # Add user_id and ensure proper structure
+            conversation_doc = {
+                'user_id': user_id,
+                **conversation_data,
+                'created_at': conversation_data['started_at']
+            }
+            
+            # Insert conversation into conversations collection
+            result = await self.db.conversations.insert_one(conversation_doc)
+            
+            if result.acknowledged:
+                logger.info(f"💾 Successfully saved conversation for user {user_id} (ID: {result.inserted_id})")
+                logger.info(f"📊 Conversation saved: {conversation_data['message_count']} messages, {len(conversation_data['summary'])} char summary")
+                return True
+            else:
+                logger.error(f"Failed to save conversation for user {user_id} - operation not acknowledged")
+                return False
+                
+        except ValueError as e:
+            logger.error(f"Validation error saving conversation for user {user_id}: {e}")
+            return False
+        except PyMongoError as e:
+            logger.error(f"MongoDB error saving conversation for user {user_id}: {e}")
+            return False
+        except Exception as e:
+            logger.error(f"Unexpected error saving conversation for user {user_id}: {e}")
+            return False
+    
+    async def get_user_conversations(self, user_id: int, limit: int = 20, skip: int = 0) -> list:
+        """
+        Get conversation summaries for history browsing with pagination
+        
+        Args:
+            user_id (int): Telegram user ID
+            limit (int): Maximum number of conversations to return
+            skip (int): Number of conversations to skip (for pagination)
+        
+        Returns:
+            list: List of conversation summaries sorted by last_message_at (newest first)
+        """
+        try:
+            if not self.connected or self.db is None:
+                raise ValueError("Database not connected")
+            
+            if not isinstance(user_id, int):
+                raise ValueError("user_id must be an integer")
+            
+            # Query conversations with projection to get summaries only
+            cursor = self.db.conversations.find(
+                {"user_id": user_id},
+                {
+                    "_id": 1,
+                    "summary": 1, 
+                    "started_at": 1,
+                    "last_message_at": 1,
+                    "message_count": 1,
+                    "created_at": 1
+                }
+            ).sort("last_message_at", -1).skip(skip).limit(limit)
+            
+            conversations = await cursor.to_list(length=limit)
+            
+            logger.info(f"📖 Retrieved {len(conversations)} conversation summaries for user {user_id} (skip: {skip}, limit: {limit})")
+            
+            return conversations
+            
+        except ValueError as e:
+            logger.error(f"Validation error retrieving conversations for user {user_id}: {e}")
+            return []
+        except PyMongoError as e:
+            logger.error(f"MongoDB error retrieving conversations for user {user_id}: {e}")
+            return []
+        except Exception as e:
+            logger.error(f"Unexpected error retrieving conversations for user {user_id}: {e}")
+            return []
+    
+    async def get_conversation_details(self, user_id: int, conversation_id: str) -> dict | None:
+        """
+        Get full conversation details by conversation ID
+        
+        Args:
+            user_id (int): Telegram user ID (for security)
+            conversation_id (str): MongoDB ObjectId as string
+        
+        Returns:
+            dict | None: Full conversation document or None if not found
+        """
+        try:
+            if not self.connected or self.db is None:
+                raise ValueError("Database not connected")
+            
+            if not isinstance(user_id, int):
+                raise ValueError("user_id must be an integer")
+            
+            from bson import ObjectId
+            
+            # Validate and convert conversation_id
+            try:
+                obj_id = ObjectId(conversation_id)
+            except Exception:
+                logger.warning(f"Invalid conversation_id format: {conversation_id}")
+                return None
+            
+            # Find conversation ensuring it belongs to the user (security)
+            conversation = await self.db.conversations.find_one({
+                "_id": obj_id,
+                "user_id": user_id
+            })
+            
+            if conversation:
+                logger.info(f"📄 Retrieved full conversation details for user {user_id}, conversation {conversation_id}")
+                logger.info(f"📊 Conversation has {conversation.get('message_count', 0)} messages")
+            else:
+                logger.info(f"No conversation found for user {user_id} with ID {conversation_id}")
+            
+            return conversation
+            
+        except ValueError as e:
+            logger.error(f"Validation error retrieving conversation details for user {user_id}: {e}")
+            return None
+        except PyMongoError as e:
+            logger.error(f"MongoDB error retrieving conversation details for user {user_id}: {e}")
+            return None
+        except Exception as e:
+            logger.error(f"Unexpected error retrieving conversation details for user {user_id}: {e}")
+            return None
+    
+    async def delete_conversation(self, user_id: int, conversation_id: str) -> bool:
+        """
+        Delete a specific conversation by ID
+        
+        Args:
+            user_id (int): Telegram user ID (for security)
+            conversation_id (str): MongoDB ObjectId as string
+        
+        Returns:
+            bool: True if deleted successfully, False otherwise
+        """
+        try:
+            if not self.connected or self.db is None:
+                raise ValueError("Database not connected")
+            
+            if not isinstance(user_id, int):
+                raise ValueError("user_id must be an integer")
+            
+            from bson import ObjectId
+            
+            # Validate and convert conversation_id
+            try:
+                obj_id = ObjectId(conversation_id)
+            except Exception:
+                logger.warning(f"Invalid conversation_id format: {conversation_id}")
+                return False
+            
+            # Delete conversation ensuring it belongs to the user (security)
+            result = await self.db.conversations.delete_one({
+                "_id": obj_id,
+                "user_id": user_id
+            })
+            
+            if result.acknowledged:
+                if result.deleted_count > 0:
+                    logger.info(f"🗑️ Successfully deleted conversation {conversation_id} for user {user_id}")
+                    return True
+                else:
+                    logger.warning(f"No conversation found to delete: user {user_id}, conversation {conversation_id}")
+                    return False
+            else:
+                logger.error(f"Failed to delete conversation {conversation_id} for user {user_id} - operation not acknowledged")
+                return False
+                
+        except ValueError as e:
+            logger.error(f"Validation error deleting conversation for user {user_id}: {e}")
+            return False
+        except PyMongoError as e:
+            logger.error(f"MongoDB error deleting conversation for user {user_id}: {e}")
+            return False
+        except Exception as e:
+            logger.error(f"Unexpected error deleting conversation for user {user_id}: {e}")
+            return False
+    
+    async def clear_user_history(self, user_id: int) -> bool:
+        """
+        Clear all conversation history for a user
+        
+        Args:
+            user_id (int): Telegram user ID
+        
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            if not self.connected or self.db is None:
+                raise ValueError("Database not connected")
+            
+            if not isinstance(user_id, int):
+                raise ValueError("user_id must be an integer")
+            
+            # Delete all conversations for the user
+            result = await self.db.conversations.delete_many({"user_id": user_id})
+            
+            if result.acknowledged:
+                logger.info(f"🗑️ Successfully cleared {result.deleted_count} conversations for user {user_id}")
+                return True
+            else:
+                logger.error(f"Failed to clear conversation history for user {user_id} - operation not acknowledged")
+                return False
+                
+        except PyMongoError as e:
+            logger.error(f"MongoDB error clearing conversation history for user {user_id}: {e}")
+            return False
+        except Exception as e:
+            logger.error(f"Unexpected error clearing conversation history for user {user_id}: {e}")
+            return False
+    
+    async def get_conversation_count(self, user_id: int) -> int:
+        """
+        Get total number of conversations for a user
+        
+        Args:
+            user_id (int): Telegram user ID
+        
+        Returns:
+            int: Number of conversations (0 if error)
+        """
+        try:
+            if not self.connected or self.db is None:
+                raise ValueError("Database not connected")
+            
+            if not isinstance(user_id, int):
+                raise ValueError("user_id must be an integer")
+            
+            count = await self.db.conversations.count_documents({"user_id": user_id})
+            logger.info(f"📊 User {user_id} has {count} saved conversations")
+            return count
+            
+        except Exception as e:
+            logger.error(f"Error counting conversations for user {user_id}: {e}")
+            return 0
 
 # Global database instance
 db = Database()

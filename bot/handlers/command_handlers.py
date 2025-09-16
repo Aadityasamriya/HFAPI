@@ -3,6 +3,7 @@ Professional Telegram bot command handlers
 Rich UI with emojis and inline keyboards for superior user experience
 """
 
+import asyncio
 import logging
 
 try:
@@ -207,7 +208,7 @@ Your conversation history has been reset. You're starting fresh with a clean sla
 🤖 Models: Premium Hugging Face Collection
 🧠 Intelligence: Adaptive Model Routing
 💾 Storage: Persistent database (as specified)
-📊 Chat History: Last 15 messages (session-only)
+📊 Chat History: Persistent storage with last 15 messages in active session
 
 **Available Actions:**
         """
@@ -365,7 +366,7 @@ Hello {safe_first_name}, you've requested to completely reset your database.
 • This action **cannot be undone**
 
 **🛡️ SECURITY NOTE:**
-Your chat messages are never stored permanently, so this only affects your account data in our secure database.
+Your conversations are stored securely in our encrypted database. This will remove your saved conversation history and account data.
 
 **Are you absolutely sure you want to proceed?**
         """
@@ -467,6 +468,47 @@ Your chat messages are never stored permanently, so this only affects your accou
             elif data == "resetdb_cancel":
                 await CommandHandlers._handle_resetdb_cancel(query, context)
             
+            # History-related callbacks
+            elif data.startswith("view_conv_"):
+                conversation_id = data.replace("view_conv_", "")
+                await CommandHandlers._handle_view_conversation(query, context, conversation_id)
+            
+            elif data.startswith("history_page_"):
+                page_number = int(data.replace("history_page_", ""))
+                await CommandHandlers._handle_history_pagination(query, context, page_number)
+            
+            elif data == "history_refresh":
+                await CommandHandlers._handle_history_refresh(query, context)
+            
+            elif data == "history_clear_confirm":
+                await CommandHandlers._handle_history_clear_confirm(query, context)
+            
+            elif data == "history_clear_yes":
+                await CommandHandlers._handle_history_clear_execute(query, context)
+            
+            elif data == "history_clear_no":
+                await CommandHandlers._handle_history_refresh(query, context)  # Just refresh instead
+            
+            elif data == "start_conversation":
+                await CommandHandlers._handle_start_conversation(query, context)
+            
+            elif data.startswith("continue_conv_"):
+                conversation_id = data.replace("continue_conv_", "")
+                await CommandHandlers._handle_continue_conversation(query, context, conversation_id)
+            
+            elif data.startswith("delete_conv_"):
+                conversation_id = data.replace("delete_conv_", "")
+                await CommandHandlers._handle_delete_conversation_confirm(query, context, conversation_id)
+            
+            elif data.startswith("delete_conv_yes_"):
+                conversation_id = data.replace("delete_conv_yes_", "")
+                await CommandHandlers._handle_delete_conversation_execute(query, context, conversation_id)
+            
+            elif data.startswith("delete_conv_no_"):
+                # Just return to conversation view
+                conversation_id = data.replace("delete_conv_no_", "")
+                await CommandHandlers._handle_view_conversation(query, context, conversation_id)
+            
             else:
                 await query.edit_message_text("🔄 Processing your request...")
                 
@@ -533,7 +575,7 @@ This will permanently delete:
 • All account preferences
 • Usage statistics
 
-🔄 **Note:** Your chat history is never stored, so it's already private.
+🔄 **Note:** Your chat history is stored securely with encryption for persistence across sessions.
 
 Are you sure you want to proceed?
         """
@@ -888,7 +930,7 @@ Ready to experience the future of AI? 🤖✨
 🤖 Models: Premium Hugging Face Collection
 🧠 Intelligence: Adaptive Model Routing
 💾 Storage: Persistent database (as specified)
-📊 Chat History: Last 15 messages (session-only)
+📊 Chat History: Persistent storage with last 15 messages in active session
 
 **Available Actions:**
         """
@@ -960,6 +1002,747 @@ Ready to experience the future of AI? 🤖✨
             reply_markup=reply_markup,
             parse_mode='Markdown'
         )
+    
+    @staticmethod
+    async def history_command(update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """
+        Display user's conversation history with professional UI and pagination
+        """
+        user = update.effective_user
+        user_id = user.id
+        username = user.username or "No username"
+        full_name = f"{user.first_name or ''} {user.last_name or ''}".strip() or "Unknown"
+        
+        # Enhanced entry logging with user details
+        logger.info(f"📚 HISTORY command invoked by user_id:{user_id} (@{username}) '{full_name}'")
+        logger.info(f"📊 Chat type: {update.effective_chat.type} | Chat ID: {update.effective_chat.id}")
+        
+        # Check rate limit
+        is_allowed, wait_time = check_rate_limit(user_id)
+        if not is_allowed:
+            await update.message.reply_text(
+                f"⚠️ **Rate Limit Exceeded**\n\nPlease wait {wait_time} seconds before sending another command.",
+                parse_mode='Markdown'
+            )
+            return
+        
+        # Check API key from persistent database storage
+        try:
+            api_key = await db.get_user_api_key(user_id)
+            if not api_key:
+                logger.info(f"❌ No API key found for user_id:{user_id} - prompting setup")
+                
+                no_api_text = """
+🔑 **API Key Required for History Access**
+
+To view your conversation history, you need to set up your Hugging Face API key first.
+
+Your conversations are stored securely, but we need your API key to verify your access.
+
+**Why API Key Required:**
+🛡️ Security - Protects your personal conversation data  
+💾 Storage - Enables persistent conversation history
+🔒 Privacy - Ensures only you can access your chats
+
+                """
+                
+                keyboard = [
+                    [InlineKeyboardButton("🔑 Set API Key", callback_data="set_api_key")],
+                    [InlineKeyboardButton("⚙️ Settings", callback_data="settings")]
+                ]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                
+                await update.message.reply_text(
+                    no_api_text,
+                    reply_markup=reply_markup,
+                    parse_mode='Markdown'
+                )
+                return
+                
+        except Exception as e:
+            logger.error(f"🔍 Database error checking API key for user_id:{user_id}: {e}")
+            await update.message.reply_text(
+                "❌ **Database Error**\n\nSorry, there was a problem accessing your data. Please try again later.",
+                parse_mode='Markdown'
+            )
+            return
+        
+        # Get conversation count and first page of conversations
+        try:
+            logger.info(f"📊 Fetching conversation count for user_id:{user_id}")
+            
+            # Get total count and first page of conversations in parallel
+            import asyncio
+            conversation_count_task = db.get_conversation_count(user_id)
+            conversations_task = db.get_user_conversations(user_id, limit=5, skip=0)
+            
+            conversation_count, conversations = await asyncio.gather(
+                conversation_count_task,
+                conversations_task
+            )
+            
+            logger.info(f"📚 User {user_id} has {conversation_count} total conversations, displaying first {len(conversations)}")
+            
+        except Exception as e:
+            logger.error(f"🔍 Database error fetching conversations for user_id:{user_id}: {e}")
+            await update.message.reply_text(
+                "❌ **Database Error**\n\nSorry, there was a problem retrieving your conversation history. Please try again later.",
+                parse_mode='Markdown'
+            )
+            return
+        
+        # Display appropriate message based on conversation count
+        if conversation_count == 0:
+            # No conversations yet
+            empty_history_text = """
+📚 **Your Conversation History**
+
+You don't have any saved conversations yet! 
+
+**How to Build History:**
+💬 Start chatting with me to create conversations
+💾 Each conversation session gets automatically saved  
+🔄 Use `/newchat` to start fresh conversation sessions
+📖 Return here anytime to browse your chat history
+
+**Get Started:**
+Just send me any message to begin your first conversation!
+
+✨ **Pro Tip:** Your conversations persist even after the bot restarts, so you can always return to previous discussions.
+            """
+            
+            keyboard = [
+                [InlineKeyboardButton("🚀 Start First Conversation", callback_data="start_conversation")],
+                [InlineKeyboardButton("💡 Help & Tips", callback_data="help")]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            await update.message.reply_text(
+                empty_history_text,
+                reply_markup=reply_markup,
+                parse_mode='Markdown'
+            )
+            return
+        
+        # Display conversation history with pagination
+        await CommandHandlers._display_conversation_history(update, context, conversations, conversation_count, page=0)
+        
+        logger.info(f"✅ HISTORY response sent successfully to user_id:{user_id} (@{username})")
+        logger.info(f"📊 Displayed {len(conversations)} conversations out of {conversation_count} total")
+    
+    @staticmethod
+    async def _display_conversation_history(update_or_query, context, conversations: list, total_count: int, page: int = 0):
+        """
+        Display conversation history with professional UI and pagination
+        
+        Args:
+            update_or_query: Update object (for new messages) or CallbackQuery (for edits)
+            context: Bot context
+            conversations: List of conversation summaries
+            total_count: Total number of conversations
+            page: Current page number (0-based)
+        """
+        # Determine if this is an update or callback query
+        is_callback = hasattr(update_or_query, 'edit_message_text')
+        
+        # Calculate pagination info
+        items_per_page = 5
+        total_pages = (total_count + items_per_page - 1) // items_per_page  # Ceiling division
+        current_page = page + 1  # Convert to 1-based for display
+        
+        # Build history text
+        history_text = f"""
+📚 **Your Conversation History** (Page {current_page}/{total_pages})
+
+Found **{total_count}** saved conversations:
+
+"""
+        
+        # Add conversation summaries
+        for i, conv in enumerate(conversations):
+            # Format timestamp
+            try:
+                from datetime import datetime
+                if 'last_message_at' in conv:
+                    timestamp = conv['last_message_at']
+                    if hasattr(timestamp, 'strftime'):
+                        time_str = timestamp.strftime("%b %d, %Y at %H:%M")
+                    else:
+                        time_str = str(timestamp)[:16]  # Fallback
+                else:
+                    time_str = "Unknown time"
+                    
+                summary = conv.get('summary', 'Untitled Conversation')[:60]  # Limit length
+                if len(conv.get('summary', '')) > 60:
+                    summary += "..."
+                    
+                message_count = conv.get('message_count', 0)
+                
+                history_text += f"""
+**{i + 1 + (page * items_per_page)}.** {escape_markdown(summary)}
+📅 {time_str} • 💬 {message_count} messages
+"""
+                
+            except Exception as e:
+                logger.error(f"Error formatting conversation summary: {e}")
+                history_text += f"\n**{i + 1 + (page * items_per_page)}.** Conversation (formatting error)\n"
+        
+        # Build inline keyboard
+        keyboard = []
+        
+        # Add conversation buttons (max 5 per page)
+        conv_buttons = []
+        for i, conv in enumerate(conversations):
+            conv_id = str(conv.get('_id', ''))
+            button_text = f"📖 View #{i + 1 + (page * items_per_page)}"
+            conv_buttons.append(InlineKeyboardButton(button_text, callback_data=f"view_conv_{conv_id}"))
+            
+            # Add 2 buttons per row
+            if len(conv_buttons) == 2 or i == len(conversations) - 1:
+                keyboard.append(conv_buttons)
+                conv_buttons = []
+        
+        # Pagination buttons
+        pagination_buttons = []
+        if page > 0:
+            pagination_buttons.append(InlineKeyboardButton("⬅️ Previous", callback_data=f"history_page_{page - 1}"))
+        if current_page < total_pages:
+            pagination_buttons.append(InlineKeyboardButton("➡️ Next", callback_data=f"history_page_{page + 1}"))
+        
+        if pagination_buttons:
+            keyboard.append(pagination_buttons)
+        
+        # Action buttons
+        action_buttons = [
+            InlineKeyboardButton("🔄 Refresh", callback_data="history_refresh"),
+            InlineKeyboardButton("🗑️ Clear All", callback_data="history_clear_confirm")
+        ]
+        keyboard.append(action_buttons)
+        
+        # Settings button
+        keyboard.append([InlineKeyboardButton("⚙️ Settings", callback_data="settings")])
+        
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        # Send or edit message
+        try:
+            if is_callback:
+                await update_or_query.edit_message_text(
+                    history_text,
+                    reply_markup=reply_markup,
+                    parse_mode='Markdown'
+                )
+            else:
+                await update_or_query.message.reply_text(
+                    history_text,
+                    reply_markup=reply_markup,
+                    parse_mode='Markdown'
+                )
+                
+        except Exception as e:
+            logger.error(f"Error displaying conversation history: {e}")
+            error_text = "❌ **Display Error**\n\nSorry, there was a problem showing your conversation history. Please try again."
+            
+            try:
+                if is_callback:
+                    await update_or_query.edit_message_text(error_text, parse_mode='Markdown')
+                else:
+                    await update_or_query.message.reply_text(error_text, parse_mode='Markdown')
+            except Exception:
+                pass  # If even error message fails, just log
+    
+    @staticmethod
+    async def _handle_view_conversation(query, context, conversation_id: str):
+        """Handle viewing full conversation details"""
+        user_id = query.from_user.id
+        username = query.from_user.username or "No username"
+        
+        logger.info(f"📄 VIEW_CONVERSATION requested by user_id:{user_id} (@{username}) for conv:{conversation_id}")
+        
+        try:
+            # Get full conversation details
+            conversation = await db.get_conversation_details(user_id, conversation_id)
+            
+            if not conversation:
+                await query.edit_message_text(
+                    "❌ **Conversation Not Found**\n\nThe requested conversation could not be found or may have been deleted.",
+                    parse_mode='Markdown'
+                )
+                return
+            
+            # Build conversation display
+            messages = conversation.get('messages', [])
+            summary = conversation.get('summary', 'Untitled Conversation')
+            message_count = conversation.get('message_count', len(messages))
+            
+            # Format timestamp
+            try:
+                timestamp = conversation.get('last_message_at', conversation.get('started_at'))
+                if hasattr(timestamp, 'strftime'):
+                    time_str = timestamp.strftime("%B %d, %Y at %H:%M")
+                else:
+                    time_str = str(timestamp)[:19] if timestamp else "Unknown time"
+            except Exception:
+                time_str = "Unknown time"
+            
+            # Build conversation text (limit to prevent message too long)
+            conv_text = f"""
+📄 **Conversation Details**
+
+**Summary:** {escape_markdown(summary)}
+📅 **Date:** {time_str}
+💬 **Messages:** {message_count}
+
+**Conversation:**
+"""
+            
+            # Add messages (limit to prevent telegram message limit)
+            char_count = len(conv_text)
+            max_chars = 3500  # Leave room for buttons and formatting
+            
+            for i, msg in enumerate(messages):
+                role = msg.get('role', 'unknown')
+                content = msg.get('content', '')
+                
+                # Format role emoji
+                role_emoji = "👤" if role == "user" else "🤖"
+                role_name = "You" if role == "user" else "AI Assistant"
+                
+                # Limit message content length
+                if len(content) > 200:
+                    content = content[:197] + "..."
+                
+                message_text = f"\n{role_emoji} **{role_name}:**\n{escape_markdown(content)}\n"
+                
+                # Check if adding this message would exceed limit
+                if char_count + len(message_text) > max_chars:
+                    remaining_messages = len(messages) - i
+                    conv_text += f"\n... and {remaining_messages} more messages\n"
+                    break
+                
+                conv_text += message_text
+                char_count += len(message_text)
+            
+            # Build action buttons
+            keyboard = [
+                [
+                    InlineKeyboardButton("💬 Continue Chat", callback_data=f"continue_conv_{conversation_id}"),
+                    InlineKeyboardButton("🗑️ Delete", callback_data=f"delete_conv_{conversation_id}")
+                ],
+                [
+                    InlineKeyboardButton("⬅️ Back to History", callback_data="history_refresh"),
+                    InlineKeyboardButton("🔄 Refresh", callback_data=f"view_conv_{conversation_id}")
+                ]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            await query.edit_message_text(
+                conv_text,
+                reply_markup=reply_markup,
+                parse_mode='Markdown'
+            )
+            
+            logger.info(f"✅ Conversation details displayed successfully for user_id:{user_id}, conv:{conversation_id}")
+            
+        except Exception as e:
+            logger.error(f"Error viewing conversation for user_id:{user_id}, conv:{conversation_id}: {e}")
+            await query.edit_message_text(
+                "❌ **Error Loading Conversation**\n\nSorry, there was a problem loading this conversation. Please try again.",
+                parse_mode='Markdown'
+            )
+    
+    @staticmethod
+    async def _handle_history_pagination(query, context, page_number: int):
+        """Handle pagination for conversation history"""
+        user_id = query.from_user.id
+        username = query.from_user.username or "No username"
+        
+        logger.info(f"📄 HISTORY_PAGINATION requested by user_id:{user_id} (@{username}) for page:{page_number}")
+        
+        try:
+            # Get conversations for the requested page
+            items_per_page = 5
+            skip = page_number * items_per_page
+            
+            conversation_count_task = db.get_conversation_count(user_id)
+            conversations_task = db.get_user_conversations(user_id, limit=items_per_page, skip=skip)
+            
+            conversation_count, conversations = await asyncio.gather(
+                conversation_count_task,
+                conversations_task
+            )
+            
+            # Display the requested page
+            await CommandHandlers._display_conversation_history(query, context, conversations, conversation_count, page=page_number)
+            
+            logger.info(f"✅ History pagination displayed successfully for user_id:{user_id}, page:{page_number}")
+            
+        except Exception as e:
+            logger.error(f"Error in history pagination for user_id:{user_id}, page:{page_number}: {e}")
+            await query.edit_message_text(
+                "❌ **Pagination Error**\n\nSorry, there was a problem loading that page. Please try again.",
+                parse_mode='Markdown'
+            )
+    
+    @staticmethod
+    async def _handle_history_refresh(query, context):
+        """Handle refreshing the conversation history view"""
+        user_id = query.from_user.id
+        username = query.from_user.username or "No username"
+        
+        logger.info(f"🔄 HISTORY_REFRESH requested by user_id:{user_id} (@{username})")
+        
+        try:
+            # Get fresh conversation data
+            conversation_count_task = db.get_conversation_count(user_id)
+            conversations_task = db.get_user_conversations(user_id, limit=5, skip=0)
+            
+            conversation_count, conversations = await asyncio.gather(
+                conversation_count_task,
+                conversations_task
+            )
+            
+            # Display refreshed history starting from page 0
+            await CommandHandlers._display_conversation_history(query, context, conversations, conversation_count, page=0)
+            
+            logger.info(f"✅ History refreshed successfully for user_id:{user_id}")
+            
+        except Exception as e:
+            logger.error(f"Error refreshing history for user_id:{user_id}: {e}")
+            await query.edit_message_text(
+                "❌ **Refresh Error**\n\nSorry, there was a problem refreshing your history. Please try again.",
+                parse_mode='Markdown'
+            )
+    
+    @staticmethod
+    async def _handle_history_clear_confirm(query, context):
+        """Handle confirmation dialog for clearing all conversation history"""
+        user_id = query.from_user.id
+        
+        # Get conversation count for the warning
+        try:
+            conversation_count = await db.get_conversation_count(user_id)
+        except Exception:
+            conversation_count = 0
+        
+        confirm_text = f"""
+🚨 **Clear All Conversation History**
+
+⚠️ **WARNING:** This will permanently delete ALL your saved conversations!
+
+📊 **You currently have {conversation_count} saved conversations**
+
+**What will be deleted:**
+🗑️ All conversation messages and content
+📅 All conversation timestamps and metadata  
+💾 All conversation summaries
+🔄 Your entire chat history with this bot
+
+**This action cannot be undone!**
+
+Are you absolutely sure you want to proceed?
+        """
+        
+        keyboard = [
+            [
+                InlineKeyboardButton("🗑️ Yes, Delete All", callback_data="history_clear_yes"),
+                InlineKeyboardButton("❌ Cancel", callback_data="history_clear_no")
+            ],
+            [InlineKeyboardButton("⬅️ Back to History", callback_data="history_refresh")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await query.edit_message_text(
+            confirm_text,
+            reply_markup=reply_markup,
+            parse_mode='Markdown'
+        )
+        
+        logger.info(f"🚨 Clear history confirmation shown to user_id:{user_id} ({conversation_count} conversations)")
+    
+    @staticmethod
+    async def _handle_history_clear_execute(query, context):
+        """Execute clearing all conversation history"""
+        user_id = query.from_user.id
+        username = query.from_user.username or "No username"
+        
+        logger.info(f"🗑️ HISTORY_CLEAR_EXECUTE requested by user_id:{user_id} (@{username})")
+        
+        try:
+            # Clear all user's conversation history
+            success = await db.clear_user_history(user_id)
+            
+            if success:
+                success_text = """
+✅ **All Conversations Deleted**
+
+Your entire conversation history has been permanently cleared.
+
+**What was deleted:**
+🗑️ All conversation messages and content
+📅 All timestamps and metadata
+💾 All conversation summaries
+
+**Fresh Start:**
+✨ You can now begin new conversations
+💬 Send any message to start chatting again
+📖 Future conversations will be saved automatically
+
+Your API key and settings remain unchanged.
+                """
+                
+                keyboard = [
+                    [InlineKeyboardButton("🚀 Start New Conversation", callback_data="start_conversation")],
+                    [InlineKeyboardButton("⚙️ Settings", callback_data="settings")]
+                ]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                
+                await query.edit_message_text(
+                    success_text,
+                    reply_markup=reply_markup,
+                    parse_mode='Markdown'
+                )
+                
+                logger.info(f"✅ All conversation history cleared successfully for user_id:{user_id}")
+                
+            else:
+                await query.edit_message_text(
+                    "❌ **Clear Failed**\n\nThere was a problem clearing your conversation history. Please try again later.",
+                    parse_mode='Markdown'
+                )
+                logger.error(f"Failed to clear conversation history for user_id:{user_id}")
+                
+        except Exception as e:
+            logger.error(f"Error clearing conversation history for user_id:{user_id}: {e}")
+            await query.edit_message_text(
+                "❌ **Clear Error**\n\nSorry, there was a problem clearing your history. Please try again later.",
+                parse_mode='Markdown'
+            )
+    
+    @staticmethod
+    async def _handle_start_conversation(query, context):
+        """Handle starting a new conversation"""
+        start_text = """
+🚀 **Ready to Start Chatting!**
+
+Just send me any message to begin a new conversation! Here are some ideas:
+
+💬 **Ask me anything:**
+• "Explain artificial intelligence"
+• "Help me write a business plan"
+• "What's the weather like on Mars?"
+
+💻 **Code assistance:**
+• "Create a Python web scraper"
+• "Help debug this JavaScript function"
+• "Write a SQL query for user analytics"
+
+🎨 **Creative tasks:**
+• "Generate an image of a sunset over mountains"
+• "Write a short story about time travel"
+• "Create a poem about programming"
+
+✨ **Your conversation will be automatically saved and you can return to view it anytime using the `/history` command!**
+
+Go ahead - send me your first message! 👇
+        """
+        
+        keyboard = [
+            [InlineKeyboardButton("💡 Need Help?", callback_data="help")],
+            [InlineKeyboardButton("⚙️ Settings", callback_data="settings")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await query.edit_message_text(
+            start_text,
+            reply_markup=reply_markup,
+            parse_mode='Markdown'
+        )
+        
+        logger.info(f"🚀 Start conversation prompt shown to user_id:{query.from_user.id}")
+    
+    @staticmethod
+    async def _handle_continue_conversation(query, context, conversation_id: str):
+        """Handle continuing a previous conversation"""
+        user_id = query.from_user.id
+        username = query.from_user.username or "No username"
+        
+        logger.info(f"💬 CONTINUE_CONVERSATION requested by user_id:{user_id} (@{username}) for conv:{conversation_id}")
+        
+        try:
+            # Get conversation details
+            conversation = await db.get_conversation_details(user_id, conversation_id)
+            
+            if not conversation:
+                await query.edit_message_text(
+                    "❌ **Conversation Not Found**\n\nThe conversation you're trying to continue could not be found.",
+                    parse_mode='Markdown'
+                )
+                return
+            
+            # Load conversation history into context
+            messages = conversation.get('messages', [])
+            if context.user_data is None:
+                context.user_data = {}
+            
+            # Clear current history and load the selected conversation
+            context.user_data['chat_history'] = messages.copy()
+            
+            summary = conversation.get('summary', 'Previous Conversation')
+            message_count = len(messages)
+            
+            continue_text = f"""
+💬 **Conversation Resumed**
+
+**Continuing:** {escape_markdown(summary)}
+📊 **Loaded {message_count} previous messages**
+
+✅ **Ready to continue!** Your conversation context has been restored.
+
+**What happens next:**
+🔄 Send any message to continue the conversation
+💾 New messages will be added to this conversation
+📖 Access full history anytime with `/history`
+
+**Tip:** I remember our previous discussion, so you can pick up right where we left off!
+
+Go ahead and send your next message! 👇
+            """
+            
+            keyboard = [
+                [
+                    InlineKeyboardButton("📄 View Full Conversation", callback_data=f"view_conv_{conversation_id}"),
+                    InlineKeyboardButton("📚 History", callback_data="history_refresh")
+                ],
+                [InlineKeyboardButton("🔄 New Chat Instead", callback_data="start_conversation")]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            await query.edit_message_text(
+                continue_text,
+                reply_markup=reply_markup,
+                parse_mode='Markdown'
+            )
+            
+            logger.info(f"✅ Conversation continued successfully for user_id:{user_id}, conv:{conversation_id}, loaded {message_count} messages")
+            
+        except Exception as e:
+            logger.error(f"Error continuing conversation for user_id:{user_id}, conv:{conversation_id}: {e}")
+            await query.edit_message_text(
+                "❌ **Continue Error**\n\nSorry, there was a problem continuing this conversation. Please try again.",
+                parse_mode='Markdown'
+            )
+    
+    @staticmethod
+    async def _handle_delete_conversation_confirm(query, context, conversation_id: str):
+        """Handle confirmation for deleting a single conversation"""
+        user_id = query.from_user.id
+        
+        try:
+            # Get conversation summary for confirmation
+            conversation = await db.get_conversation_details(user_id, conversation_id)
+            
+            if not conversation:
+                await query.edit_message_text(
+                    "❌ **Conversation Not Found**\n\nThe conversation you're trying to delete could not be found.",
+                    parse_mode='Markdown'
+                )
+                return
+            
+            summary = conversation.get('summary', 'Untitled Conversation')
+            message_count = conversation.get('message_count', 0)
+            
+            confirm_text = f"""
+🗑️ **Delete Conversation**
+
+⚠️ **Are you sure you want to delete this conversation?**
+
+**Conversation:** {escape_markdown(summary)}
+💬 **Messages:** {message_count}
+
+**This action cannot be undone!**
+
+The conversation will be permanently removed from your history.
+            """
+            
+            keyboard = [
+                [
+                    InlineKeyboardButton("🗑️ Yes, Delete", callback_data=f"delete_conv_yes_{conversation_id}"),
+                    InlineKeyboardButton("❌ Cancel", callback_data=f"delete_conv_no_{conversation_id}")
+                ],
+                [InlineKeyboardButton("⬅️ Back to Conversation", callback_data=f"view_conv_{conversation_id}")]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            await query.edit_message_text(
+                confirm_text,
+                reply_markup=reply_markup,
+                parse_mode='Markdown'
+            )
+            
+            logger.info(f"🗑️ Delete conversation confirmation shown to user_id:{user_id} for conv:{conversation_id}")
+            
+        except Exception as e:
+            logger.error(f"Error showing delete confirmation for user_id:{user_id}, conv:{conversation_id}: {e}")
+            await query.edit_message_text(
+                "❌ **Error**\n\nSorry, there was a problem processing your request. Please try again.",
+                parse_mode='Markdown'
+            )
+    
+    @staticmethod
+    async def _handle_delete_conversation_execute(query, context, conversation_id: str):
+        """Execute deleting a single conversation"""
+        user_id = query.from_user.id
+        username = query.from_user.username or "No username"
+        
+        logger.info(f"🗑️ DELETE_CONVERSATION_EXECUTE requested by user_id:{user_id} (@{username}) for conv:{conversation_id}")
+        
+        try:
+            # Delete the conversation
+            success = await db.delete_conversation(user_id, conversation_id)
+            
+            if success:
+                success_text = """
+✅ **Conversation Deleted**
+
+The conversation has been permanently removed from your history.
+
+**What's next:**
+📚 Return to your conversation history
+🚀 Start a new conversation
+⚙️ Adjust your settings
+                """
+                
+                keyboard = [
+                    [
+                        InlineKeyboardButton("📚 Back to History", callback_data="history_refresh"),
+                        InlineKeyboardButton("🚀 New Chat", callback_data="start_conversation")
+                    ],
+                    [InlineKeyboardButton("⚙️ Settings", callback_data="settings")]
+                ]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                
+                await query.edit_message_text(
+                    success_text,
+                    reply_markup=reply_markup,
+                    parse_mode='Markdown'
+                )
+                
+                logger.info(f"✅ Conversation deleted successfully for user_id:{user_id}, conv:{conversation_id}")
+                
+            else:
+                await query.edit_message_text(
+                    "❌ **Delete Failed**\n\nThere was a problem deleting this conversation. It may have already been removed.",
+                    parse_mode='Markdown'
+                )
+                logger.warning(f"Failed to delete conversation for user_id:{user_id}, conv:{conversation_id}")
+                
+        except Exception as e:
+            logger.error(f"Error deleting conversation for user_id:{user_id}, conv:{conversation_id}: {e}")
+            await query.edit_message_text(
+                "❌ **Delete Error**\n\nSorry, there was a problem deleting this conversation. Please try again.",
+                parse_mode='Markdown'
+            )
 
 # Export command handlers
 command_handlers = CommandHandlers()
