@@ -28,6 +28,7 @@ class IntentType(Enum):
     PDF_PROCESSING = "pdf_processing"        # 2025: New P1 feature - PDF analysis
     ZIP_ANALYSIS = "zip_analysis"            # 2025: New P1 feature - ZIP file analysis  
     IMAGE_ANALYSIS = "image_analysis"        # 2025: New P1 feature - Image content analysis
+    FILE_GENERATION = "file_generation"      # 2025: New P1 feature - File generation and delivery
 
 class IntelligentRouter:
     """
@@ -201,6 +202,29 @@ class IntelligentRouter:
                 r'(?:extract.?text|get.?text|read)\s+(?:from|in)\s+(?:image|photo|screenshot)',
                 r'\b(?:identify|classify|categorize)\s+(?:objects?|people|scenes?)\s+(?:in|from)\s+(?:image|photo)',
                 r'(?:visual.?content|image.?content|picture.?content)\s+(?:analysis|recognition|description)',
+            ],
+            
+            # 2025: P1 Feature - File Generation with AI
+            IntentType.FILE_GENERATION: [
+                r'\b(?:create|generate|make|build|produce|write)\s+(?:a|an|some)?\s*(?:file|script|document|config|configuration)',
+                r'\b(?:create|generate|make|build|write)\s+(?:a|an|some)?\s*(?:python|py|javascript|js|json|txt|text|csv|xml|md|markdown)\s+(?:file|script|document)',
+                r'(?:generate|create|make|build|produce)\s+(?:a|an|some)?\s*(?:\.py|\.js|\.json|\.txt|\.csv|\.xml|\.md)\s+(?:file|script)',
+                r'\b(?:save|export|download|deliver)\s+(?:as|to|in)\s+(?:file|document|script)',
+                r'(?:can you|could you|please|help me)\s+(?:create|generate|make|build|write)\s+(?:a|an|some)?\s*(?:file|script|document)',
+                r'(?:output|save|export|write)\s+(?:this|that|the result|the response)\s+(?:to|as|in)\s+(?:a|an)?\s*(?:file|document|script)',
+                r'\b(?:code|script|program)\s+(?:file|document)\s+(?:for|to|that|which)',
+                r'(?:configuration|config|settings)\s+(?:file|document|json|xml|yaml)',
+                r'(?:data|content|text|information)\s+(?:file|document|csv|json|txt)',
+                r'(?:put|save|store|write|output)\s+(?:this|that|the|it)\s+(?:in|to|as)\s+(?:a|an)?\s*(?:file|document|script)',
+                r'(?:send|give|provide|deliver)\s+(?:me|us)?\s*(?:a|an|some)?\s*(?:file|document|script|attachment)',
+                r'(?:download|attachment|file.?download|document.?download)',
+                # File format specific patterns
+                r'(?:python.?script|py.?file|\.py\s+file)',
+                r'(?:json.?file|json.?config|\.json\s+file|configuration.?json)',
+                r'(?:text.?file|txt.?file|\.txt\s+file|plain.?text)',
+                r'(?:markdown.?file|md.?file|\.md\s+file|documentation.?md)',
+                r'(?:csv.?file|\.csv\s+file|comma.?separated|spreadsheet.?data)',
+                r'(?:xml.?file|\.xml\s+file|xml.?document|xml.?config)',
             ]
         }
     
@@ -208,6 +232,7 @@ class IntelligentRouter:
         """2025 Enhanced priority weights for intent types"""
         return {
             IntentType.CODE_GENERATION: 10,         # Highest priority - very specific patterns
+            IntentType.FILE_GENERATION: 9,          # 2025: P1 High priority - file creation requests
             IntentType.IMAGE_GENERATION: 9,         # High priority - specific visual requests
             IntentType.PDF_PROCESSING: 9,           # 2025: P1 High priority - PDF file uploads
             IntentType.ZIP_ANALYSIS: 9,             # 2025: P1 High priority - ZIP file uploads
