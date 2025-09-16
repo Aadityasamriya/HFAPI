@@ -72,18 +72,56 @@ class ModelCaller:
                     else:
                         return False, "Model is currently loading. Please try again in a few moments."
                 
+                elif response.status == 429:  # Rate limit
+                    if retries < Config.MAX_RETRIES:
+                        # Exponential backoff for rate limits
+                        wait_time = Config.RETRY_DELAY * (2 ** retries)
+                        logger.warning(f"Rate limit hit for model {model_name}, retrying in {wait_time}s")
+                        await asyncio.sleep(wait_time)
+                        return await self._make_api_call(model_name, payload, api_key, retries + 1)
+                    else:
+                        return False, "Rate limit exceeded. Please try again later."
+                
+                elif response.status >= 500:  # Server errors
+                    if retries < Config.MAX_RETRIES:
+                        # Linear backoff for server errors
+                        wait_time = Config.RETRY_DELAY * (retries + 1)
+                        logger.warning(f"Server error {response.status} for model {model_name}, retrying in {wait_time}s")
+                        await asyncio.sleep(wait_time)
+                        return await self._make_api_call(model_name, payload, api_key, retries + 1)
+                    else:
+                        return False, f"Server error (HTTP {response.status}). Please try again later."
+                
+                elif response.status == 401:  # Unauthorized
+                    error_text = await response.text()
+                    logger.error(f"Unauthorized access for model {model_name}: {error_text}")
+                    return False, "Invalid API key. Please check your Hugging Face API key."
+                
+                elif response.status == 404:  # Model not found
+                    error_text = await response.text()
+                    logger.error(f"Model not found: {model_name}")
+                    return False, f"Model '{model_name}' not found or not accessible."
+                
                 else:
                     error_text = await response.text()
                     logger.error(f"API call failed with status {response.status}: {error_text}")
-                    return False, f"API error: {error_text}"
+                    return False, f"API error (HTTP {response.status}): {error_text}"
                     
         except asyncio.TimeoutError:
             logger.error(f"Timeout calling model {model_name}")
             return False, "Request timed out. Please try again."
         
+        except aiohttp.ClientConnectorError as e:
+            logger.error(f"Connection error calling model {model_name}: {e}")
+            return False, "Network connection error. Please check your internet connection."
+        
+        except aiohttp.ContentTypeError as e:
+            logger.error(f"Content type error calling model {model_name}: {e}")
+            return False, "Invalid response format from API. Please try again."
+        
         except Exception as e:
-            logger.error(f"Error calling model {model_name}: {e}")
-            return False, f"Network error: {str(e)}"
+            logger.error(f"Unexpected error calling model {model_name}: {e}")
+            return False, f"Unexpected error: {str(e)}"
     
     def _format_chat_history(self, chat_history: List[Dict], new_prompt: str) -> str:
         """

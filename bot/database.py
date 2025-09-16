@@ -26,16 +26,16 @@ class EncryptionManager:
         key_b64 = os.getenv('ENCRYPTION_KEY')
         if key_b64:
             try:
-                # Environment key should be base64 encoded string from Fernet.generate_key()
-                return base64.urlsafe_b64decode(key_b64.encode('utf-8'))
+                # Environment key should be a Fernet key (32 url-safe base64 bytes)
+                # Fernet.generate_key() already returns base64-encoded bytes
+                return key_b64.encode('utf-8')
             except Exception as e:
                 logger.warning(f"Invalid encryption key in environment ({e}), generating new one")
         
         # Generate new key for this session
         key = Fernet.generate_key()
-        # Log the base64 encoded key for environment setup
-        key_b64_str = base64.urlsafe_b64encode(key).decode('utf-8')
-        logger.warning(f"Generated new encryption key for this session. To persist data across restarts, set ENCRYPTION_KEY={key_b64_str}")
+        # Log guidance for environment setup WITHOUT exposing the key
+        logger.warning("Generated new encryption key for this session. To persist data across restarts, set ENCRYPTION_KEY environment variable with a Fernet key.")
         return key
     
     def encrypt(self, data: str) -> str:
