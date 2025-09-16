@@ -18,16 +18,26 @@ class Config:
     # Database Configuration
     MONGO_URI = os.getenv('MONGO_URI')
     
-    # Latest 2024-2025 Hugging Face Models - State-of-the-Art Performance
-    DEFAULT_TEXT_MODEL = "meta-llama/Llama-3.2-3B-Instruct"  # Latest Llama 3.2 - Superior performance
-    ADVANCED_TEXT_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # Multilingual powerhouse
-    DEFAULT_CODE_MODEL = "bigcode/starcoder2-15b"  # Latest StarCoder2 - Best coding model
-    FALLBACK_CODE_MODEL = "codellama/CodeLlama-13b-Instruct-hf"  # Enhanced CodeLlama
-    DEFAULT_IMAGE_MODEL = "black-forest-labs/FLUX.1-schnell"  # FLUX.1 - State-of-the-art 2024
-    FALLBACK_IMAGE_MODEL = "stabilityai/stable-diffusion-xl-base-1.0"  # Reliable fallback
-    DEFAULT_SENTIMENT_MODEL = "cardiffnlp/twitter-roberta-base-sentiment-latest"
-    EMOTION_MODEL = "SamLowe/roberta-base-go_emotions"  # Advanced emotion detection
-    FALLBACK_TEXT_MODEL = "mistralai/Mixtral-8x7B-Instruct-v0.1"  # Still excellent fallback
+    # 2025 Hugging Face Models - Optimized for Free Tier Accessibility
+    # Text Generation Models - Reliable, always-available models
+    DEFAULT_TEXT_MODEL = "gpt2"  # Classic, always accessible
+    ADVANCED_TEXT_MODEL = "distilgpt2"  # Fast and reliable
+    FALLBACK_TEXT_MODEL = "microsoft/DialoGPT-medium"  # Conversational fallback
+    
+    # Code Generation Models - Free tier accessible code models  
+    DEFAULT_CODE_MODEL = "microsoft/CodeBERT-base"  # Code understanding and completion
+    FALLBACK_CODE_MODEL = "codeparrot/codeparrot-small"  # Lightweight code generation
+    CODE_INSTRUCT_MODEL = "bigcode/starcoder2-3b"  # More advanced when available
+    
+    # Image Generation Models - Classic stable diffusion models
+    DEFAULT_IMAGE_MODEL = "runwayml/stable-diffusion-v1-5"  # Most reliable SD model
+    FALLBACK_IMAGE_MODEL = "stabilityai/stable-diffusion-2-1"  # SD 2.1 fallback
+    ALTERNATIVE_IMAGE_MODEL = "CompVis/stable-diffusion-v1-4"  # Original SD fallback
+    
+    # Analysis Models - Always-available classification models
+    DEFAULT_SENTIMENT_MODEL = "distilbert-base-uncased-finetuned-sst-2-english"  # Always works
+    EMOTION_MODEL = "cardiffnlp/twitter-roberta-base-sentiment-latest"  # Robust sentiment
+    SIMPLE_SENTIMENT_MODEL = "cardiffnlp/twitter-roberta-base-sentiment"  # Simple fallback
     
     # Bot Configuration
     MAX_CHAT_HISTORY = 15

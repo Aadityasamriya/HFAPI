@@ -31,20 +31,28 @@ class ModelCaller:
         if self.session:
             await self.session.close()
     
-    async def _make_api_call(self, model_name: str, payload: Dict, api_key: str, retries: int = 0) -> Tuple[bool, Any]:
+    async def _make_api_call(self, model_name: str, payload: Dict, api_key: str, retries: int = 0, endpoint_type: str = "inference") -> Tuple[bool, Any]:
         """
-        Make API call to Hugging Face with retry logic
+        Make API call to Hugging Face with retry logic and 2025 API support
         
         Args:
             model_name (str): Name of the Hugging Face model
             payload (dict): Request payload
             api_key (str): User's Hugging Face API key
             retries (int): Current retry count
+            endpoint_type (str): Type of endpoint ("inference", "chat", "text2img")
             
         Returns:
             Tuple[bool, Any]: (success, response_data)
         """
-        url = f"https://api-inference.huggingface.co/models/{model_name}"
+        # Use different endpoints based on type for 2025 API changes
+        if endpoint_type == "chat":
+            url = f"https://api-inference.huggingface.co/models/{model_name}/v1/chat/completions"
+        elif endpoint_type == "text2img":
+            url = f"https://api-inference.huggingface.co/models/{model_name}"
+        else:
+            url = f"https://api-inference.huggingface.co/models/{model_name}"
+            
         headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json"
@@ -99,8 +107,13 @@ class ModelCaller:
                 
                 elif response.status == 404:  # Model not found
                     error_text = await response.text()
-                    logger.error(f"Model not found: {model_name}")
-                    return False, f"Model '{model_name}' not found or not accessible."
+                    logger.error(f"Model not found: {model_name} - {error_text}")
+                    return False, f"Model '{model_name}' not found or not accessible. This may be due to 2025 API changes."
+                
+                elif response.status == 400:  # Bad request - often API format issues
+                    error_text = await response.text()
+                    logger.error(f"Bad request for model {model_name}: {error_text}")
+                    return False, f"Invalid request format for model '{model_name}'. This model may require a different API endpoint."
                 
                 else:
                     error_text = await response.text()
@@ -217,17 +230,37 @@ class ModelCaller:
             
             return True, generated_text
         
-        # Smart fallback system - try multiple models
-        fallback_models = [Config.FALLBACK_TEXT_MODEL, Config.ADVANCED_TEXT_MODEL]
-        for fallback_model in fallback_models:
-            if not success and model_name != fallback_model:
+        # Smart fallback system - try multiple models with simplified payloads
+        fallback_models = [
+            (Config.ADVANCED_TEXT_MODEL, "inference"),
+            (Config.FALLBACK_TEXT_MODEL, "inference")
+        ]
+        
+        for fallback_model, endpoint_type in fallback_models:
+            if model_name != fallback_model:
                 logger.info(f"Trying fallback model {fallback_model}")
-                success, result = await self._make_api_call(fallback_model, payload, api_key)
-                if success and isinstance(result, list) and len(result) > 0:
-                    generated_text = result[0].get('generated_text', '').strip()
+                
+                # Simplified payload for fallback models
+                fallback_payload = {
+                    "inputs": prompt,  # Use simple prompt for fallbacks
+                    "parameters": {
+                        "max_new_tokens": 500,
+                        "temperature": 0.7,
+                        "return_full_text": False
+                    }
+                }
+                
+                fallback_success, fallback_result = await self._make_api_call(
+                    fallback_model, fallback_payload, api_key, endpoint_type=endpoint_type
+                )
+                
+                if fallback_success and isinstance(fallback_result, list) and len(fallback_result) > 0:
+                    generated_text = fallback_result[0].get('generated_text', '').strip()
+                    logger.info(f"Successfully used fallback model {fallback_model}")
                     return True, generated_text
         
-        return False, result if isinstance(result, str) else "Failed to generate text with all available models."
+        error_message = result if isinstance(result, str) else "Failed to generate text with all available models."
+        return False, f"Text generation failed: {error_message}"
     
     async def generate_code(self, prompt: str, api_key: str, language: str = "python", special_params: Optional[Dict] = None) -> Tuple[bool, str]:
         """
@@ -289,27 +322,37 @@ class ModelCaller:
             
             return True, generated_code
         
-        # Try fallback CodeLlama model
-        if not success:
-            logger.info(f"Trying fallback code model {Config.FALLBACK_CODE_MODEL}")
-            fallback_payload = {
-                "inputs": f"# Generate {language} code for: {prompt}\n\n",
-                "parameters": {
-                    "max_new_tokens": 800,
-                    "temperature": 0.3,
-                    "do_sample": True,
-                    "top_p": 0.95,
-                    "return_full_text": False
-                }
-            }
-            success, result = await self._make_api_call(Config.FALLBACK_CODE_MODEL, fallback_payload, api_key)
-            if success and isinstance(result, list) and len(result) > 0:
-                generated_code = result[0].get('generated_text', '').strip()
-                if not generated_code.startswith('```'):
-                    generated_code = f"```{language}\n{generated_code}\n```"
-                return True, generated_code
+        # Try fallback models with different strategies
+        fallback_models = [
+            (Config.FALLBACK_CODE_MODEL, f"# Generate {language} code for: {prompt}\n\n"),
+            (Config.CODE_INSTRUCT_MODEL, f"Write {language} code to {prompt}"),
+            (Config.ADVANCED_TEXT_MODEL, f"Please write {language} code that does the following: {prompt}")
+        ]
         
-        return False, result if isinstance(result, str) else "Failed to generate code with available models."
+        for fallback_model, fallback_prompt in fallback_models:
+            if model_name != fallback_model:
+                logger.info(f"Trying fallback code model {fallback_model}")
+                fallback_payload = {
+                    "inputs": fallback_prompt,
+                    "parameters": {
+                        "max_new_tokens": 800,
+                        "temperature": 0.3,
+                        "do_sample": True,
+                        "top_p": 0.95,
+                        "return_full_text": False
+                    }
+                }
+                
+                fallback_success, fallback_result = await self._make_api_call(fallback_model, fallback_payload, api_key)
+                if fallback_success and isinstance(fallback_result, list) and len(fallback_result) > 0:
+                    generated_code = fallback_result[0].get('generated_text', '').strip()
+                    if not generated_code.startswith('```'):
+                        generated_code = f"```{language}\n{generated_code}\n```"
+                    logger.info(f"Successfully used fallback code model {fallback_model}")
+                    return True, generated_code
+        
+        error_message = result if isinstance(result, str) else "Failed to generate code with available models."
+        return False, f"Code generation failed: {error_message}"
     
     async def generate_image(self, prompt: str, api_key: str, special_params: Optional[Dict] = None) -> Tuple[bool, bytes]:
         """
@@ -342,28 +385,43 @@ class ModelCaller:
             }
         }
         
-        success, result = await self._make_api_call(model_name, payload, api_key)
+        success, result = await self._make_api_call(model_name, payload, api_key, endpoint_type="text2img")
         
         if success and isinstance(result, bytes):
             return True, result
         
-        # Try fallback Stable Diffusion XL if FLUX.1 fails
-        if not success:
-            logger.info(f"Trying fallback image model {Config.FALLBACK_IMAGE_MODEL}")
-            fallback_payload = {
+        # Try fallback image models with appropriate configurations
+        fallback_models = [
+            (Config.FALLBACK_IMAGE_MODEL, {
                 "inputs": enhanced_prompt,
                 "parameters": {
-                    "guidance_scale": 7.5,
-                    "num_inference_steps": 50,  # More steps for SDXL
-                    "width": 1024,
-                    "height": 1024
+                    "guidance_scale": special_params.get('guidance_scale', 7.5),
+                    "num_inference_steps": special_params.get('num_inference_steps', 20),
+                    "width": special_params.get('width', 512),
+                    "height": special_params.get('height', 512)
                 }
-            }
-            success, result = await self._make_api_call(Config.FALLBACK_IMAGE_MODEL, fallback_payload, api_key)
-            if success and isinstance(result, bytes):
-                return True, result
+            }),
+            (Config.ALTERNATIVE_IMAGE_MODEL, {
+                "inputs": prompt,  # Simpler prompt for fallback
+                "parameters": {
+                    "guidance_scale": 7.5,
+                    "num_inference_steps": 15
+                }
+            })
+        ]
         
-        return False, b""
+        for fallback_model, fallback_payload in fallback_models:
+            if model_name != fallback_model:
+                logger.info(f"Trying fallback image model {fallback_model}")
+                fallback_success, fallback_result = await self._make_api_call(
+                    fallback_model, fallback_payload, api_key, endpoint_type="text2img"
+                )
+                if fallback_success and isinstance(fallback_result, bytes):
+                    logger.info(f"Successfully used fallback image model {fallback_model}")
+                    return True, fallback_result
+        
+        error_message = result if isinstance(result, str) else "Failed to generate image with available models."
+        return False, f"Image generation failed: {error_message}".encode('utf-8')
     
     async def analyze_sentiment(self, text: str, api_key: str, use_emotion_detection: bool = False) -> Tuple[bool, Dict]:
         """
@@ -403,7 +461,20 @@ class ModelCaller:
                     'model_used': 'roberta_sentiment'
                 }
         
-        return False, {'error': 'Failed to analyze sentiment'}
+        # Try fallback sentiment model
+        if not success and model_name != Config.SIMPLE_SENTIMENT_MODEL:
+            logger.info(f"Trying fallback sentiment model {Config.SIMPLE_SENTIMENT_MODEL}")
+            fallback_success, fallback_result = await self._make_api_call(Config.SIMPLE_SENTIMENT_MODEL, payload, api_key)
+            
+            if fallback_success and isinstance(fallback_result, list):
+                return True, {
+                    'emotion_type': 'sentiment',
+                    'result': fallback_result[0] if fallback_result else {},
+                    'model_used': 'distilbert_sentiment'
+                }
+        
+        error_message = result if isinstance(result, str) else "Failed to analyze sentiment"
+        return False, {'error': error_message}
 
 # Global model caller instance
 model_caller = ModelCaller()
