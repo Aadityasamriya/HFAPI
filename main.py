@@ -39,8 +39,16 @@ class AIAssistantBot:
     
     async def post_init(self, app: Application) -> None:
         """Post-initialization hook for database connection"""
-        await db.connect()
-        logger.info("Database connected via post_init")
+        try:
+            if not db.connected:
+                await db.connect()
+                logger.info("Database connected via post_init")
+            else:
+                logger.info("Database already connected - skipping post_init connection")
+        except Exception as e:
+            logger.error(f"Error in post_init: {e}")
+            # Don't fail the entire bot if database connection fails in post_init
+            pass
     
     async def post_shutdown(self, app: Application) -> None:
         """Post-shutdown hook for cleanup"""
@@ -142,10 +150,10 @@ def main():
         Config.validate_config()
         logger.info("Configuration validated successfully")
         
-        # Build application with lifecycle hooks
+        # Build application without lifecycle hooks to avoid blocking issues
         if not Config.TELEGRAM_BOT_TOKEN:
             raise ValueError("TELEGRAM_BOT_TOKEN is required")
-        bot.application = Application.builder().token(Config.TELEGRAM_BOT_TOKEN).post_init(bot.post_init).post_shutdown(bot.post_shutdown).build()
+        bot.application = Application.builder().token(Config.TELEGRAM_BOT_TOKEN).build()
         
         # Register handlers
         bot._register_handlers()
@@ -153,10 +161,26 @@ def main():
         
         logger.info("Starting AI Assistant Pro bot...")
         
+        # Connect to database before starting polling
+        logger.info("🔗 Connecting to database...")
+        try:
+            if not db.connected:
+                asyncio.run(db.connect())
+                logger.info("✅ Database connected successfully")
+            else:
+                logger.info("✅ Database already connected")
+        except Exception as e:
+            logger.warning(f"Database connection failed: {e} - Bot will continue without database")
+        
+        logger.info("🎯 Initializing Telegram polling...")
+        
         # Start polling - this will handle its own event loop
         bot.application.run_polling(
-            drop_pending_updates=True
+            drop_pending_updates=True,
+            allowed_updates=Update.ALL_TYPES
         )
+        
+        logger.info("✅ Bot is now polling for messages!")
         
     except KeyboardInterrupt:
         logger.info("Bot stopped by user")
