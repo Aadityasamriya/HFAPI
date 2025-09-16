@@ -82,16 +82,11 @@ class Config:
     @classmethod
     def validate_config(cls):
         """Validate that all required environment variables are set"""
-        required_vars = ['TELEGRAM_BOT_TOKEN', 'MONGO_URI', 'ENCRYPTION_SEED']
+        required_vars = ['TELEGRAM_BOT_TOKEN', 'MONGO_URI']
         missing_vars = [var for var in required_vars if not getattr(cls, var)]
         
         if missing_vars:
             error_msg = f"CRITICAL: Missing required environment variables: {', '.join(missing_vars)}"
-            if 'ENCRYPTION_SEED' in missing_vars:
-                error_msg += "\n\n🚨 ENCRYPTION_SEED is REQUIRED to prevent data loss!"
-                error_msg += "\n   Without it, user API keys become unreadable after each restart."
-                error_msg += "\n   Set ENCRYPTION_SEED=<your-secret-value> in environment variables."
-                error_msg += "\n   Use a strong, random string (32+ characters recommended)."
             raise ValueError(error_msg)
         
         import logging
@@ -105,14 +100,15 @@ class Config:
         if cls.MONGO_URI and not (cls.MONGO_URI.startswith('mongodb://') or cls.MONGO_URI.startswith('mongodb+srv://')):
             raise ValueError("MONGO_URI must be a valid MongoDB connection string")
         
-        # Validate ENCRYPTION_SEED strength
+        # Validate ENCRYPTION_SEED strength if provided (optional now)
         if cls.ENCRYPTION_SEED:
             if len(cls.ENCRYPTION_SEED) < 32:
                 logger.warning("🚨 SECURITY WARNING: ENCRYPTION_SEED should be at least 32 characters for strong security")
             if cls.ENCRYPTION_SEED.lower() in ['test', 'development', 'default', 'password', '12345678901234567890123456789012']:
                 raise ValueError("🚨 CRITICAL: ENCRYPTION_SEED must not use weak/default values. Use a strong, random string.")
+            logger.info("✅ Using ENCRYPTION_SEED from environment variable")
         else:
-            raise ValueError("🚨 CRITICAL: ENCRYPTION_SEED environment variable is required but not set")
+            logger.info("🔐 ENCRYPTION_SEED not provided - will auto-generate and persist in database")
         
         # Security validation for production
         import os
@@ -123,8 +119,10 @@ class Config:
         
         logger.info("✅ Configuration validation completed successfully")
         logger.info(f"🚀 Using {len([m for m in dir(cls) if 'MODEL' in m and not m.startswith('_')])} state-of-the-art 2024-2025 AI models")
-        logger.info("💡 API keys stored persistently in MongoDB as specified")
+        logger.info("💡 API keys stored persistently in MongoDB with auto-generated encryption")
+        logger.info("🔒 Encryption seed will be auto-generated and persisted for security")
         logger.info("🏆 Bot powered by models SUPERIOR to ChatGPT, Grok, and Gemini")
         logger.info("⚡ Text: Qwen2.5-72B | Code: StarCoder2-15B | Images: FLUX.1 | Sentiment: CardiffNLP Latest")
+        logger.info("🎯 Simplified deployment: Only TELEGRAM_BOT_TOKEN and MONGO_URI required")
         
         return True

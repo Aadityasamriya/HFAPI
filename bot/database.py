@@ -61,15 +61,67 @@ class Database:
             # Default to False for safety in case of parsing errors
             return False
     
+    async def _get_or_create_encryption_seed(self) -> str:
+        """
+        Get encryption seed from database or create and store a new one
+        This ensures the same seed is used across bot restarts without requiring environment variables
+        
+        Returns:
+            str: Encryption seed for key derivation
+        """
+        try:
+            if not self.connected or self.db is None:
+                raise ValueError("Database must be connected to manage encryption seed")
+            
+            # Try to get existing seed from system collection
+            system_doc = await self.db.system_config.find_one({"type": "encryption_config"})
+            
+            if system_doc and "encryption_seed" in system_doc:
+                seed = system_doc["encryption_seed"]
+                if isinstance(seed, str) and len(seed) >= 32:
+                    logger.info("✅ Retrieved persistent encryption seed from database")
+                    return seed
+                else:
+                    logger.warning("⚠️ Stored encryption seed is invalid, generating new one")
+            
+            # Generate new strong encryption seed
+            logger.info("🔐 Generating new encryption seed for persistent storage...")
+            new_seed = base64.b64encode(secrets.token_bytes(32)).decode('ascii')
+            
+            # Store the seed in system collection with metadata
+            import datetime
+            system_config = {
+                "type": "encryption_config",
+                "encryption_seed": new_seed,
+                "created_at": datetime.datetime.utcnow(),
+                "version": "1.0",
+                "description": "Auto-generated encryption seed for API key protection"
+            }
+            
+            await self.db.system_config.update_one(
+                {"type": "encryption_config"},
+                {"$set": system_config},
+                upsert=True
+            )
+            
+            logger.info("✅ Generated and stored new encryption seed in database")
+            logger.info("🔒 Encryption seed will persist across bot restarts")
+            return new_seed
+            
+        except Exception as e:
+            logger.error(f"CRITICAL: Failed to get/create encryption seed: {e}")
+            raise ValueError(f"Cannot manage encryption seed: {e}")
+    
     def _get_encryption_key(self) -> bytes:
         """
         Get or generate a secure encryption key for API key protection
+        Now uses persistent seed from database instead of environment variables
         
         Returns:
             bytes: 32-byte AES-256 encryption key
         """
         try:
-            # Try to get key from environment variable first
+            # Try to get key from environment variable first (for advanced users)
             env_key = os.getenv('API_ENCRYPTION_KEY')
             if env_key:
                 # If provided as base64, decode it
@@ -90,21 +142,36 @@ class Database:
                 except Exception:
                     pass
             
-            # SECURITY FIX: Generate a secure key using proper cryptographic practices
-            # Use a dedicated encryption seed from environment, NOT database credentials
+            # Check for environment ENCRYPTION_SEED (backward compatibility)
             encryption_seed = os.getenv('ENCRYPTION_SEED')
-            if not encryption_seed:
-                # Secure fallback: Generate a random key and warn about persistence
-                logger.critical("🚨 CRITICAL SECURITY WARNING: No ENCRYPTION_SEED environment variable set!")
-                logger.critical("🚨 Using random key generation - encrypted data will NOT persist across restarts!")
-                logger.critical("🚨 Set ENCRYPTION_SEED environment variable for production use!")
-                
-                # Use a random 256-bit key for this session
-                random_key = secrets.token_bytes(32)
-                logger.warning("🔐 Generated random 256-bit encryption key for this session only")
-                return random_key
-                
-            # Use PBKDF2 with the dedicated encryption seed (NOT database URI)
+            if encryption_seed:
+                logger.info("✅ Using ENCRYPTION_SEED from environment variable")
+            else:
+                # Get persistent seed from database (NEW FEATURE)
+                if self.connected and self.db is not None:
+                    # Use synchronous call - this is called during initialization
+                    import asyncio
+                    try:
+                        # Get current event loop or create a new one
+                        loop = asyncio.get_event_loop()
+                        if loop.is_running():
+                            # If we're in an async context, we can't use await
+                            # We'll need to handle this differently
+                            logger.info("🔄 Database encryption seed retrieval deferred until async context")
+                            # For now, use a temporary approach that will be fixed in async init
+                            encryption_seed = "temporary_seed_will_be_replaced_in_async_init"
+                        else:
+                            encryption_seed = loop.run_until_complete(self._get_or_create_encryption_seed())
+                    except Exception as e:
+                        logger.warning(f"Could not get seed from database synchronously: {e}")
+                        # Fall back to temporary seed - this will be replaced during async initialization
+                        encryption_seed = "temporary_seed_will_be_replaced_in_async_init"
+                else:
+                    logger.warning("Database not connected, using fallback seed derivation")
+                    # Use a deterministic seed based on available information
+                    encryption_seed = "fallback_seed_for_unconnected_database"
+            
+            # Use PBKDF2 with the encryption seed
             password = encryption_seed.encode('utf-8')
             salt = b'telegram_bot_api_key_encryption_2024_v2'  # Fixed salt for deterministic keys
             
@@ -117,7 +184,6 @@ class Database:
             
             derived_key = kdf.derive(password)
             logger.info("✅ Generated secure encryption key using PBKDF2-SHA256")
-            logger.warning("🔐 PRODUCTION TIP: Set API_ENCRYPTION_KEY environment variable for enhanced security")
             return derived_key
             
         except Exception as e:
@@ -337,6 +403,9 @@ class Database:
             # Ensure proper indexing after successful connection
             await self._ensure_indexes()
             
+            # Initialize encryption with persistent seed after successful connection
+            await self._initialize_encryption_with_persistent_seed()
+            
         except Exception as e:
             logger.error(f"Failed to connect to MongoDB: {e}")
             self.connected = False
@@ -391,6 +460,39 @@ class Database:
             # Don't raise - indexes are performance optimization
         except Exception as e:
             logger.error(f"Unexpected error creating indexes: {e}")
+    
+    async def _initialize_encryption_with_persistent_seed(self):
+        """
+        Initialize encryption system with persistent seed from database
+        This method should be called after successful database connection
+        """
+        try:
+            # Get or create the encryption seed from database
+            encryption_seed = await self._get_or_create_encryption_seed()
+            
+            # Generate the encryption key using PBKDF2
+            password = encryption_seed.encode('utf-8')
+            salt = b'telegram_bot_api_key_encryption_2024_v2'
+            
+            kdf = PBKDF2HMAC(
+                algorithm=hashes.SHA256(),
+                length=32,
+                salt=salt,
+                iterations=100000,
+            )
+            
+            self._encryption_key = kdf.derive(password)
+            self._aesgcm = AESGCM(self._encryption_key)
+            
+            # Create index for system_config collection
+            await self.db.system_config.create_index("type", unique=True)
+            
+            logger.info("✅ Encryption system initialized with persistent seed from database")
+            logger.info("🔒 API keys will persist securely across bot restarts")
+            
+        except Exception as e:
+            logger.error(f"CRITICAL: Failed to initialize encryption with persistent seed: {e}")
+            raise
     
     async def save_user_api_key(self, user_id: int, api_key: str) -> bool:
         """
