@@ -13,4 +13,8 @@ asyncio-throttle>=1.0.2
 tenacity>=8.5.0
 numpy>=2.0.0
 psutil>=6.0.0
-tenacity
+python-magic>=0.4.27
+pytesseract>=0.3.10
+opencv-python>=4.8.0
+pdf2image>=1.16.3
+filetype>=1.2.0

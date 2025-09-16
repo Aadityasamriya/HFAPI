@@ -576,6 +576,530 @@ class ModelCaller:
         
         error_message = result if isinstance(result, str) else "Failed to analyze sentiment"
         return False, {'error': error_message}
+    
+    async def analyze_pdf(self, pdf_text: str, pdf_metadata: dict, api_key: str, analysis_type: str = "comprehensive") -> Tuple[bool, Dict]:
+        """
+        Analyze PDF content using AI models
+        
+        Args:
+            pdf_text (str): Extracted text from PDF
+            pdf_metadata (dict): PDF metadata (pages, title, author, etc.)
+            api_key (str): Hugging Face API key
+            analysis_type (str): Type of analysis ("comprehensive", "summary", "key_points", "tables")
+            
+        Returns:
+            Tuple[bool, Dict]: (success, analysis_data)
+        """
+        if not pdf_text.strip():
+            return False, {'error': 'No text content found in PDF'}
+        
+        # Choose appropriate model based on content length and complexity
+        content_length = len(pdf_text)
+        if content_length > 50000:  # Long documents
+            model_name = Config.DEFAULT_TEXT_MODEL  # Qwen2.5-72B for complex analysis
+            max_tokens = min(2000, Config.QWEN_MAX_TOKENS)
+        elif content_length > 10000:  # Medium documents
+            model_name = Config.ADVANCED_TEXT_MODEL  # Qwen2.5-7B
+            max_tokens = 1500
+        else:  # Short documents
+            model_name = Config.FALLBACK_TEXT_MODEL  # Llama-3.2-3B
+            max_tokens = 1000
+        
+        # Create analysis prompt based on type
+        if analysis_type == "summary":
+            analysis_prompt = f"""📄 **PDF Summary Task**
+        
+Please provide a comprehensive summary of this PDF document:
+
+**Metadata:**
+- Pages: {pdf_metadata.get('pages', 'Unknown')}
+- Title: {pdf_metadata.get('title', 'Not provided')}
+- Author: {pdf_metadata.get('author', 'Not provided')}
+
+**Content:**
+{pdf_text[:8000]}{'...' if len(pdf_text) > 8000 else ''}
+
+Please provide:
+1. Executive Summary (2-3 sentences)
+2. Key Points (bullet format)
+3. Main Topics Covered
+4. Important Details or Findings
+5. Conclusion/Recommendations (if applicable)
+
+Keep the summary concise but comprehensive."""
+
+        elif analysis_type == "key_points":
+            analysis_prompt = f"""📝 **PDF Key Points Extraction**
+        
+Extract the most important points from this PDF document:
+
+**Document Info:** {pdf_metadata.get('pages', 'Unknown')} pages
+**Content:**
+{pdf_text[:10000]}{'...' if len(pdf_text) > 10000 else ''}
+
+Please extract:
+- Main arguments or thesis
+- Supporting evidence
+- Key statistics or data
+- Important conclusions
+- Action items or recommendations
+
+Format as clear, numbered points."""
+
+        elif analysis_type == "tables":
+            analysis_prompt = f"""📊 **PDF Table and Data Analysis**
+        
+Analyze any tables, charts, or structured data in this PDF:
+
+**Content:**
+{pdf_text[:8000]}{'...' if len(pdf_text) > 8000 else ''}
+
+Please identify and explain:
+- Tables and their contents
+- Charts or graphs mentioned
+- Statistical data
+- Structured information
+- Data insights and patterns
+
+If no tables are found, analyze the numerical/structured content."""
+
+        else:  # comprehensive
+            analysis_prompt = f"""🔍 **Comprehensive PDF Analysis**
+        
+Provide a thorough analysis of this PDF document:
+
+**Metadata:**
+- Pages: {pdf_metadata.get('pages', 'Unknown')}
+- Title: {pdf_metadata.get('title', 'Not provided')}
+- Author: {pdf_metadata.get('author', 'Not provided')}
+
+**Content:**
+{pdf_text[:8000]}{'...' if len(pdf_text) > 8000 else ''}
+
+Please provide:
+1. **Document Overview** - What type of document is this?
+2. **Main Content Analysis** - Key themes, arguments, findings
+3. **Structure Analysis** - How is the document organized?
+4. **Important Details** - Critical information, data, statistics
+5. **Quality Assessment** - Clarity, completeness, reliability
+6. **Practical Value** - How can this information be used?
+
+Be thorough but concise."""
+
+        # Prepare payload for text generation
+        payload = {
+            "inputs": analysis_prompt,
+            "parameters": {
+                "max_new_tokens": max_tokens,
+                "temperature": 0.3,  # Lower temperature for factual analysis
+                "do_sample": True,
+                "top_p": 0.95,
+                "repetition_penalty": 1.05,
+                "return_full_text": False
+            }
+        }
+        
+        success, result = await self._make_api_call(model_name, payload, api_key)
+        
+        if success and isinstance(result, list) and len(result) > 0:
+            analysis_text = result[0].get('generated_text', '').strip()
+            
+            return True, {
+                'analysis_type': analysis_type,
+                'analysis': analysis_text,
+                'document_info': pdf_metadata,
+                'content_length': content_length,
+                'model_used': model_name.split('/')[-1] if '/' in model_name else model_name
+            }
+        
+        # Try fallback with simpler prompt
+        simple_prompt = f"Analyze this PDF content:\n\n{pdf_text[:5000]}\n\nProvide key insights and summary."
+        simple_payload = {
+            "inputs": simple_prompt,
+            "parameters": {
+                "max_new_tokens": 800,
+                "temperature": 0.4,
+                "return_full_text": False
+            }
+        }
+        
+        fallback_success, fallback_result = await self._make_api_call(Config.FALLBACK_TEXT_MODEL, simple_payload, api_key)
+        if fallback_success and isinstance(fallback_result, list) and len(fallback_result) > 0:
+            analysis_text = fallback_result[0].get('generated_text', '').strip()
+            return True, {
+                'analysis_type': f"{analysis_type}_simplified",
+                'analysis': analysis_text,
+                'document_info': pdf_metadata,
+                'model_used': 'llama_fallback'
+            }
+        
+        error_message = result if isinstance(result, str) else "Failed to analyze PDF content"
+        return False, {'error': error_message}
+    
+    async def analyze_zip_contents(self, file_contents: List[Dict], api_key: str, analysis_depth: str = "overview") -> Tuple[bool, Dict]:
+        """
+        Analyze contents of a ZIP archive using AI models
+        
+        Args:
+            file_contents (List[Dict]): List of file info with 'name', 'size', 'type', 'content' (if text)
+            api_key (str): Hugging Face API key  
+            analysis_depth (str): Level of analysis ("overview", "detailed", "code_focus")
+            
+        Returns:
+            Tuple[bool, Dict]: (success, analysis_data)
+        """
+        if not file_contents:
+            return False, {'error': 'No files found in ZIP archive'}
+        
+        # Prepare content summary
+        total_files = len(file_contents)
+        total_size = sum(f.get('size', 0) for f in file_contents)
+        file_types = {}
+        text_files = []
+        
+        for file_info in file_contents:
+            file_type = file_info.get('type', 'unknown')
+            file_types[file_type] = file_types.get(file_type, 0) + 1
+            
+            # Include text content for analysis (limit to prevent overload)
+            if file_info.get('content') and len(text_files) < 20:
+                text_files.append(file_info)
+        
+        # Create analysis prompt based on depth
+        if analysis_depth == "overview":
+            analysis_prompt = f"""📦 **ZIP Archive Overview Analysis**
+
+Analyze this ZIP archive structure and provide insights:
+
+**Archive Statistics:**
+- Total Files: {total_files}
+- Total Size: {total_size:,} bytes ({total_size/1024:.1f} KB)
+- File Types: {', '.join([f'{count} {ftype}' for ftype, count in file_types.items()])}
+
+**File Listing:**
+{chr(10).join([f"- {f['name']} ({f.get('size', 0)} bytes)" for f in file_contents[:50]])}
+{'... (and more)' if total_files > 50 else ''}
+
+**Sample Content (first few text files):**
+{chr(10).join([f"=== {f['name']} ===" + chr(10) + f.get('content', '')[:500] + ('...' if len(f.get('content', '')) > 500 else '') + chr(10) for f in text_files[:5]])}
+
+Please analyze:
+1. **Archive Purpose** - What kind of project/content is this?
+2. **Structure Analysis** - How is the content organized?
+3. **Content Quality** - Assessment of the files and structure
+4. **Notable Files** - Important or interesting files found
+5. **Recommendations** - Suggestions for the user
+
+Be concise but informative."""
+
+        elif analysis_depth == "detailed":
+            analysis_prompt = f"""🔍 **Detailed ZIP Archive Analysis**
+
+Perform comprehensive analysis of this ZIP archive:
+
+**Archive Details:**
+- Files: {total_files} | Size: {total_size:,} bytes
+- Types: {file_types}
+
+**Complete File Structure:**
+{chr(10).join([f"{i+1}. {f['name']} ({f.get('size', 0)} bytes, {f.get('type', 'unknown')})" for i, f in enumerate(file_contents)])}
+
+**Content Analysis (text files):**
+{chr(10).join([f"=== FILE: {f['name']} ===" + chr(10) + f.get('content', '')[:1000] + ('...' if len(f.get('content', '')) > 1000 else '') + chr(10) + "---" + chr(10) for f in text_files[:10]])}
+
+Provide detailed analysis:
+1. **Project/Content Identification** - What is this archive?
+2. **Architecture Analysis** - Code/content structure and organization
+3. **Quality Assessment** - Code quality, documentation, completeness
+4. **Key Components** - Important files and their purposes
+5. **Dependencies** - External requirements or libraries
+6. **Usage Instructions** - How to use/deploy this content
+7. **Security Review** - Any potential security concerns
+8. **Improvement Suggestions** - Recommendations for enhancement"""
+
+        elif analysis_depth == "code_focus":
+            code_files = [f for f in text_files if any(ext in f.get('name', '').lower() for ext in ['.py', '.js', '.java', '.cpp', '.c', '.php', '.rb', '.go', '.rs', '.ts', '.jsx', '.vue'])]
+            
+            analysis_prompt = f"""💻 **Code-Focused ZIP Analysis**
+
+Analyze the code structure and quality in this archive:
+
+**Code Statistics:**
+- Total Files: {total_files} | Code Files: {len(code_files)}
+- Languages Detected: {', '.join(set([f.get('name', '').split('.')[-1] for f in code_files if '.' in f.get('name', '')]))}
+
+**Code Files:**
+{chr(10).join([f"📄 {f['name']} ({f.get('size', 0)} bytes)" for f in code_files])}
+
+**Code Analysis (samples):**
+{chr(10).join([f"=== {f['name']} ===" + chr(10) + f.get('content', '')[:800] + ('...' if len(f.get('content', '')) > 800 else '') + chr(10) + "---" + chr(10) for f in code_files[:8]])}
+
+Please provide:
+1. **Technology Stack** - Programming languages, frameworks used
+2. **Code Architecture** - Structure, patterns, design approach  
+3. **Code Quality** - Style, organization, best practices
+4. **Functionality** - What does this code do?
+5. **Completeness** - Is this a complete application/library?
+6. **Dependencies** - Required libraries or external dependencies
+7. **Deployment** - How to run or deploy this code
+8. **Security Analysis** - Potential security issues or concerns
+9. **Code Review** - Strengths, weaknesses, suggestions
+
+Focus on technical aspects and code quality."""
+
+        else:
+            analysis_prompt = f"Analyze this ZIP archive with {total_files} files containing: {', '.join(file_types.keys())}"
+        
+        # Choose model based on analysis complexity
+        if analysis_depth == "detailed" or len(text_files) > 10:
+            model_name = Config.DEFAULT_TEXT_MODEL  # Use most capable model
+            max_tokens = 2500
+        elif analysis_depth == "code_focus":
+            model_name = Config.DEFAULT_CODE_MODEL  # Use code-specialized model for code analysis
+            max_tokens = 2000
+        else:
+            model_name = Config.ADVANCED_TEXT_MODEL
+            max_tokens = 1500
+        
+        # For code-focused analysis, use code generation endpoint
+        if analysis_depth == "code_focus":
+            payload = {
+                "inputs": analysis_prompt,
+                "parameters": {
+                    "max_new_tokens": max_tokens,
+                    "temperature": 0.2,  # Lower temperature for code analysis
+                    "do_sample": True,
+                    "top_p": 0.9,
+                    "return_full_text": False
+                }
+            }
+        else:
+            payload = {
+                "inputs": analysis_prompt,
+                "parameters": {
+                    "max_new_tokens": max_tokens,
+                    "temperature": 0.4,  # Moderate temperature for analysis
+                    "do_sample": True,
+                    "top_p": 0.95,
+                    "return_full_text": False
+                }
+            }
+        
+        success, result = await self._make_api_call(model_name, payload, api_key)
+        
+        if success and isinstance(result, list) and len(result) > 0:
+            analysis_text = result[0].get('generated_text', '').strip()
+            
+            return True, {
+                'analysis_depth': analysis_depth,
+                'analysis': analysis_text,
+                'archive_stats': {
+                    'total_files': total_files,
+                    'total_size': total_size,
+                    'file_types': file_types,
+                    'text_files_analyzed': len(text_files)
+                },
+                'model_used': model_name.split('/')[-1] if '/' in model_name else model_name
+            }
+        
+        error_message = result if isinstance(result, str) else "Failed to analyze ZIP contents"
+        return False, {'error': error_message}
+    
+    async def analyze_image_content(self, image_data: bytes, analysis_type: str, api_key: str) -> Tuple[bool, Dict]:
+        """
+        Analyze image content using vision models and AI
+        
+        Args:
+            image_data (bytes): Image file data
+            analysis_type (str): Type of analysis ("description", "ocr", "objects", "comprehensive")
+            api_key (str): Hugging Face API key
+            
+        Returns:
+            Tuple[bool, Dict]: (success, analysis_data)
+        """
+        try:
+            # First, we need to encode the image for API calls
+            import base64
+            image_b64 = base64.b64encode(image_data).decode('utf-8')
+            
+            # Choose model based on analysis type
+            if analysis_type == "ocr" or analysis_type == "text":
+                # Use a model that can extract text from images
+                model_name = "microsoft/trocr-base-handwritten"  # For OCR tasks
+                payload = {
+                    "inputs": image_b64
+                }
+            elif analysis_type == "objects" or analysis_type == "detection":
+                # Use object detection model
+                model_name = "facebook/detr-resnet-50"  # For object detection
+                payload = {
+                    "inputs": image_b64
+                }
+            else:
+                # Use general vision model for description and comprehensive analysis
+                model_name = "nlpconnect/vit-gpt2-image-captioning"  # For image captioning
+                payload = {
+                    "inputs": image_b64
+                }
+            
+            success, result = await self._make_api_call(model_name, payload, api_key)
+            
+            if success:
+                # Process different types of results
+                if analysis_type == "ocr" and result:
+                    # OCR results
+                    if isinstance(result, list) and len(result) > 0:
+                        extracted_text = result[0].get('generated_text', '') if 'generated_text' in result[0] else str(result[0])
+                        
+                        # If we have text, analyze it with a text model
+                        if extracted_text.strip():
+                            text_analysis_prompt = f"""📖 **Text Extracted from Image Analysis**
+
+Extracted Text:
+{extracted_text}
+
+Please provide:
+1. **Content Summary** - What type of text is this?
+2. **Key Information** - Important details, numbers, or data
+3. **Structure Analysis** - How is the text organized?
+4. **Practical Value** - How can this information be used?
+5. **Quality Assessment** - Is the text complete and clear?
+
+Be concise but thorough."""
+
+                            text_payload = {
+                                "inputs": text_analysis_prompt,
+                                "parameters": {
+                                    "max_new_tokens": 800,
+                                    "temperature": 0.3,
+                                    "return_full_text": False
+                                }
+                            }
+                            
+                            text_success, text_result = await self._make_api_call(Config.ADVANCED_TEXT_MODEL, text_payload, api_key)
+                            
+                            analysis = text_result[0].get('generated_text', '') if text_success and isinstance(text_result, list) else "Text analysis unavailable"
+                            
+                            return True, {
+                                'analysis_type': 'ocr',
+                                'extracted_text': extracted_text,
+                                'text_analysis': analysis,
+                                'model_used': 'trocr_plus_text_analysis'
+                            }
+                        else:
+                            return True, {
+                                'analysis_type': 'ocr',
+                                'extracted_text': extracted_text or "No text detected in image",
+                                'model_used': 'trocr'
+                            }
+                            
+                elif analysis_type in ["objects", "detection"] and result:
+                    # Object detection results
+                    return True, {
+                        'analysis_type': 'object_detection',
+                        'objects_detected': result,
+                        'model_used': 'detr'
+                    }
+                    
+                else:
+                    # General image description/captioning
+                    if isinstance(result, list) and len(result) > 0:
+                        caption = result[0].get('generated_text', '') if 'generated_text' in result[0] else str(result[0])
+                        
+                        # Enhance the caption with AI analysis
+                        if analysis_type == "comprehensive":
+                            enhancement_prompt = f"""🖼️ **Comprehensive Image Analysis Enhancement**
+
+Basic Image Caption: "{caption}"
+
+Based on this caption, please provide enhanced analysis:
+
+1. **Visual Content** - Detailed description of what's visible
+2. **Scene Analysis** - Setting, context, environment
+3. **Object Details** - Specific objects, people, or elements present
+4. **Artistic/Technical Elements** - Colors, composition, style, quality
+5. **Context Interpretation** - What might be happening or the purpose
+6. **Practical Information** - Any useful details for the viewer
+7. **Overall Assessment** - Quality, clarity, and notable features
+
+Expand on the basic caption with rich, detailed insights."""
+
+                            enhancement_payload = {
+                                "inputs": enhancement_prompt,
+                                "parameters": {
+                                    "max_new_tokens": 1200,
+                                    "temperature": 0.5,
+                                    "return_full_text": False
+                                }
+                            }
+                            
+                            enhance_success, enhance_result = await self._make_api_call(Config.ADVANCED_TEXT_MODEL, enhancement_payload, api_key)
+                            
+                            enhanced_analysis = enhance_result[0].get('generated_text', '') if enhance_success and isinstance(enhance_result, list) else caption
+                            
+                            return True, {
+                                'analysis_type': 'comprehensive',
+                                'basic_caption': caption,
+                                'detailed_analysis': enhanced_analysis,
+                                'model_used': 'vit_gpt2_plus_text_enhancement'
+                            }
+                        else:
+                            return True, {
+                                'analysis_type': 'description',
+                                'description': caption,
+                                'model_used': 'vit_gpt2'
+                            }
+            
+            # Fallback to text-only analysis if vision models fail
+            fallback_prompt = f"""🖼️ **Image Analysis Request**
+
+The user has uploaded an image for {analysis_type} analysis, but I cannot directly process images at the moment.
+
+Please provide helpful guidance:
+
+1. **Analysis Type Requested:** {analysis_type}
+2. **What I would typically analyze:** 
+   - For description: Visual content, objects, scene, colors, composition
+   - For OCR: Text extraction and content analysis
+   - For objects: Object detection and identification
+   - For comprehensive: Complete visual analysis and insights
+
+3. **Alternative Suggestions:**
+   - How the user could get this type of analysis
+   - What to look for when analyzing this type of content
+   - Tools or methods that might help
+
+4. **General Guidance:**
+   - Tips for this type of image analysis
+   - What information is typically valuable
+
+Be helpful and provide value even without direct image access."""
+
+            fallback_payload = {
+                "inputs": fallback_prompt,
+                "parameters": {
+                    "max_new_tokens": 600,
+                    "temperature": 0.6,
+                    "return_full_text": False
+                }
+            }
+            
+            fallback_success, fallback_result = await self._make_api_call(Config.FALLBACK_TEXT_MODEL, fallback_payload, api_key)
+            
+            if fallback_success and isinstance(fallback_result, list) and len(fallback_result) > 0:
+                guidance = fallback_result[0].get('generated_text', '').strip()
+                return True, {
+                    'analysis_type': f'{analysis_type}_guidance',
+                    'guidance': guidance,
+                    'note': 'Direct image processing unavailable, providing guidance instead',
+                    'model_used': 'text_guidance'
+                }
+            
+            return False, {'error': f'Image {analysis_type} analysis failed - vision models unavailable'}
+            
+        except Exception as e:
+            _safe_log_error(logger.error, f"Error in image analysis: {e}")
+            return False, {'error': f'Image analysis error: {str(e)}'}
 
 # Global model caller instance
 model_caller = ModelCaller()

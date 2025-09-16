@@ -17,7 +17,7 @@ except ImportError as e:
 from bot.config import Config
 from bot.database import db
 from bot.handlers.command_handlers import command_handlers
-from bot.handlers.message_handlers import message_handlers
+from bot.handlers.message_handlers import message_handlers, MessageHandlers
 
 # Configure logging with security
 logging.basicConfig(
@@ -182,8 +182,19 @@ class HuggingFaceBot:
             MessageHandler(filters.TEXT & ~filters.COMMAND, message_handlers.text_message_handler)
         )
         
-        # Error handler
-        self.application.add_error_handler(message_handlers.error_handler)
+        # P1 FEATURES: File upload handlers for advanced document and image processing (2025)
+        # Document handler for PDF and ZIP files  
+        self.application.add_handler(
+            MessageHandler(filters.Document.ALL, MessageHandlers.document_handler)
+        )
+        
+        # Photo handler for image analysis
+        self.application.add_handler(
+            MessageHandler(filters.PHOTO, MessageHandlers.photo_handler)
+        )
+        
+        # Error handler (enhanced for file processing)
+        self.application.add_error_handler(MessageHandlers.error_handler)
         
         logger.info("All handlers registered successfully")
         logger.info(f"📊 Handler summary: {len(self.application.handlers)} handler groups configured")

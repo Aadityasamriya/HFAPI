@@ -747,6 +747,530 @@ Please provide detailed analysis including key insights, patterns, and actionabl
                     # Don't fail the response if saving fails
             else:
                 await update.message.reply_text("❌ **Conversation Error** - Let me try that again.", parse_mode='Markdown')
+    
+    @staticmethod
+    async def document_handler(update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """
+        Handle document uploads (PDF and ZIP files) with AI analysis
+        """
+        user = update.effective_user
+        user_id = user.id
+        username = user.username or "No username"
+        
+        logger.info(f"📎 DOCUMENT upload received from user_id:{user_id} (@{username})")
+        
+        # Check rate limit
+        is_allowed, wait_time = check_rate_limit(user_id)
+        if not is_allowed:
+            await update.message.reply_text(
+                f"⚠️ **Rate Limit Exceeded**\n\nPlease wait {wait_time} seconds before uploading another file.",
+                parse_mode='Markdown'
+            )
+            return
+        
+        try:
+            # Get document info
+            document = update.message.document
+            if not document:
+                await update.message.reply_text(
+                    "❌ **No Document Found**\n\nPlease upload a valid PDF or ZIP file.",
+                    parse_mode='Markdown'
+                )
+                return
+            
+            filename = document.file_name or "unknown_file"
+            file_size = document.file_size or 0
+            mime_type = document.mime_type or "application/octet-stream"
+            
+            logger.info(f"📄 Document details: {filename} ({file_size:,} bytes, {mime_type}) from user {user_id}")
+            
+            # Determine file type and validate
+            is_pdf = mime_type in ['application/pdf'] or filename.lower().endswith('.pdf')
+            is_zip = mime_type in ['application/zip', 'application/x-zip-compressed'] or filename.lower().endswith('.zip')
+            
+            if not (is_pdf or is_zip):
+                await update.message.reply_text(
+                    "❌ **Unsupported File Type**\n\n"
+                    "I can only process:\n"
+                    "• **PDF files** - For document analysis\n"
+                    "• **ZIP archives** - For content analysis\n\n"
+                    "Please upload a PDF or ZIP file.",
+                    parse_mode='Markdown'
+                )
+                return
+            
+            # Check file size limits
+            from bot.file_processors import FileProcessor
+            max_size = FileProcessor.MAX_ZIP_SIZE if is_zip else FileProcessor.MAX_PDF_SIZE
+            if file_size > max_size:
+                max_size_mb = max_size / (1024 * 1024)
+                await update.message.reply_text(
+                    f"❌ **File Too Large**\n\n"
+                    f"Maximum size for {'ZIP' if is_zip else 'PDF'} files: {max_size_mb:.1f}MB\n"
+                    f"Your file: {file_size / (1024 * 1024):.1f}MB\n\n"
+                    f"Please upload a smaller file.",
+                    parse_mode='Markdown'
+                )
+                return
+            
+            # Download file data
+            await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=ChatAction.UPLOAD_DOCUMENT)
+            
+            processing_msg = await update.message.reply_text(
+                f"📥 **Downloading {filename}...**\n\n"
+                f"Processing your {'ZIP archive' if is_zip else 'PDF document'} for analysis. This may take a moment...",
+                parse_mode='Markdown'
+            )
+            
+            try:
+                # Download file
+                file_obj = await document.get_file()
+                file_data = await file_obj.download_as_bytearray()
+                
+                # Security validation
+                expected_type = 'zip' if is_zip else 'pdf'
+                is_valid, error_msg = FileProcessor.validate_file_security(bytes(file_data), filename, expected_type)
+                
+                if not is_valid:
+                    await processing_msg.edit_text(
+                        f"🚫 **Security Validation Failed**\n\n{error_msg}\n\n"
+                        "Please upload a valid, safe file.",
+                        parse_mode='Markdown'
+                    )
+                    return
+                
+                # Process based on file type
+                if is_pdf:
+                    await MessageHandlers._process_pdf_document(update, context, file_data, filename, processing_msg)
+                elif is_zip:
+                    await MessageHandlers._process_zip_archive(update, context, file_data, filename, processing_msg)
+                    
+            except Exception as download_error:
+                logger.error(f"File download error for user {user_id}: {download_error}")
+                await processing_msg.edit_text(
+                    "❌ **Download Failed**\n\n"
+                    "Failed to download your file. Please try uploading again.",
+                    parse_mode='Markdown'
+                )
+                
+        except Exception as e:
+            _safe_log_error(logger.error, f"Error in document handler for user {user_id}: {e}")
+            await update.message.reply_text(
+                "🚫 **Document Processing Error**\n\n"
+                "An error occurred while processing your document. Please try again.",
+                parse_mode='Markdown'
+            )
+    
+    @staticmethod
+    async def photo_handler(update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """
+        Handle photo uploads for image analysis
+        """
+        user = update.effective_user
+        user_id = user.id
+        username = user.username or "No username"
+        
+        logger.info(f"🖼️ PHOTO upload received from user_id:{user_id} (@{username})")
+        
+        # Check rate limit
+        is_allowed, wait_time = check_rate_limit(user_id)
+        if not is_allowed:
+            await update.message.reply_text(
+                f"⚠️ **Rate Limit Exceeded**\n\nPlease wait {wait_time} seconds before uploading another image.",
+                parse_mode='Markdown'
+            )
+            return
+        
+        try:
+            # Get the largest photo size
+            if not update.message.photo:
+                await update.message.reply_text(
+                    "❌ **No Photo Found**\n\nPlease upload a valid image file.",
+                    parse_mode='Markdown'
+                )
+                return
+            
+            photo = update.message.photo[-1]  # Get highest resolution
+            file_size = photo.file_size or 0
+            
+            logger.info(f"📸 Photo details: {photo.width}x{photo.height} ({file_size:,} bytes) from user {user_id}")
+            
+            # Check file size
+            from bot.file_processors import FileProcessor
+            if file_size > FileProcessor.MAX_IMAGE_SIZE:
+                max_size_mb = FileProcessor.MAX_IMAGE_SIZE / (1024 * 1024)
+                await update.message.reply_text(
+                    f"❌ **Image Too Large**\n\n"
+                    f"Maximum size for images: {max_size_mb:.1f}MB\n"
+                    f"Your image: {file_size / (1024 * 1024):.1f}MB\n\n"
+                    f"Please upload a smaller image.",
+                    parse_mode='Markdown'
+                )
+                return
+            
+            # Download and process image
+            await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=ChatAction.UPLOAD_PHOTO)
+            
+            processing_msg = await update.message.reply_text(
+                "🔍 **Analyzing Your Image...**\n\n"
+                "Processing image content and extracting insights. This may take a moment...",
+                parse_mode='Markdown'
+            )
+            
+            try:
+                # Download image
+                file_obj = await photo.get_file()
+                image_data = await file_obj.download_as_bytearray()
+                
+                # Security validation
+                is_valid, error_msg = FileProcessor.validate_file_security(bytes(image_data), f"image_{photo.file_id}.jpg", 'image')
+                
+                if not is_valid:
+                    await processing_msg.edit_text(
+                        f"🚫 **Image Validation Failed**\n\n{error_msg}\n\n"
+                        "Please upload a valid image file.",
+                        parse_mode='Markdown'
+                    )
+                    return
+                
+                # Process image
+                await MessageHandlers._process_image_analysis(update, context, image_data, f"image_{photo.file_id}.jpg", processing_msg)
+                
+            except Exception as download_error:
+                logger.error(f"Image download error for user {user_id}: {download_error}")
+                await processing_msg.edit_text(
+                    "❌ **Download Failed**\n\n"
+                    "Failed to download your image. Please try uploading again.",
+                    parse_mode='Markdown'
+                )
+                
+        except Exception as e:
+            _safe_log_error(logger.error, f"Error in photo handler for user {user_id}: {e}")
+            await update.message.reply_text(
+                "🚫 **Image Processing Error**\n\n"
+                "An error occurred while processing your image. Please try again.",
+                parse_mode='Markdown'
+            )
+    
+    @staticmethod
+    async def _process_pdf_document(update, context, file_data: bytes, filename: str, processing_msg) -> None:
+        """Process PDF document with AI analysis"""
+        user_id = update.effective_user.id
+        
+        try:
+            # Get user's API key
+            api_key = await db.get_user_api_key(user_id)
+            if not api_key:
+                await processing_msg.edit_text(
+                    "🔑 **API Key Required**\n\n"
+                    "Please provide your Hugging Face API key first using the /start command.",
+                    parse_mode='Markdown'
+                )
+                return
+            
+            await processing_msg.edit_text(
+                "📄 **Extracting PDF Content...**\n\n"
+                "Extracting text, tables, and metadata from your PDF document...",
+                parse_mode='Markdown'
+            )
+            
+            # Extract PDF content
+            from bot.file_processors import FileProcessor
+            pdf_result = await FileProcessor.extract_pdf_content(file_data, filename)
+            
+            if not pdf_result.get('success'):
+                await processing_msg.edit_text(
+                    f"❌ **PDF Extraction Failed**\n\n{pdf_result.get('error', 'Unknown error')}\n\n"
+                    "Please ensure you've uploaded a valid PDF file.",
+                    parse_mode='Markdown'
+                )
+                return
+            
+            await processing_msg.edit_text(
+                "🧠 **Analyzing PDF Content with AI...**\n\n"
+                "Using advanced AI models to analyze your document content...",
+                parse_mode='Markdown'
+            )
+            
+            # AI analysis
+            async with ModelCaller() as model_caller:
+                success, analysis_result = await model_caller.analyze_pdf(
+                    pdf_result['full_text'],
+                    pdf_result['metadata'],
+                    api_key,
+                    analysis_type="comprehensive"
+                )
+            
+            if success and analysis_result:
+                # Format response
+                metadata = pdf_result['metadata']
+                stats = pdf_result.get('stats', {})
+                
+                safe_filename = escape_markdown(filename)
+                safe_analysis = safe_markdown_format(analysis_result.get('analysis', 'Analysis unavailable'))
+                
+                response_text = f"""📄 **PDF Analysis Complete**
+
+**Document:** {safe_filename}
+**Pages:** {metadata.get('pages', 'Unknown')} | **Size:** {metadata.get('file_size', 0):,} bytes
+{'**Title:** ' + escape_markdown(metadata.get('title', '')) if metadata.get('title') else ''}
+{'**Author:** ' + escape_markdown(metadata.get('author', '')) if metadata.get('author') else ''}
+
+📊 **Content Statistics:**
+• Characters: {stats.get('total_characters', 0):,}
+• Pages with text: {stats.get('pages_with_text', 0)}
+• Tables detected: {stats.get('tables_found', 0)}
+
+🤖 **AI Analysis:**
+
+{safe_analysis}
+
+🎯 *Analyzed by {escape_markdown(analysis_result.get('model_used', 'AI'))} \- Advanced 2025 document processing*"""
+                
+                # Delete processing message and send result
+                await processing_msg.delete()
+                await update.message.reply_text(response_text, parse_mode='Markdown')
+                
+                logger.info(f"✅ PDF analysis completed successfully for user {user_id}")
+                
+            else:
+                error_msg = analysis_result.get('error', 'Analysis failed') if analysis_result else 'AI analysis unavailable'
+                await processing_msg.edit_text(
+                    f"❌ **AI Analysis Failed**\n\n{error_msg}\n\n"
+                    "The PDF was extracted successfully, but AI analysis encountered an error.",
+                    parse_mode='Markdown'
+                )
+                
+        except Exception as e:
+            _safe_log_error(logger.error, f"PDF processing error for user {user_id}: {e}")
+            await processing_msg.edit_text(
+                "🚫 **PDF Processing Error**\n\n"
+                "An error occurred while processing your PDF. Please try again.",
+                parse_mode='Markdown'
+            )
+    
+    @staticmethod
+    async def _process_zip_archive(update, context, file_data: bytes, filename: str, processing_msg) -> None:
+        """Process ZIP archive with comprehensive analysis"""
+        user_id = update.effective_user.id
+        
+        try:
+            # Get user's API key
+            api_key = await db.get_user_api_key(user_id)
+            if not api_key:
+                await processing_msg.edit_text(
+                    "🔑 **API Key Required**\n\n"
+                    "Please provide your Hugging Face API key first using the /start command.",
+                    parse_mode='Markdown'
+                )
+                return
+            
+            await processing_msg.edit_text(
+                "📦 **Extracting ZIP Contents...**\n\n"
+                "Safely extracting and cataloging files in your ZIP archive...",
+                parse_mode='Markdown'
+            )
+            
+            # Extract ZIP contents
+            from bot.file_processors import FileProcessor
+            zip_result = await FileProcessor.analyze_zip_archive(file_data, filename)
+            
+            if not zip_result.get('success'):
+                await processing_msg.edit_text(
+                    f"❌ **ZIP Extraction Failed**\n\n{zip_result.get('error', 'Unknown error')}\n\n"
+                    "Please ensure you've uploaded a valid ZIP file.",
+                    parse_mode='Markdown'
+                )
+                return
+            
+            await processing_msg.edit_text(
+                "🧠 **Analyzing ZIP Contents with AI...**\n\n"
+                "Using advanced AI models to analyze your archive contents...",
+                parse_mode='Markdown'
+            )
+            
+            # Determine analysis depth based on content
+            file_contents = zip_result.get('file_contents', [])
+            has_code = any(f.get('extension', '') in ['.py', '.js', '.java', '.cpp', '.php', '.rb'] for f in file_contents)
+            analysis_depth = "code_focus" if has_code else "overview"
+            
+            # AI analysis
+            async with ModelCaller() as model_caller:
+                success, analysis_result = await model_caller.analyze_zip_contents(
+                    file_contents,
+                    api_key,
+                    analysis_depth=analysis_depth
+                )
+            
+            if success and analysis_result:
+                # Format response
+                archive_info = zip_result.get('archive_info', {})
+                stats = zip_result.get('stats', {})
+                
+                safe_filename = escape_markdown(filename)
+                safe_analysis = safe_markdown_format(analysis_result.get('analysis', 'Analysis unavailable'))
+                
+                file_types_summary = ', '.join([f"{count} {ftype}" for ftype, count in 
+                                               dict(list({f.get('type', 'unknown'): 1 for f in file_contents}.items())[:5]).items()])
+                
+                response_text = f"""📦 **ZIP Archive Analysis Complete**
+
+**Archive:** {safe_filename}
+**Files:** {archive_info.get('total_files', 0)} | **Size:** {archive_info.get('compressed_size', 0):,} bytes
+**Uncompressed:** {archive_info.get('uncompressed_size', 0):,} bytes
+
+📊 **Content Summary:**
+• Text files analyzed: {stats.get('text_files', 0)}
+• File types: {escape_markdown(file_types_summary)}
+• Analysis depth: {escape_markdown(analysis_result.get('analysis_depth', 'standard'))}
+
+🤖 **AI Analysis:**
+
+{safe_analysis}
+
+🎯 *Analyzed by {escape_markdown(analysis_result.get('model_used', 'AI'))} \- Advanced 2025 archive processing*"""
+                
+                # Delete processing message and send result
+                await processing_msg.delete()
+                await update.message.reply_text(response_text, parse_mode='Markdown')
+                
+                logger.info(f"✅ ZIP analysis completed successfully for user {user_id}")
+                
+            else:
+                error_msg = analysis_result.get('error', 'Analysis failed') if analysis_result else 'AI analysis unavailable'
+                await processing_msg.edit_text(
+                    f"❌ **AI Analysis Failed**\n\n{error_msg}\n\n"
+                    "The ZIP was extracted successfully, but AI analysis encountered an error.",
+                    parse_mode='Markdown'
+                )
+                
+        except Exception as e:
+            _safe_log_error(logger.error, f"ZIP processing error for user {user_id}: {e}")
+            await processing_msg.edit_text(
+                "🚫 **ZIP Processing Error**\n\n"
+                "An error occurred while processing your ZIP file. Please try again.",
+                parse_mode='Markdown'
+            )
+    
+    @staticmethod
+    async def _process_image_analysis(update, context, image_data: bytes, filename: str, processing_msg) -> None:
+        """Process image with comprehensive AI analysis"""
+        user_id = update.effective_user.id
+        
+        try:
+            # Get user's API key
+            api_key = await db.get_user_api_key(user_id)
+            if not api_key:
+                await processing_msg.edit_text(
+                    "🔑 **API Key Required**\n\n"
+                    "Please provide your Hugging Face API key first using the /start command.",
+                    parse_mode='Markdown'
+                )
+                return
+            
+            await processing_msg.edit_text(
+                "🖼️ **Processing Image...**\n\n"
+                "Extracting image information and preparing for AI analysis...",
+                parse_mode='Markdown'
+            )
+            
+            # Process image
+            from bot.file_processors import FileProcessor
+            image_result = await FileProcessor.process_image_content(image_data, filename, "comprehensive")
+            
+            if not image_result.get('success'):
+                await processing_msg.edit_text(
+                    f"❌ **Image Processing Failed**\n\n{image_result.get('error', 'Unknown error')}\n\n"
+                    "Please ensure you've uploaded a valid image file.",
+                    parse_mode='Markdown'
+                )
+                return
+            
+            await processing_msg.edit_text(
+                "🧠 **Analyzing Image with AI...**\n\n"
+                "Using advanced computer vision and AI models to analyze your image...",
+                parse_mode='Markdown'
+            )
+            
+            # AI analysis
+            async with ModelCaller() as model_caller:
+                success, ai_analysis = await model_caller.analyze_image_content(
+                    image_data,
+                    "comprehensive",
+                    api_key
+                )
+            
+            # Prepare response
+            image_info = image_result.get('image_info', {})
+            ocr_result = image_result.get('ocr', {})
+            
+            safe_filename = escape_markdown(filename)
+            
+            # Build response text
+            response_text = f"""🖼️ **Image Analysis Complete**
+
+**Image:** {safe_filename}
+**Dimensions:** {image_info.get('width', 0)}x{image_info.get('height', 0)} pixels
+**Format:** {image_info.get('format', 'Unknown')} | **Size:** {image_info.get('file_size', 0):,} bytes"""
+            
+            # Add OCR results if text was found
+            if ocr_result.get('has_text'):
+                extracted_text = ocr_result.get('text', '')
+                if len(extracted_text) > 300:
+                    extracted_text = extracted_text[:300] + "..."
+                safe_ocr_text = escape_markdown(extracted_text)
+                response_text += f"\n\n📖 **Text Extracted (OCR):**\n{safe_ocr_text}"
+            
+            # Add AI analysis if available
+            if success and ai_analysis:
+                if 'detailed_analysis' in ai_analysis:
+                    safe_analysis = safe_markdown_format(ai_analysis['detailed_analysis'])
+                    response_text += f"\n\n🤖 **AI Visual Analysis:**\n{safe_analysis}"
+                elif 'description' in ai_analysis:
+                    safe_description = safe_markdown_format(ai_analysis['description'])
+                    response_text += f"\n\n🤖 **AI Description:**\n{safe_description}"
+                elif 'guidance' in ai_analysis:
+                    safe_guidance = safe_markdown_format(ai_analysis['guidance'])
+                    response_text += f"\n\n💡 **Analysis Guidance:**\n{safe_guidance}"
+                
+                model_used = ai_analysis.get('model_used', 'AI vision models')
+                response_text += f"\n\n🎯 *Analyzed by {escape_markdown(model_used)} \- Advanced 2025 computer vision*"
+            else:
+                response_text += "\n\n⚠️ **Note:** AI visual analysis is currently limited, but OCR and basic image processing completed successfully."
+            
+            # Delete processing message and send result
+            await processing_msg.delete()
+            await update.message.reply_text(response_text, parse_mode='Markdown')
+            
+            logger.info(f"✅ Image analysis completed successfully for user {user_id}")
+            
+        except Exception as e:
+            _safe_log_error(logger.error, f"Image processing error for user {user_id}: {e}")
+            await processing_msg.edit_text(
+                "🚫 **Image Processing Error**\n\n"
+                "An error occurred while processing your image. Please try again.",
+                parse_mode='Markdown'
+            )
+    
+    @staticmethod
+    async def error_handler(update, context) -> None:
+        """Enhanced error handler for all bot operations"""
+        user_id = getattr(update.effective_user, 'id', 'Unknown') if update.effective_user else 'Unknown'
+        
+        # Log error safely without exposing sensitive information
+        _safe_log_error(logger.error, f"Update {update} caused error {context.error} for user {user_id}")
+        
+        # Send user-friendly error message
+        try:
+            if update.message:
+                await update.message.reply_text(
+                    "🚫 **Something went wrong**\n\n"
+                    "I encountered an unexpected error. Please try again, and if the problem persists, contact support.",
+                    parse_mode='Markdown'
+                )
+        except Exception:
+            # Fallback if even error message fails
+            logger.error("Failed to send error message to user")
 
 # Export message handlers
 message_handlers = MessageHandlers()

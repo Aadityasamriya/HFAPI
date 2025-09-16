@@ -25,6 +25,9 @@ class IntentType(Enum):
     DOCUMENT_PROCESSING = "document_processing"  # 2025: New intent
     MULTI_MODAL = "multi_modal"              # 2025: New intent
     CONVERSATION = "conversation"            # 2025: New intent
+    PDF_PROCESSING = "pdf_processing"        # 2025: New P1 feature - PDF analysis
+    ZIP_ANALYSIS = "zip_analysis"            # 2025: New P1 feature - ZIP file analysis  
+    IMAGE_ANALYSIS = "image_analysis"        # 2025: New P1 feature - Image content analysis
 
 class IntelligentRouter:
     """
@@ -167,6 +170,37 @@ class IntelligentRouter:
                 r'(?:how.?are.?you|what\'s.?up|tell.?me.?about.?yourself)',
                 r'(?:opinion|thoughts|what.?do.?you.?think|personal.?view)',
                 r'(?:conversation|chat|talk|discuss)(?!.*(?:code|image|analysis))',
+            ],
+            
+            # 2025: P1 Features - Advanced file processing capabilities
+            IntentType.PDF_PROCESSING: [
+                r'\b(?:analyze|read|extract|process|parse|summarize)\s+(?:pdf|document|file)',
+                r'(?:pdf.?analysis|document.?processing|text.?extraction|content.?from.?pdf)',
+                r'\b(?:tables?|charts?|graphs?)\s+(?:from|in)\s+(?:pdf|document)',
+                r'(?:extract.?text|get.?content|read.?document|parse.?pdf)',
+                r'\b(?:summarize|summary|key.?points|main.?ideas)\s+(?:from|of|in)\s+(?:pdf|document|file)',
+                r'(?:ocr|optical.?character.?recognition)\s+(?:pdf|document|scanned)',
+                r'(?:metadata|properties|info)\s+(?:from|of|in)\s+(?:pdf|document)',
+            ],
+            
+            IntentType.ZIP_ANALYSIS: [
+                r'\b(?:analyze|examine|process|extract|explore)\s+(?:zip|archive|compressed)',
+                r'(?:zip.?analysis|archive.?processing|compressed.?file|contents.?of.?zip)',
+                r'\b(?:unzip|extract|decompress)\s+(?:and\s+)?(?:analyze|examine|process)',
+                r'(?:file.?structure|directory.?listing|contents.?overview)',
+                r'\b(?:scan|check|inspect)\s+(?:zip|archive)\s+(?:contents|files)',
+                r'(?:bulk.?file.?analysis|multiple.?files.?processing)',
+            ],
+            
+            IntentType.IMAGE_ANALYSIS: [
+                r'\b(?:analyze|examine|describe|identify|recognize)\s+(?:image|photo|picture)',
+                r'(?:image.?analysis|photo.?recognition|visual.?analysis|computer.?vision)',
+                r'(?:what.?is.?in|what.?do.?you.?see|describe.?this)\s+(?:image|photo|picture)',
+                r'\b(?:ocr|text.?recognition|read.?text)\s+(?:from|in)\s+(?:image|photo|picture)',
+                r'(?:object.?detection|face.?recognition|scene.?analysis)',
+                r'(?:extract.?text|get.?text|read)\s+(?:from|in)\s+(?:image|photo|screenshot)',
+                r'\b(?:identify|classify|categorize)\s+(?:objects?|people|scenes?)\s+(?:in|from)\s+(?:image|photo)',
+                r'(?:visual.?content|image.?content|picture.?content)\s+(?:analysis|recognition|description)',
             ]
         }
     
@@ -175,6 +209,9 @@ class IntelligentRouter:
         return {
             IntentType.CODE_GENERATION: 10,         # Highest priority - very specific patterns
             IntentType.IMAGE_GENERATION: 9,         # High priority - specific visual requests
+            IntentType.PDF_PROCESSING: 9,           # 2025: P1 High priority - PDF file uploads
+            IntentType.ZIP_ANALYSIS: 9,             # 2025: P1 High priority - ZIP file uploads
+            IntentType.IMAGE_ANALYSIS: 8,           # 2025: P1 High priority - Image analysis
             IntentType.DATA_ANALYSIS: 8,            # 2025: High priority - data processing
             IntentType.SENTIMENT_ANALYSIS: 8,       # High priority - specific analysis requests
             IntentType.DOCUMENT_PROCESSING: 7,      # 2025: Medium-high priority - document tasks

@@ -67,6 +67,49 @@ ENVIRONMENT=production
 
 ---
 
+## ⚙️ **System Dependencies**
+
+For full functionality, your deployment environment should include these system packages:
+
+### **Required System Packages**
+```bash
+# For OCR functionality (image text extraction)
+tesseract-ocr
+
+# For file type detection
+libmagic-dev  # or libmagic1 on some systems
+
+# For PDF processing (usually pre-installed)
+poppler-utils
+```
+
+### **Installation by Platform**
+
+**Ubuntu/Debian:**
+```bash
+apt-get update
+apt-get install -y tesseract-ocr libmagic-dev poppler-utils
+```
+
+**CentOS/RHEL/AlmaLinux:**
+```bash
+yum install -y tesseract libmagic poppler-utils
+```
+
+**Alpine Linux (Docker):**
+```bash
+apk add --no-cache tesseract-ocr libmagic poppler-utils
+```
+
+### **Feature Impact**
+- **Without tesseract-ocr**: OCR functionality gracefully disabled with user-friendly error messages
+- **Without libmagic**: File type detection falls back to extension-based detection
+- **Without poppler-utils**: PDF image extraction may be limited
+
+Most cloud platforms include these packages by default, but verify if you encounter file processing issues.
+
+---
+
 ## 🚀 **Deployment Platforms**
 
 ### **Railway (Recommended)**
