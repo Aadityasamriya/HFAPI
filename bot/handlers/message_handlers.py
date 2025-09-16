@@ -505,20 +505,10 @@ Use `/start` for detailed setup instructions.
         """Global error handler for the bot"""
         error_message = str(context.error)
         
-        # Handle entity parsing errors specifically
-        if "Can't parse entities" in error_message or "entity" in error_message.lower():
-            logger.warning(f"Entity parsing error detected: {error_message}")
-            if update and hasattr(update, 'effective_message') and update.effective_message:
-                try:
-                    await update.effective_message.reply_text(
-                        "⚠️ **Message Format Issue**\n\nYour message contains formatting that I can't process properly. Please try sending your message again without special formatting.",
-                        parse_mode='Markdown'
-                    )
-                except Exception:
-                    # Fallback without parse_mode if even that fails
-                    await update.effective_message.reply_text(
-                        "⚠️ Message Format Issue - Please try sending your message again without special formatting."
-                    )
+        # Handle entity parsing errors - silently ignore them since we handle them in message processing
+        if "Can't parse entities" in error_message or ("entity" in error_message.lower() and "offset" in error_message.lower()):
+            logger.warning(f"Entity parsing error detected (ignoring): {error_message}")
+            # Don't send any response to user - our message handler will process the message properly
             return
         
         # Log other errors
