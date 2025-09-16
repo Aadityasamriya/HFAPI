@@ -182,9 +182,13 @@ class RateLimiter:
         logger.info(f"Rate limit reset for user {user_id}")
 
 
-# Global instances for use across the application
+# Global instances for use across the application  
 markdown_sanitizer = MarkdownSanitizer()
-rate_limiter = RateLimiter(max_requests=15, time_window=60)  # 15 requests per minute
+rate_limiter = RateLimiter(max_requests=20, time_window=60)  # 20 requests per minute - enhanced for superior performance
+
+# Enhanced rate limiter for different user types
+premium_rate_limiter = RateLimiter(max_requests=50, time_window=60)  # For premium users if implemented
+admin_rate_limiter = RateLimiter(max_requests=100, time_window=60)  # For admin users
 
 # Convenience functions for easy import
 def escape_markdown(text: str) -> str:

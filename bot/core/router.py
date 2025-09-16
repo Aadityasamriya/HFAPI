@@ -40,24 +40,27 @@ class IntelligentRouter:
         """Initialize regex patterns for intent detection"""
         return {
             IntentType.IMAGE_GENERATION: [
-                r'\b(?:draw|paint|sketch|illustrate)\s+(?:a|an)?\s*(?:beautiful|stunning|amazing|gorgeous|lovely|pretty)?\s*(?:sunset|sunrise|landscape|portrait|scene|picture|image|drawing|artwork|illustration)',
-                r'\b(?:create|generate|make|design)\s+(?:a|an)?\s*(?:image|picture|photo|artwork|drawing|illustration|graphic|logo|icon|visual)',
-                r'\b(?:show|visualize|picture)\s+(?:me)?\s*(?:a|an)?\s*(?:image|picture)',
-                r'\b(?:draw|paint|sketch|illustrate)\b(?!.*(?:function|code|program|script|class|method))',
-                r'(?:can you|could you|please).*(?:draw|paint|sketch|create|make).*(?:image|picture|artwork|visual)',
-                r'\b(?:logo|icon|banner|poster|wallpaper|avatar|art|artistic|visual|painting|drawing|sketch|illustration|graphic)\b',
-                r'(?:dalle|midjourney|stable.?diffusion|text.?to.?image)',
+                r'\b(?:draw|paint|sketch|illustrate|create|generate|make|design|show|visualize)\s+(?:a|an)?\s*(?:beautiful|stunning|amazing|gorgeous|lovely|pretty|professional|artistic|detailed)?\s*(?:sunset|sunrise|landscape|portrait|scene|picture|image|drawing|artwork|illustration|photo|graphic|visual|logo|icon|banner|poster|wallpaper|avatar)',
+                r'\b(?:create|generate|make|design|produce)\s+(?:a|an)?\s*(?:image|picture|photo|artwork|drawing|illustration|graphic|logo|icon|visual|art)',
+                r'\b(?:show|visualize|picture|display)\s+(?:me)?\s*(?:a|an)?\s*(?:image|picture|visual|artwork)',
+                r'\b(?:draw|paint|sketch|illustrate)\b(?!.*(?:function|code|program|script|class|method|algorithm))',
+                r'(?:can you|could you|please|i want|i need).*(?:draw|paint|sketch|create|make|generate|design).*(?:image|picture|artwork|visual|art|graphic)',
+                r'\b(?:logo|icon|banner|poster|wallpaper|avatar|art|artistic|visual|painting|drawing|sketch|illustration|graphic|artwork|photography|render|composition)\b',
+                r'(?:dalle|midjourney|stable.?diffusion|text.?to.?image|flux|ai.?art|image.?generation)',
+                r'(?:digital.?art|concept.?art|fantasy.?art|photorealistic|hyperrealistic|stylized)',
             ],
             
             IntentType.CODE_GENERATION: [
-                r'\b(?:write|create|generate|code|program|implement|build|develop)\s+(?:a|an)?\s*(?:function|class|method|script|program|application|app)',
-                r'\b(?:python|javascript|java|c\+\+|typescript|php|ruby|go|rust|swift|kotlin)\s+(?:code|function|script|program)',
-                r'\b(?:algorithm|function|class|method|API|library|framework)',
-                r'(?:how to|help me).*(?:code|program|implement|write)',
-                r'\b(?:debug|fix|error|bug|issue).*(?:code|function|script)',
-                r'\b(?:react|vue|angular|django|flask|express|laravel)',
-                r'(?:github|stackoverflow|programming|coding|development)',
-                r'\b(?:sql|database|query|table|schema)',
+                r'\b(?:write|create|generate|code|program|implement|build|develop|design)\s+(?:a|an|some)?\s*(?:function|class|method|script|program|application|app|module|component|service|api|library)',
+                r'\b(?:python|javascript|java|c\+\+|typescript|php|ruby|go|rust|swift|kotlin|c#|dart|scala|r)\s+(?:code|function|script|program|class|method)',
+                r'\b(?:algorithm|function|class|method|API|library|framework|module|component|microservice|backend|frontend)',
+                r'(?:how to|help me|show me|teach me|guide me).*(?:code|program|implement|write|build|develop)',
+                r'\b(?:debug|fix|error|bug|issue|optimize|refactor|improve).*(?:code|function|script|program)',
+                r'\b(?:react|vue|angular|django|flask|express|laravel|spring|rails|next|nuxt|svelte)',
+                r'(?:github|stackoverflow|programming|coding|development|software|engineering)',
+                r'\b(?:sql|database|query|table|schema|mongodb|postgresql|mysql|sqlite)',
+                r'(?:rest.?api|graphql|microservices|web.?service|backend|full.?stack)',
+                r'(?:machine.?learning|ai|neural.?network|data.?science|automation)',
             ],
             
             IntentType.SENTIMENT_ANALYSIS: [

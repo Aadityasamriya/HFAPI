@@ -16,15 +16,15 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Ready"
+args = "AI Assistant Pro Bot"
 
 [[workflows.workflow]]
-name = "Ready"
+name = "AI Assistant Pro Bot"
 author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "echo \"✅ Railway Deployment Ready\""
+args = "python main.py"
 
 [workflows.workflow.metadata]
 outputType = "console"

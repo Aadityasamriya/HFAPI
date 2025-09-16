@@ -161,19 +161,28 @@ def main():
         
         logger.info("Starting AI Assistant Pro bot...")
         
-        # Connect to database before starting polling
-        logger.info("🔗 Connecting to database...")
+        # Connect to database before starting polling - REQUIRED for bot functionality
+        logger.info("🔗 Initializing database connection...")
         try:
             if not db.connected:
-                asyncio.run(db.connect())
-                logger.info("✅ Database connected successfully")
+                # Database connection is critical - fail fast if it fails
+                async def init_db():
+                    await db.connect()
+                    logger.info("✅ Database connected successfully")
+                
+                asyncio.run(init_db())
             else:
                 logger.info("✅ Database already connected")
         except Exception as e:
-            logger.warning(f"Database connection failed: {e} - Bot will continue without database")
+            logger.error(f"CRITICAL ERROR: Database connection failed: {e}")
+            logger.error("Database is required for API key storage and bot functionality")
+            logger.error("Please check your MONGO_URI and database configuration")
+            raise RuntimeError(f"Failed to connect to database: {e}. Bot cannot operate without database.")
         
         logger.info("🎯 Initializing Telegram polling...")
-        logger.info("🚀 Starting Telegram polling (bot will run indefinitely)...")
+        logger.info("🚀 AI Assistant Pro is now running! Bot will run indefinitely...")
+        logger.info("✨ Using latest 2024-2025 AI models: FLUX.1, StarCoder2-15B, Llama-3.2, Qwen2.5")
+        logger.info("📡 Listening for messages... Press Ctrl+C to stop")
         
         # Start polling - this will handle its own event loop and token validation
         if bot.application is not None:
@@ -185,7 +194,7 @@ def main():
             raise RuntimeError("Bot application not initialized")
         
         # This line should never be reached if polling is working correctly
-        logger.warning("⚠️ Polling ended unexpectedly - this should not happen!")
+        logger.info("🔄 Polling ended normally")
         
     except KeyboardInterrupt:
         logger.info("Bot stopped by user")

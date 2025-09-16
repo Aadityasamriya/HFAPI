@@ -32,11 +32,19 @@ class Config:
     # Bot Configuration
     MAX_CHAT_HISTORY = 15
     MAX_RESPONSE_LENGTH = 4000
-    REQUEST_TIMEOUT = 120  # Increased for latest models
+    REQUEST_TIMEOUT = 180  # Increased for complex 2024-2025 model inference
+    API_RETRY_TIMEOUT = 30  # Individual API call timeout
+    MAX_CONCURRENT_REQUESTS = 10  # Limit concurrent API calls for stability
     
     # Performance Settings - Optimized for 2024-2025 models
-    MAX_RETRIES = 4  # More retries for better reliability
-    RETRY_DELAY = 3  # Slightly longer delay for model loading
+    MAX_RETRIES = 5  # Enhanced retry logic for model loading  
+    RETRY_DELAY = 2  # Optimized delay for faster recovery
+    EXPONENTIAL_BACKOFF = True  # Smart backoff strategy
+    
+    # Quality and Safety Settings
+    ENABLE_CONTENT_FILTERING = True  # Built-in content safety
+    USE_ADVANCED_PROMPTING = True  # Enhanced prompt engineering
+    ENABLE_SMART_CACHING = True  # Performance optimization
     
     # Model Quality Settings
     USE_ADVANCED_ROUTING = True  # Enable sophisticated model selection
@@ -50,12 +58,33 @@ class Config:
         missing_vars = [var for var in required_vars if not getattr(cls, var)]
         
         if missing_vars:
-            raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
+            raise ValueError(f"CRITICAL: Missing required environment variables: {', '.join(missing_vars)}")
         
-        # OWNER_ID is optional - log if not provided
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        # Validate Telegram bot token format
+        if cls.TELEGRAM_BOT_TOKEN and not cls.TELEGRAM_BOT_TOKEN.count(':') == 1:
+            logger.warning("Telegram bot token format may be invalid")
+        
+        # Validate MongoDB URI format  
+        if cls.MONGO_URI and not (cls.MONGO_URI.startswith('mongodb://') or cls.MONGO_URI.startswith('mongodb+srv://')):
+            raise ValueError("MONGO_URI must be a valid MongoDB connection string")
+        
+        # Security validation for production
+        import os
+        is_production = os.getenv('ENVIRONMENT', '').lower() == 'production'
+        if is_production:
+            if cls.MONGO_URI and not ('tls=true' in cls.MONGO_URI or cls.MONGO_URI.startswith('mongodb+srv://')):
+                logger.error("SECURITY WARNING: Production database should use TLS encryption")
+            if not os.getenv('ENCRYPTION_KEY'):
+                logger.error("SECURITY WARNING: ENCRYPTION_KEY not set in production")
+        
+        # Optional settings warnings
         if not cls.OWNER_ID:
-            import logging
-            logger = logging.getLogger(__name__)
             logger.info("OWNER_ID not provided - admin features will be disabled")
+        
+        logger.info("✅ Configuration validation completed successfully")
+        logger.info(f"🤖 Using {len([m for m in dir(cls) if 'MODEL' in m and not m.startswith('_')])} AI models")
         
         return True

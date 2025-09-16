@@ -108,20 +108,32 @@ class ModelCaller:
                     return False, f"API error (HTTP {response.status}): {error_text}"
                     
         except asyncio.TimeoutError:
-            logger.error(f"Timeout calling model {model_name}")
-            return False, "Request timed out. Please try again."
+            logger.error(f"Timeout calling model {model_name} after {Config.REQUEST_TIMEOUT}s")
+            if retries < Config.MAX_RETRIES:
+                logger.info(f"Retrying {model_name} due to timeout (attempt {retries + 1})")
+                await asyncio.sleep(Config.RETRY_DELAY)
+                return await self._make_api_call(model_name, payload, api_key, retries + 1)
+            return False, "Request timed out after multiple attempts. The model may be overloaded."
         
         except aiohttp.ClientConnectorError as e:
             logger.error(f"Connection error calling model {model_name}: {e}")
-            return False, "Network connection error. Please check your internet connection."
+            if retries < Config.MAX_RETRIES:
+                logger.info(f"Retrying {model_name} due to connection error (attempt {retries + 1})")
+                await asyncio.sleep(Config.RETRY_DELAY * 2)  # Longer wait for connection issues
+                return await self._make_api_call(model_name, payload, api_key, retries + 1)
+            return False, "Network connection error. Please check your internet connection and try again."
         
         except aiohttp.ContentTypeError as e:
             logger.error(f"Content type error calling model {model_name}: {e}")
-            return False, "Invalid response format from API. Please try again."
+            return False, "Invalid response format from API. Please try again with a different model."
+        
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON decode error calling model {model_name}: {e}")
+            return False, "Invalid JSON response from API. Please try again."
         
         except Exception as e:
-            logger.error(f"Unexpected error calling model {model_name}: {e}")
-            return False, f"Unexpected error: {str(e)}"
+            logger.error(f"Unexpected error calling model {model_name}: {e}", exc_info=True)
+            return False, f"Unexpected error occurred. Please try again later."
     
     def _format_chat_history(self, chat_history: List[Dict], new_prompt: str) -> str:
         """
