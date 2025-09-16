@@ -173,14 +173,19 @@ def main():
             logger.warning(f"Database connection failed: {e} - Bot will continue without database")
         
         logger.info("🎯 Initializing Telegram polling...")
+        logger.info("🚀 Starting Telegram polling (bot will run indefinitely)...")
         
-        # Start polling - this will handle its own event loop
-        bot.application.run_polling(
-            drop_pending_updates=True,
-            allowed_updates=Update.ALL_TYPES
-        )
+        # Start polling - this will handle its own event loop and token validation
+        if bot.application is not None:
+            bot.application.run_polling(
+                drop_pending_updates=True,
+                allowed_updates=Update.ALL_TYPES
+            )
+        else:
+            raise RuntimeError("Bot application not initialized")
         
-        logger.info("✅ Bot is now polling for messages!")
+        # This line should never be reached if polling is working correctly
+        logger.warning("⚠️ Polling ended unexpectedly - this should not happen!")
         
     except KeyboardInterrupt:
         logger.info("Bot stopped by user")
