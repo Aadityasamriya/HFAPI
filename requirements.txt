@@ -8,3 +8,13 @@ pymongo[srv]
 motor
 aiohttp
 cryptography
+aiohttp
+cryptography
+huggingface_hub
+motor
+Pillow
+pymongo[srv]
+PyMuPDF
+python-dotenv
+python-telegram-bot[ext]
+requests
