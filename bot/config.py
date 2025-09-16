@@ -17,6 +17,9 @@ class Config:
     # Database Configuration
     MONGO_URI = os.getenv('MONGO_URI')
     
+    # Security Configuration
+    ENCRYPTION_SEED = os.getenv('ENCRYPTION_SEED')
+    
     # 2024-2025 STATE-OF-THE-ART Hugging Face Models - SUPERIOR TO CHATGPT/GROK/GEMINI
     # Text Generation Models - Latest cutting-edge models outperforming GPT-4
     DEFAULT_TEXT_MODEL = "Qwen/Qwen2.5-72B-Instruct"  # 72B params, outperforms GPT-4, 131K context
@@ -79,11 +82,17 @@ class Config:
     @classmethod
     def validate_config(cls):
         """Validate that all required environment variables are set"""
-        required_vars = ['TELEGRAM_BOT_TOKEN', 'MONGO_URI']
+        required_vars = ['TELEGRAM_BOT_TOKEN', 'MONGO_URI', 'ENCRYPTION_SEED']
         missing_vars = [var for var in required_vars if not getattr(cls, var)]
         
         if missing_vars:
-            raise ValueError(f"CRITICAL: Missing required environment variables: {', '.join(missing_vars)}")
+            error_msg = f"CRITICAL: Missing required environment variables: {', '.join(missing_vars)}"
+            if 'ENCRYPTION_SEED' in missing_vars:
+                error_msg += "\n\n🚨 ENCRYPTION_SEED is REQUIRED to prevent data loss!"
+                error_msg += "\n   Without it, user API keys become unreadable after each restart."
+                error_msg += "\n   Set ENCRYPTION_SEED=<your-secret-value> in environment variables."
+                error_msg += "\n   Use a strong, random string (32+ characters recommended)."
+            raise ValueError(error_msg)
         
         import logging
         logger = logging.getLogger(__name__)
@@ -95,6 +104,15 @@ class Config:
         # Validate MongoDB URI format  
         if cls.MONGO_URI and not (cls.MONGO_URI.startswith('mongodb://') or cls.MONGO_URI.startswith('mongodb+srv://')):
             raise ValueError("MONGO_URI must be a valid MongoDB connection string")
+        
+        # Validate ENCRYPTION_SEED strength
+        if cls.ENCRYPTION_SEED:
+            if len(cls.ENCRYPTION_SEED) < 32:
+                logger.warning("🚨 SECURITY WARNING: ENCRYPTION_SEED should be at least 32 characters for strong security")
+            if cls.ENCRYPTION_SEED.lower() in ['test', 'development', 'default', 'password', '12345678901234567890123456789012']:
+                raise ValueError("🚨 CRITICAL: ENCRYPTION_SEED must not use weak/default values. Use a strong, random string.")
+        else:
+            raise ValueError("🚨 CRITICAL: ENCRYPTION_SEED environment variable is required but not set")
         
         # Security validation for production
         import os
