@@ -97,14 +97,8 @@ class ModelCaller:
             Tuple[bool, Any]: (success, response_data)
         """
         # 2025 API Update: Enhanced endpoint routing with provider support
-        if endpoint_type == "text2img":
-            url = f"https://api-inference.huggingface.co/models/{model_name}"
-        elif endpoint_type == "chat":
-            # 2025: Chat completion endpoint for conversation models
-            url = f"https://api-inference.huggingface.co/models/{model_name}/v1/chat/completions"
-        else:
-            # Standard inference endpoint for all other models
-            url = f"https://api-inference.huggingface.co/models/{model_name}"
+        # All Hugging Face models use the same endpoint pattern - chat formatting happens in payload
+        url = f"https://api-inference.huggingface.co/models/{model_name}"
             
         # 2025 API: Enhanced headers with provider and cache control
         headers = {
@@ -178,6 +172,12 @@ class ModelCaller:
                 elif response.status == 404:  # Model not found
                     error_text = await response.text()
                     _safe_log_error(logger.error, f"Model not found: {model_name} - {error_text}")
+                    
+                    # Enhanced 404 handling: Try fallback for chat/conversation models
+                    if retries == 0 and endpoint_type == "chat":
+                        logger.info(f"404 for chat model {model_name}, retrying with standard inference")
+                        return await self._make_api_call(model_name, payload, api_key, retries + 1, "inference")
+                    
                     return False, f"Model '{model_name}' not found or not accessible. This may be due to 2025 API changes."
                 
                 elif response.status == 400:  # Bad request - often API format issues
