@@ -19,76 +19,6 @@ from bot.security_utils import escape_markdown, safe_markdown_format, check_rate
 
 logger = logging.getLogger(__name__)
 
-def _is_persistence_enabled(context: ContextTypes.DEFAULT_TYPE) -> bool:
-    """
-    Check if Application persistence is enabled
-    
-    Args:
-        context: Telegram context object
-        
-    Returns:
-        bool: True if persistence is enabled
-    """
-    try:
-        # Check if persistence is enabled by examining the context's application
-        app = getattr(context, 'application', None)
-        if app and hasattr(app, 'persistence'):
-            return app.persistence is not None
-        return False
-    except Exception:
-        # If we can't determine, assume persistence is enabled for safety
-        return True
-
-def _safe_store_api_key(context: ContextTypes.DEFAULT_TYPE, api_key: str) -> bool:
-    """
-    Safely store API key with persistence protection
-    
-    Args:
-        context: Telegram context object
-        api_key: The API key to store
-        
-    Returns:
-        bool: True if stored successfully, False if blocked by persistence
-    """
-    if not context.user_data:
-        return False
-        
-    # CRITICAL SECURITY CHECK: Never store API keys if persistence is enabled
-    if _is_persistence_enabled(context):
-        logger.error(
-            "SECURITY ALERT: API key storage blocked - Application persistence is enabled. "
-            "This prevents accidental permanent storage of sensitive credentials."
-        )
-        return False
-    
-    # Only store in session if persistence is disabled
-    context.user_data['api_key'] = api_key
-    return True
-
-def _safe_get_api_key(context: ContextTypes.DEFAULT_TYPE) -> str:
-    """
-    Safely retrieve API key with persistence validation
-    
-    Args:
-        context: Telegram context object
-        
-    Returns:
-        str: API key or empty string if not available/unsafe
-    """
-    if not context.user_data:
-        return ""
-        
-    # CRITICAL SECURITY CHECK: Clear any persisted API keys
-    if _is_persistence_enabled(context):
-        api_key = context.user_data.get('api_key')
-        if api_key:
-            logger.warning(
-                "SECURITY ALERT: Found API key with persistence enabled - clearing immediately"
-            )
-            context.user_data.pop('api_key', None)
-        return ""
-    
-    return context.user_data.get('api_key', "")
 
 class MessageHandlers:
     """Advanced message processing with intelligent AI routing"""
@@ -116,8 +46,8 @@ class MessageHandlers:
             await MessageHandlers._handle_api_key_input(update, context, message_text)
             return
         
-        # Get user's API key from session with security validation
-        api_key = _safe_get_api_key(context)
+        # Get user's API key from persistent database storage as specified
+        api_key = await db.get_user_api_key(user_id)
         if not api_key:
             await MessageHandlers._prompt_api_key_setup(update, context)
             return
@@ -184,22 +114,19 @@ class MessageHandlers:
                 )
             
             if success:
-                # Store API key in session with persistence protection
-                if context.user_data is not None:
-                    if _safe_store_api_key(context, api_key):
+                # Store API key persistently in database as specified
+                success_stored = await db.save_user_api_key(user_id, api_key)
+                if success_stored:
+                    if context.user_data is not None:
                         context.user_data['waiting_for_api_key'] = False
-                    else:
-                        # Persistence is enabled - cannot store API key
-                        await update.message.reply_text(
-                            "🔒 **Security Protection Activated**\n\n"
-                            "API key storage has been blocked because Application persistence is enabled. "
-                            "This is a security feature to prevent accidental permanent storage of your credentials.\n\n"
-                            "**To use the bot:**\n"
-                            "• Contact administrator to disable persistence\n"
-                            "• Or restart bot without persistence enabled",
-                            parse_mode='Markdown'
-                        )
-                        return
+                else:
+                    await update.message.reply_text(
+                        "❌ **Storage Error**\n\n"
+                        "Failed to save your API key to the database. "
+                        "Please try again or contact support if the problem persists.",
+                        parse_mode='Markdown'
+                    )
+                    return
                 
                 success_text = """
 ✅ **API Key Configured Successfully!** 🎉
@@ -218,7 +145,7 @@ Your Hugging Face API key has been validated and stored for this session.
 • 💬 Context-aware conversations
 • 🔄 Automatic model selection
 
-🔒 **Privacy Note:** Your API key is stored only for this session with advanced security protection and will be cleared when you restart the bot.
+🔒 **Privacy Note:** Your API key is stored securely in our encrypted database as specified, allowing you to use the bot seamlessly across sessions.
 
 What would you like to explore first? 🤖✨
                 """

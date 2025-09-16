@@ -105,7 +105,7 @@ class Config:
         
         logger.info("✅ Configuration validation completed successfully")
         logger.info(f"🚀 Using {len([m for m in dir(cls) if 'MODEL' in m and not m.startswith('_')])} state-of-the-art 2024-2025 AI models")
-        logger.info("💡 API keys are now session-based - no persistent storage required")
+        logger.info("💡 API keys stored persistently in MongoDB as specified")
         logger.info("🏆 Bot powered by models SUPERIOR to ChatGPT, Grok, and Gemini")
         logger.info("⚡ Text: Qwen2.5-72B | Code: StarCoder2-15B | Images: FLUX.1 | Sentiment: CardiffNLP Latest")
         

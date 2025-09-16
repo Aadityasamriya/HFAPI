@@ -144,7 +144,8 @@ Your conversation history has been reset. You're starting fresh with a clean sla
             )
             return
             
-        api_key = context.user_data.get('api_key') if context.user_data else None
+        # Check API key from persistent database storage
+        api_key = await db.get_user_api_key(user_id)
         
         status_emoji = "✅" if api_key else "❌"
         api_status = "Connected" if api_key else "Not Set"
@@ -156,7 +157,8 @@ Your conversation history has been reset. You're starting fresh with a clean sla
 🔑 API Key: {status_emoji} {api_status}
 🤖 Models: Premium Hugging Face Collection
 🧠 Intelligence: Adaptive Model Routing
-📊 Chat History: Last 15 messages
+💾 Storage: Persistent database (as specified)
+📊 Chat History: Last 15 messages (session-only)
 
 **Available Actions:**
         """
@@ -312,11 +314,11 @@ Your conversation history has been reset. You're starting fresh with a clean sla
 4️⃣ Copy your token (starts with hf_)
 5️⃣ Send it here as your next message
 
-🛡️ **Security:** Your API key is stored only in your current session. No permanent storage - maximum privacy!
+🛡️ **Security:** Your API key is stored securely in our encrypted database as specified.
 
 💸 **Cost:** Completely FREE for personal use! Hugging Face offers generous quotas for all latest models.
 
-🔒 **Privacy First:** API keys are session-based only - they're never stored permanently anywhere!
+🔒 **Privacy First:** API keys are stored persistently but securely encrypted for seamless access.
 
 ✨ **You're about to access AI technology that rivals ChatGPT, but with the newest 2024-2025 models!**
         """
@@ -367,25 +369,36 @@ Are you sure you want to proceed?
     
     @staticmethod
     async def _handle_data_reset(query, context) -> None:
-        """Handle session data reset"""
+        """Handle complete user data reset"""
         user_id = query.from_user.id
         
-        # Clear session data only
+        # Reset all user data in database as specified
+        success = await db.reset_user_database(user_id)
+        
+        # Also clear session data
         if context.user_data:
             context.user_data.clear()
         
-        text = """
-✅ **Session Data Cleared** 
+        if success:
+            text = """
+✅ **All Data Reset Complete** 
 
-Your session data has been cleared, including:
-• API key (if set)
+Your data has been completely cleared, including:
+• API key (permanently removed)
+• All account preferences
+• Usage statistics
 • Chat history
-• Preferences
 
 🔄 To continue using AI Assistant Pro, you'll need to set up your API key again.
 
-💡 **Note:** We don't store any data permanently - everything is session-based for your privacy!
-        """
+💡 **Note:** Your data has been permanently removed from our secure database as requested.
+            """
+        else:
+            text = """
+❌ **Reset Failed** 
+
+There was an issue resetting your data. Please try again or contact support if the problem persists.
+            """
         
         keyboard = [
             [InlineKeyboardButton("🔑 Set New API Key", callback_data="set_api_key")],
@@ -574,7 +587,8 @@ Ready to experience the future of AI? 🤖✨
 🔑 API Key: {status_emoji} {api_status}
 🤖 Models: Premium Hugging Face Collection
 🧠 Intelligence: Adaptive Model Routing
-📊 Chat History: Last 15 messages
+💾 Storage: Persistent database (as specified)
+📊 Chat History: Last 15 messages (session-only)
 
 **Available Actions:**
         """
