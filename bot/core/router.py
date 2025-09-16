@@ -28,6 +28,7 @@ class IntelligentRouter:
     
     def __init__(self):
         self.intent_patterns = self._initialize_patterns()
+        self.intent_priorities = self._initialize_priorities()
         self.programming_languages = {
             'python', 'javascript', 'typescript', 'java', 'c++', 'c#', 'php', 
             'ruby', 'go', 'rust', 'swift', 'kotlin', 'dart', 'scala', 'r',
@@ -39,12 +40,12 @@ class IntelligentRouter:
         """Initialize regex patterns for intent detection"""
         return {
             IntentType.IMAGE_GENERATION: [
-                r'\b(?:draw|create|generate|make|design|paint|sketch|illustrate)\s+(?:a|an)?\s*(?:image|picture|photo|artwork|drawing|illustration|graphic|logo|icon)',
+                r'\b(?:draw|paint|sketch|illustrate)\s+(?:a|an)?\s*(?:beautiful|stunning|amazing|gorgeous|lovely|pretty)?\s*(?:sunset|sunrise|landscape|portrait|scene|picture|image|drawing|artwork|illustration)',
+                r'\b(?:create|generate|make|design)\s+(?:a|an)?\s*(?:image|picture|photo|artwork|drawing|illustration|graphic|logo|icon|visual)',
                 r'\b(?:show|visualize|picture)\s+(?:me)?\s*(?:a|an)?\s*(?:image|picture)',
-                r'\b(?:art|artistic|visual|painting|drawing|sketch|illustration|graphic)',
-                r'\b(?:generate|create).*(?:visual|image|picture|artwork)',
-                r'(?:can you|could you|please).*(?:draw|create|make).*(?:image|picture|artwork)',
-                r'\b(?:logo|icon|banner|poster|wallpaper|avatar)',
+                r'\b(?:draw|paint|sketch|illustrate)\b(?!.*(?:function|code|program|script|class|method))',
+                r'(?:can you|could you|please).*(?:draw|paint|sketch|create|make).*(?:image|picture|artwork|visual)',
+                r'\b(?:logo|icon|banner|poster|wallpaper|avatar|art|artistic|visual|painting|drawing|sketch|illustration|graphic)\b',
                 r'(?:dalle|midjourney|stable.?diffusion|text.?to.?image)',
             ],
             
@@ -60,10 +61,12 @@ class IntelligentRouter:
             ],
             
             IntentType.SENTIMENT_ANALYSIS: [
-                r'\b(?:analyze|check|determine|find)\s+(?:the\s+)?(?:sentiment|mood|tone|emotion|feeling)',
+                r'\b(?:what\'?s|what\s+is|analyze|check|determine|find)\s+(?:the\s+)?(?:sentiment|mood|tone|emotion|feeling)',
+                r'(?:sentiment|emotion|feeling|mood|tone)\s+(?:of|analysis|detection|recognition)',
                 r'(?:is this|how does this sound|what do you think about).*(?:positive|negative|neutral)',
-                r'\b(?:sentiment|emotion|feeling|mood|tone)\s+(?:analysis|detection|recognition)',
-                r'(?:positive|negative|neutral|happy|sad|angry|excited|disappointed)',
+                r'(?:analyze|check)\s+(?:this|the)?\s*(?:text|message|comment|review)',
+                r'(?:positive|negative|neutral|happy|sad|angry|excited|disappointed)\s+(?:sentiment|feeling|emotion)',
+                r'\b(?:sentiment)\b.*(?:of|about|in)\b',
             ],
             
             IntentType.CREATIVE_WRITING: [
@@ -75,10 +78,12 @@ class IntelligentRouter:
             ],
             
             IntentType.QUESTION_ANSWERING: [
-                r'^\s*(?:what|who|when|where|why|how|which|whose)\s+',
-                r'(?:explain|tell me|describe|clarify|elaborate)',
-                r'(?:question|answer|information|knowledge|facts)',
-                r'(?:do you know|can you tell me|help me understand)',
+                r'^\s*(?:what|who|when|where|why|how|which|whose)\s+(?:is|are|was|were|does|do|did|will|would|can|could|should)',
+                r'\b(?:what\s+is)\s+(?:artificial\s+intelligence|machine\s+learning|deep\s+learning|AI|ML|computer\s+science|programming|technology)',
+                r'(?:explain|tell me|describe|clarify|elaborate)\s+(?:what|how|why|the)',
+                r'(?:question|answer|information|knowledge|facts)(?!.*(?:draw|create|generate|image|picture))',
+                r'(?:do you know|can you tell me|help me understand)\s+(?:what|how|why)',
+                r'\b(?:definition|meaning|concept)\s+(?:of|for)',
             ],
             
             IntentType.TRANSLATION: [
@@ -87,6 +92,18 @@ class IntelligentRouter:
                 r'\b(?:language|linguistic|multilingual)',
                 r'(?:what does.*mean in|how do you say.*in)',
             ]
+        }
+    
+    def _initialize_priorities(self) -> Dict[IntentType, int]:
+        """Initialize priority weights for intent types"""
+        return {
+            IntentType.CODE_GENERATION: 10,      # Highest priority - very specific patterns
+            IntentType.IMAGE_GENERATION: 9,      # High priority - specific visual requests
+            IntentType.SENTIMENT_ANALYSIS: 8,    # High priority - specific analysis requests
+            IntentType.CREATIVE_WRITING: 7,      # Medium-high priority - creative requests
+            IntentType.TRANSLATION: 6,           # Medium priority - language requests
+            IntentType.QUESTION_ANSWERING: 5,    # Lower priority - broad category
+            IntentType.TEXT_GENERATION: 1,       # Lowest priority - fallback
         }
     
     def analyze_prompt_complexity(self, prompt: str) -> Dict[str, Any]:
@@ -161,36 +178,48 @@ class IntelligentRouter:
         prompt_lower = prompt.lower()
         intent_scores = {}
         
-        # Calculate scores for each intent type
+        # Calculate weighted scores for each intent type
         for intent_type, patterns in self.intent_patterns.items():
-            score = 0
+            raw_score = 0
             matches = []
             
             for pattern in patterns:
                 if re.search(pattern, prompt_lower):
-                    score += 1
+                    raw_score += 1
                     matches.append(pattern)
             
-            if score > 0:
+            if raw_score > 0:
+                # Apply priority weighting
+                priority_weight = self.intent_priorities.get(intent_type, 1)
+                weighted_score = raw_score * priority_weight
+                
                 intent_scores[intent_type] = {
-                    'score': score,
+                    'raw_score': raw_score,
+                    'weighted_score': weighted_score,
+                    'priority': priority_weight,
                     'matches': matches
                 }
         
         # Get prompt analysis
         analysis = self.analyze_prompt_complexity(prompt)
         
-        # Determine primary intent
+        # Determine primary intent using weighted scores
         if intent_scores:
-            primary_intent = max(intent_scores.keys(), key=lambda x: intent_scores[x]['score'])
+            # Use weighted score for primary intent selection
+            primary_intent = max(intent_scores.keys(), key=lambda x: intent_scores[x]['weighted_score'])
+            confidence = intent_scores[primary_intent]['weighted_score']
         else:
             # Default to text generation if no specific intent detected
             primary_intent = IntentType.TEXT_GENERATION
+            confidence = 0
+        
+        # Apply additional heuristics for edge cases
+        primary_intent = self._apply_intent_heuristics(prompt, primary_intent, intent_scores, analysis)
         
         # Build routing information
         routing_info = {
             'primary_intent': primary_intent,
-            'confidence': intent_scores.get(primary_intent, {}).get('score', 0),
+            'confidence': confidence,
             'all_intents': intent_scores,
             'analysis': analysis,
             'recommended_model': self._get_recommended_model(primary_intent, analysis),
@@ -246,6 +275,31 @@ class IntelligentRouter:
             })
         
         return base_params
+    
+    def _apply_intent_heuristics(self, prompt: str, primary_intent: IntentType, intent_scores: Dict, analysis: Dict) -> IntentType:
+        """Apply additional heuristics to refine intent detection"""
+        prompt_lower = prompt.lower()
+        
+        # Special case: If prompt starts with "what" and mentions technical concepts, prioritize Q&A
+        if (prompt_lower.strip().startswith('what') and 
+            any(term in prompt_lower for term in ['artificial intelligence', 'machine learning', 'ai', 'technology', 'computer', 'programming'])):
+            return IntentType.QUESTION_ANSWERING
+        
+        # Special case: "Draw/paint" + descriptive words should be image generation
+        if (re.search(r'\b(?:draw|paint|sketch)\s+(?:a|an)?\s*(?:beautiful|stunning|amazing|gorgeous|lovely|pretty)', prompt_lower) or
+            re.search(r'\b(?:draw|paint|sketch)\s+(?:a|an)?\s*(?:sunset|sunrise|landscape|portrait|scene)', prompt_lower)):
+            return IntentType.IMAGE_GENERATION
+        
+        # Special case: "sentiment of" should always be sentiment analysis
+        if re.search(r'\b(?:sentiment|feeling|emotion)\s+of\b', prompt_lower):
+            return IntentType.SENTIMENT_ANALYSIS
+        
+        # Special case: Code-specific terms should prioritize code generation
+        if (analysis.get('has_technical_terms') and 
+            re.search(r'\b(?:function|class|method|algorithm|code|script|program)\b', prompt_lower)):
+            return IntentType.CODE_GENERATION
+        
+        return primary_intent
     
     def get_model_performance_feedback(self, intent: IntentType, success: bool, response_quality: str) -> Dict:
         """
