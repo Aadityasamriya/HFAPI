@@ -53,13 +53,13 @@ class MessageHandlers:
             
             # Process based on intent
             if intent == IntentType.IMAGE_GENERATION:
-                await MessageHandlers._handle_image_generation(update, context, message_text, api_key)
+                await MessageHandlers._handle_image_generation(update, context, message_text, api_key, routing_info)
             
             elif intent == IntentType.CODE_GENERATION:
                 await MessageHandlers._handle_code_generation(update, context, message_text, api_key, routing_info)
             
             elif intent == IntentType.SENTIMENT_ANALYSIS:
-                await MessageHandlers._handle_sentiment_analysis(update, context, message_text, api_key)
+                await MessageHandlers._handle_sentiment_analysis(update, context, message_text, api_key, routing_info)
             
             else:  # Text generation and other intents
                 await MessageHandlers._handle_text_generation(update, context, message_text, api_key, chat_history, routing_info)
@@ -271,7 +271,7 @@ Use `/start` for detailed setup instructions.
             )
     
     @staticmethod
-    async def _handle_image_generation(update, context: ContextTypes.DEFAULT_TYPE, prompt: str, api_key: str) -> None:
+    async def _handle_image_generation(update, context: ContextTypes.DEFAULT_TYPE, prompt: str, api_key: str, routing_info: dict) -> None:
         """Handle professional image generation"""
         user_id = update.effective_user.id
         
@@ -323,7 +323,7 @@ Use `/start` for detailed setup instructions.
             )
     
     @staticmethod
-    async def _handle_sentiment_analysis(update, context: ContextTypes.DEFAULT_TYPE, prompt: str, api_key: str) -> None:
+    async def _handle_sentiment_analysis(update, context: ContextTypes.DEFAULT_TYPE, prompt: str, api_key: str, routing_info: dict) -> None:
         """Handle sentiment analysis requests"""
         user_id = update.effective_user.id
         
@@ -348,6 +348,8 @@ Use `/start` for detailed setup instructions.
                 # Check if advanced emotion detection is needed
                 use_emotions = routing_info.get('special_parameters', {}).get('use_emotion_detection', False)
                 success, sentiment_data = await model_caller.analyze_sentiment(analysis_text, api_key, use_emotions)
+            
+            response_text = "❌ **Analysis Error**\n\nUnable to format sentiment analysis results."
             
             if success and sentiment_data:
                 # Enhanced sentiment formatting for both standard and emotion detection
