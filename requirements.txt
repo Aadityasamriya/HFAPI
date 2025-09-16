@@ -5,13 +5,5 @@ requests
 Pillow
 PyMuPDF
 pymongo[srv]
+motor
 aiohttp
-asyncio
-aiohttp
-huggingface_hub
-Pillow
-pymongo[srv]
-PyMuPDF
-python-dotenv
-python-telegram-bot[ext]
-requests
