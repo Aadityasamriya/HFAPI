@@ -1,0 +1,117 @@
+Core Objective:Build a sophisticated, ready-to-deploy Telegram bot in Python. The bot will act as an intelligent "AI Orchestrator," using a user's personal Hugging Face API key to perform a variety of tasks like text generation, image creation, and more. The entire user experience must be confined to Telegram. Strictly no web interface is required.
+Core Principles:
+User-Centric & Secure: The user provides their own Hugging Face API key. This key, along with the user's Telegram ID, will be the only data stored persistently.
+Privacy First: User chat histories must NOT be stored in any database. They will be managed in-memory for the duration of a session only.
+Intelligent Routing: The bot's main function is to understand the user's intent and route the request to the appropriate specialized Hugging Face model.
+Seamless UX: The interface should be simple, relying on minimal commands (/start, /newchat, /settings) and inline buttons for all major actions.
+
+Technology Stack:
+Language: Python
+Telegram Bot Framework: python-telegram-bot (latest asynchronous version)
+Database: MongoDB. Connection will be via a MONGO_URI environment variable.
+Hugging Face Interaction: requests library for calling the Serverless Inference API.
+Environment Variables: Use Replit Secrets for all credentials (TELEGRAM_BOT_TOKEN, OWNER_ID, MONGO_URI).
+
+Required File & Folder Structure:Please create the project with this exact structure:
+code Code
+downloadcontent_copy
+expand_less
+   /
+├── main.py
+├── requirements.txt
+├── Procfile
+└── bot/
+    ├── __init__.py
+    ├── config.py
+    ├── database.py
+    └── core/
+    |   ├── __init__.py
+    |   ├── router.py
+    |   └── model_caller.py
+    └── handlers/
+        ├── __init__.py
+        ├── command_handlers.py
+        └── message_handlers.py
+ 
+
+Detailed Implementation Instructions:
+1. requirements.txt:Create this file with the following libraries:
+code Txt
+downloadcontent_copy
+expand_less
+IGNORE_WHEN_COPYING_START
+IGNORE_WHEN_COPYING_END
+   python-telegram-bot[ext]
+huggingface_hub
+python-dotenv
+requests
+Pillow
+PyMuPDF
+pymongo[srv]
+ 
+2. Procfile:Create this file for deployment with the content:
+code Code
+downloadcontent_copy
+expand_less
+IGNORE_WHEN_COPYING_START
+IGNORE_WHEN_COPYING_END
+   worker: python main.py```
+
+**3. `bot/config.py`:**
+This file should load `TELEGRAM_BOT_TOKEN`, `OWNER_ID`, and `MONGO_URI` from the environment variables (Replit Secrets).
+
+**4. `bot/database.py` (MongoDB Integration):**
+*   Implement a connection to a MongoDB database using the `MONGO_URI`.
+*   Create a collection named `users`.
+*   The `users` collection schema should store only two fields: `user_id` (integer, indexed for uniqueness) and `hf_api_key` (string).
+*   Create the following functions:
+    *   `save_user_api_key(user_id, api_key)`: Inserts or updates a user's document with their API key.
+    *   `get_user_api_key(user_id)`: Retrieves the API key for a given user ID.
+    *   `reset_user_database(user_id)`: Deletes the entire document for a given user ID.
+
+**5. `bot/core/model_caller.py` (Hugging Face API Logic):**
+*   Create a centralized function to call the Hugging Face Inference API. It should take the model name, payload, and the user's API key as arguments.
+*   Implement specific functions for different tasks:
+    *   `generate_text(prompt, api_key, chat_history)`: Uses a powerful instructional model like `mistralai/Mixtral-8x7B-Instruct-v0.1`. It should format the `chat_history` into a coherent prompt.
+    *   `generate_image(prompt, api_key)`: Uses a text-to-image model like `stabilityai/stable-diffusion-xl-base-1.0`. It must handle the API response as raw image bytes.
+
+**6. `bot/core/router.py` (The Bot's "Brain"):**
+*   Create a function `route_prompt(text)`.
+*   This function will use simple keyword-based rules to determine the user's intent.
+    *   If the prompt contains "draw," "create a picture," or "generate an image," the intent is `image_generation`.
+    *   By default, the intent is `text_generation`.
+*   This function should return a string representing the intent (e.g., `"image_generation"`).
+
+**7. In-Memory Chat History Management:**
+*   Chat history must be managed using the `context.user_data` dictionary provided by the `python-telegram-bot` library.
+*   It should store a list of messages, like `[{'role': 'user', 'content': '...'}, {'role': 'assistant', 'content': '...'}]`.
+*   Limit the history to the last 10-15 messages to manage context length.
+
+**8. `bot/handlers/command_handlers.py`:**
+*   Implement the following commands:
+    *   **/start**: Display a professional welcome message and an inline button "🔑 Set/Update API Key".
+    *   **/newchat**: Clear the `chat_history` from `context.user_data` and confirm to the user.
+    *   **/settings**: Display inline buttons for "🔄 Change Hugging Face API Key" and "🗑️ Reset My Data".
+*   Implement a `button_handler` function to manage all `CallbackQuery` events from the inline buttons. This handler will manage the logic for setting the API key and confirming database resets.
+
+**9. `bot/handlers/message_handlers.py`:**
+*   Create a primary `text_message_handler` that contains the main logic flow:
+    1.  Check if the bot is waiting for an API key. If so, save it using the `database.py` function.
+    2.  If not, retrieve the user's API key from MongoDB. If it doesn't exist, prompt them to use `/start`.
+    3.  Send a "typing..." chat action to improve user experience.
+    4.  Update the in-memory chat history with the user's new prompt.
+    5.  Call the `router.py` function to determine the intent.
+    6.  Based on the intent, call the appropriate function from `model_caller.py` (e.g., `generate_text` or `generate_image`).
+    7.  Send the final response (text or photo) back to the user.
+    8.  Update the in-memory chat history with the assistant's response.
+*   Ensure robust error handling for API calls. If a model is loading or fails, inform the user gracefully.
+
+**10. `main.py`:**
+*   This is the entry point. It should:
+    *   Initialize the `Application`.
+    *   Register all command handlers, the message handler, and the callback query handler.
+    *   Start the bot using polling.
+
+Please write clean, well-commented, and asynchronous Python code. The final product should be a high-quality, reliable, and intelligent Telegram bot ready for deployment.
+
+ 
