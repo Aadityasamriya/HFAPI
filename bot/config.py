@@ -18,20 +18,30 @@ class Config:
     # Database Configuration
     MONGO_URI = os.getenv('MONGO_URI')
     
-    # Hugging Face Model Configuration
-    DEFAULT_TEXT_MODEL = "mistralai/Mixtral-8x7B-Instruct-v0.1"
-    DEFAULT_CODE_MODEL = "codellama/CodeLlama-7b-Instruct-hf"
-    DEFAULT_IMAGE_MODEL = "stabilityai/stable-diffusion-xl-base-1.0"
-    FALLBACK_TEXT_MODEL = "microsoft/DialoGPT-large"
+    # Latest 2024-2025 Hugging Face Models - State-of-the-Art Performance
+    DEFAULT_TEXT_MODEL = "meta-llama/Llama-3.2-3B-Instruct"  # Latest Llama 3.2 - Superior performance
+    ADVANCED_TEXT_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # Multilingual powerhouse
+    DEFAULT_CODE_MODEL = "bigcode/starcoder2-15b"  # Latest StarCoder2 - Best coding model
+    FALLBACK_CODE_MODEL = "codellama/CodeLlama-13b-Instruct-hf"  # Enhanced CodeLlama
+    DEFAULT_IMAGE_MODEL = "black-forest-labs/FLUX.1-schnell"  # FLUX.1 - State-of-the-art 2024
+    FALLBACK_IMAGE_MODEL = "stabilityai/stable-diffusion-xl-base-1.0"  # Reliable fallback
+    DEFAULT_SENTIMENT_MODEL = "cardiffnlp/twitter-roberta-base-sentiment-latest"
+    EMOTION_MODEL = "SamLowe/roberta-base-go_emotions"  # Advanced emotion detection
+    FALLBACK_TEXT_MODEL = "mistralai/Mixtral-8x7B-Instruct-v0.1"  # Still excellent fallback
     
     # Bot Configuration
     MAX_CHAT_HISTORY = 15
     MAX_RESPONSE_LENGTH = 4000
-    REQUEST_TIMEOUT = 60
+    REQUEST_TIMEOUT = 120  # Increased for latest models
     
-    # Performance Settings
-    MAX_RETRIES = 3
-    RETRY_DELAY = 2
+    # Performance Settings - Optimized for 2024-2025 models
+    MAX_RETRIES = 4  # More retries for better reliability
+    RETRY_DELAY = 3  # Slightly longer delay for model loading
+    
+    # Model Quality Settings
+    USE_ADVANCED_ROUTING = True  # Enable sophisticated model selection
+    ENABLE_MODEL_FALLBACKS = True  # Smart fallback system
+    PERFORMANCE_MONITORING = True  # Track model performance
     
     @classmethod
     def validate_config(cls):

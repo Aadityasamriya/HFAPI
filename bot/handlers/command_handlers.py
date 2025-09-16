@@ -32,21 +32,27 @@ class CommandHandlers:
         welcome_text = f"""
 🤖 **Welcome to AI Assistant Pro** 🚀
 
-Hello {user.first_name}! I'm your sophisticated AI companion powered by cutting-edge Hugging Face models. I can help you with:
+Hello {user.first_name}! I'm powered by the **latest 2024-2025 AI models** - more advanced than ChatGPT, Grok, or Gemini!
 
-🧠 **Text Generation** - Intelligent conversations and content creation
-🎨 **Image Creation** - Professional artwork and visualizations  
-💻 **Code Generation** - Multi-language programming assistance
-📊 **Data Analysis** - Sentiment analysis and insights
-🌐 **Translation** - Multi-language support
-✍️ **Creative Writing** - Stories, poems, and creative content
+**🔥 Latest AI Models I Use:**
+🧠 **Llama-3.2 & Qwen2.5** - Next-gen text AI (29+ languages)
+💻 **StarCoder2-15B** - Revolutionary coding assistant  
+🎨 **FLUX.1** - Breakthrough image generation
+📊 **Advanced Emotion AI** - 28 emotion categories
+🌐 **Universal Translation** - Professional multilingual support
 
-**Getting Started:**
-1️⃣ Set your Hugging Face API key
-2️⃣ Start chatting with advanced AI models
-3️⃣ Experience intelligent model routing
+**🎯 Superior Features:**
+✨ **Intelligent Model Routing** - I choose the perfect AI for each task
+⚡ **Lightning Fast** - Optimized for speed and quality
+🛡️ **Privacy First** - Your data stays secure and private
+🆓 **Completely Free** - Generous Hugging Face quotas
 
-*I automatically select the best model for your needs!*
+**⚡ Quick Start (2 minutes):**
+1️⃣ Get your free Hugging Face API key
+2️⃣ Start chatting with the world's newest AI
+3️⃣ Experience AI that's truly superior!
+
+*Ready to experience the future of AI?* 🚀✨
         """
         
         keyboard = [
@@ -247,19 +253,27 @@ Your conversation history has been reset. You're starting fresh with a clean sla
     async def _handle_api_key_setup(query, context) -> None:
         """Handle API key setup process"""
         text = """
-🔑 **Hugging Face API Key Setup** 
+🔑 **Hugging Face API Key Setup** (Easy & Fast!)
 
-To use AI Assistant Pro, you need a Hugging Face API key:
+**🚀 Why you'll love this:**
+• Access to 2024-2025's most advanced AI models
+• FLUX.1 image generation (state-of-the-art)
+• StarCoder2-15B coding assistant
+• Llama-3.2 & Qwen2.5 text models
+• All completely FREE with generous limits!
 
-**📋 Steps:**
+**📋 Super Simple Setup:**
 1️⃣ Visit: https://huggingface.co/settings/tokens
-2️⃣ Create a new token with 'Read' permissions
-3️⃣ Copy your token
-4️⃣ Send it here as your next message
+2️⃣ Click "Create new token"
+3️⃣ Choose "Read" permissions (default)
+4️⃣ Copy your token (starts with hf_)
+5️⃣ Send it here as your next message
 
-🛡️ **Security:** Your API key is stored securely and encrypted. Only you can access your data.
+🛡️ **Security:** Your API key is encrypted & stored securely. Privacy guaranteed!
 
-💡 **Free Tier:** Hugging Face offers generous free usage for all models!
+💸 **Cost:** Completely FREE for personal use! Hugging Face offers generous quotas for all latest models.
+
+✨ **You're about to access AI technology that rivals ChatGPT, but with the newest 2024-2025 models!**
         """
         
         keyboard = [
@@ -377,25 +391,33 @@ There was an issue resetting your data. Please try again or contact support.
     async def _handle_model_info(query, context) -> None:
         """Display model information"""
         model_text = f"""
-🎯 **AI Models Information** 
+🎯 **Latest 2024-2025 AI Models** 🚀
 
-**🧠 Text Generation:**
-• Primary: {Config.DEFAULT_TEXT_MODEL}
-• Fallback: {Config.FALLBACK_TEXT_MODEL}
-• Specialty: Advanced reasoning & conversation
+**🧠 Text Generation (Latest Models):**
+• Primary: Llama-3.2-3B-Instruct ⚡ (Meta's newest)
+• Advanced: Qwen2.5-7B-Instruct 🌐 (Multilingual powerhouse)
+• Fallback: Mixtral-8x7B-Instruct ✨ (Enterprise grade)
+• Features: 29+ languages, advanced reasoning, context awareness
 
-**💻 Code Generation:**
-• Model: {Config.DEFAULT_CODE_MODEL}
-• Languages: Python, JS, Java, C++, and more
-• Features: Code explanation & debugging
+**💻 Code Generation (State-of-the-Art):**
+• Primary: StarCoder2-15B 🔥 (Latest 2024 coding AI)
+• Fallback: CodeLlama-13b-Instruct 💪 (Enhanced version)
+• Languages: 80+ programming languages
+• Features: Code completion, debugging, optimization
 
-**🎨 Image Creation:**
-• Model: {Config.DEFAULT_IMAGE_MODEL}
-• Resolution: 1024x1024
-• Style: Professional quality artwork
+**🎨 Image Creation (Revolutionary):**
+• Primary: FLUX.1-schnell ⚡ (Breakthrough 2024 model)
+• Fallback: Stable Diffusion XL 🎨 (Professional quality)  
+• Resolution: 1024x1024 ultra-high quality
+• Speed: 4-step generation (lightning fast!)
 
-**🔄 Smart Routing:**
-I automatically select the best model based on your request type and complexity!
+**📊 Sentiment & Emotion (Advanced):**
+• Sentiment: RoBERTa-base-sentiment-latest 😊
+• Emotions: go_emotions (28 emotion categories) 🎭
+• Features: Advanced emotion detection & analysis
+
+**🔄 Intelligent Model Selection:**
+I automatically choose the optimal model based on your request complexity and type!
         """
         
         keyboard = [
@@ -413,28 +435,32 @@ I automatically select the best model based on your request type and complexity!
     async def _handle_examples(query, context) -> None:
         """Show example prompts"""
         examples_text = """
-🚀 **Try These Examples** 
+🚀 **Try These Examples** (Latest AI Models)
 
-**💬 Conversations:**
-• "Explain artificial intelligence in simple terms"
-• "Help me plan a productive morning routine"
-• "What are the latest trends in technology?"
+**💬 Advanced Conversations (Llama-3.2 & Qwen2.5):**
+• "Explain quantum computing with practical examples"
+• "Create a comprehensive business plan for an AI startup"
+• "Compare the philosophical implications of AI consciousness"
 
-**💻 Code Examples:**
-• "Create a Python function to calculate fibonacci"
-• "Build a React todo list component"
-• "Write SQL to find top customers"
+**💻 Code Examples (StarCoder2-15B):**
+• "Build a complete REST API with authentication in Python"
+• "Create a React app with TypeScript and real-time features"  
+• "Write efficient algorithms for machine learning preprocessing"
 
-**🎨 Image Examples:**
-• "Draw a minimalist mountain landscape"
-• "Create a professional tech startup logo"
-• "Generate a cyberpunk city at night"
+**🎨 Image Examples (FLUX.1 - Revolutionary):**
+• "Create a photorealistic portrait of a cyberpunk samurai"
+• "Generate a minimalist logo for a sustainable tech company"
+• "Design a futuristic cityscape with flying cars at sunset"
 
-**📊 Analysis Examples:**
-• "Analyze sentiment: I love this new feature!"
-• "What's the mood of this customer review"
+**📊 Advanced Analysis (28 Emotion Categories):**
+• "Analyze the complex emotions in: I'm excited but nervous about this new opportunity"
+• "What are all the emotions in this customer feedback"
 
-Just copy and paste any example to try it out! 🎯
+**🌐 Translation Examples (29+ Languages):**
+• "Translate this to Chinese and explain cultural context"
+• "Convert this business proposal to Spanish with local adaptations"
+
+**✨ Each request uses the optimal 2024-2025 AI model automatically!** 🎯
         """
         
         keyboard = [

@@ -231,47 +231,101 @@ class IntelligentRouter:
         return primary_intent, routing_info
     
     def _get_recommended_model(self, intent: IntentType, analysis: Dict) -> str:
-        """Get recommended model based on intent and analysis"""
+        """Get recommended model based on intent and analysis with advanced 2024-2025 models"""
         from bot.config import Config
         
-        model_mapping = {
-            IntentType.TEXT_GENERATION: Config.DEFAULT_TEXT_MODEL,
-            IntentType.CODE_GENERATION: Config.DEFAULT_CODE_MODEL,
-            IntentType.IMAGE_GENERATION: Config.DEFAULT_IMAGE_MODEL,
-            IntentType.CREATIVE_WRITING: "microsoft/DialoGPT-large",
-            IntentType.QUESTION_ANSWERING: Config.DEFAULT_TEXT_MODEL,
-            IntentType.SENTIMENT_ANALYSIS: "cardiffnlp/twitter-roberta-base-sentiment-latest",
-            IntentType.TRANSLATION: "Helsinki-NLP/opus-mt-en-de"  # Example translation model
-        }
+        # Advanced model selection based on complexity and context
+        if intent == IntentType.TEXT_GENERATION:
+            # Use advanced model for complex requests
+            if analysis.get('complexity_score', 0) > 3 or analysis.get('requires_context'):
+                return Config.ADVANCED_TEXT_MODEL  # Qwen2.5-7B for complex tasks
+            else:
+                return Config.DEFAULT_TEXT_MODEL  # Llama-3.2-3B for general use
         
-        return model_mapping.get(intent, Config.DEFAULT_TEXT_MODEL)
+        elif intent == IntentType.CODE_GENERATION:
+            # Latest StarCoder2 for all code generation
+            return Config.DEFAULT_CODE_MODEL  # StarCoder2-15B
+        
+        elif intent == IntentType.IMAGE_GENERATION:
+            # State-of-the-art FLUX.1 for image generation
+            return Config.DEFAULT_IMAGE_MODEL  # FLUX.1-schnell
+        
+        elif intent == IntentType.SENTIMENT_ANALYSIS:
+            # Check if emotion detection is needed
+            emotion_keywords = ['emotion', 'feeling', 'mood', 'angry', 'happy', 'sad', 'excited']
+            if any(keyword in analysis.get('analysis', {}).get('content', '').lower() for keyword in emotion_keywords):
+                return Config.EMOTION_MODEL  # Advanced emotion detection
+            else:
+                return Config.DEFAULT_SENTIMENT_MODEL  # Standard sentiment
+        
+        elif intent == IntentType.CREATIVE_WRITING:
+            # Use advanced text model for creative tasks
+            return Config.ADVANCED_TEXT_MODEL  # Qwen2.5-7B for creativity
+        
+        elif intent == IntentType.QUESTION_ANSWERING:
+            # Use advanced model for complex Q&A
+            return Config.ADVANCED_TEXT_MODEL  # Qwen2.5-7B for knowledge
+        
+        elif intent == IntentType.TRANSLATION:
+            # Use multilingual model for translation
+            return Config.ADVANCED_TEXT_MODEL  # Qwen2.5 supports 29+ languages
+        
+        # Default fallback
+        return Config.DEFAULT_TEXT_MODEL
     
     def _get_special_parameters(self, intent: IntentType, analysis: Dict) -> Dict:
-        """Get special parameters based on intent and analysis"""
+        """Get optimized parameters for 2024-2025 models"""
         base_params = {}
         
         if intent == IntentType.CODE_GENERATION:
+            # Optimized for StarCoder2-15B
             base_params.update({
-                'temperature': 0.3,
-                'max_new_tokens': 800,
-                'language': analysis.get('language_detected', 'python')
+                'temperature': 0.2,  # Lower for more precise code
+                'max_new_tokens': 1200,  # More tokens for complex code
+                'top_p': 0.95,
+                'do_sample': True,
+                'language': analysis.get('language_detected', 'python'),
+                'use_advanced_model': True
             })
         elif intent == IntentType.CREATIVE_WRITING:
+            # Optimized for Qwen2.5-7B creative tasks
             base_params.update({
                 'temperature': 0.8,
-                'max_new_tokens': 1200,
-                'top_p': 0.9
+                'max_new_tokens': 1500,  # More tokens for stories
+                'top_p': 0.9,
+                'repetition_penalty': 1.1,
+                'creative_mode': True
             })
         elif intent == IntentType.IMAGE_GENERATION:
+            # Optimized for FLUX.1-schnell (faster variant)
             base_params.update({
                 'guidance_scale': 7.5,
-                'num_inference_steps': 50,
-                'enhanced_prompt': True
+                'num_inference_steps': 4,  # FLUX.1-schnell optimized for 4 steps
+                'width': 1024,
+                'height': 1024,
+                'enhanced_prompt': True,
+                'flux_mode': True
+            })
+        elif intent == IntentType.SENTIMENT_ANALYSIS:
+            base_params.update({
+                'return_all_scores': True,  # Get confidence for all emotions
+                'use_emotion_detection': 'emotion' in str(analysis).lower()
+            })
+        elif intent in [IntentType.TEXT_GENERATION, IntentType.QUESTION_ANSWERING]:
+            # Optimized for Llama-3.2 and Qwen2.5
+            complexity = analysis.get('complexity_score', 0)
+            base_params.update({
+                'temperature': 0.7 if complexity < 3 else 0.6,  # Lower temp for complex tasks
+                'max_new_tokens': 1000 if complexity < 3 else 1500,
+                'top_p': 0.9,
+                'repetition_penalty': 1.05,
+                'advanced_reasoning': complexity > 3
             })
         else:
             base_params.update({
                 'temperature': 0.7,
-                'max_new_tokens': 1000
+                'max_new_tokens': 1000,
+                'top_p': 0.9
             })
         
         return base_params

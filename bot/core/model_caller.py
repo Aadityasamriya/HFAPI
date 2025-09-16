@@ -153,34 +153,38 @@ class ModelCaller:
         
         return "\n".join(formatted_messages)
     
-    async def generate_text(self, prompt: str, api_key: str, chat_history: Optional[List[Dict]] = None, model_override: Optional[str] = None) -> Tuple[bool, str]:
+    async def generate_text(self, prompt: str, api_key: str, chat_history: Optional[List[Dict]] = None, model_override: Optional[str] = None, special_params: Optional[Dict] = None) -> Tuple[bool, str]:
         """
-        Generate text using advanced language models
+        Generate text using latest 2024-2025 language models with intelligent fallbacks
         
         Args:
             prompt (str): User prompt
             api_key (str): Hugging Face API key
             chat_history (list): Previous conversation history
             model_override (str): Optional model override
+            special_params (dict): Special parameters for model
             
         Returns:
             Tuple[bool, str]: (success, generated_text)
         """
         chat_history = chat_history or []
+        special_params = special_params or {}
         model_name = model_override or Config.DEFAULT_TEXT_MODEL
         
         # Format the prompt with chat history
         formatted_prompt = self._format_chat_history(chat_history, prompt)
         
+        # Advanced parameters for latest models
         payload = {
             "inputs": formatted_prompt,
             "parameters": {
-                "max_new_tokens": 1000,
-                "temperature": 0.7,
+                "max_new_tokens": special_params.get('max_new_tokens', 1000),
+                "temperature": special_params.get('temperature', 0.7),
                 "do_sample": True,
-                "top_p": 0.9,
-                "repetition_penalty": 1.1,
-                "return_full_text": False
+                "top_p": special_params.get('top_p', 0.9),
+                "repetition_penalty": special_params.get('repetition_penalty', 1.05),
+                "return_full_text": False,
+                "pad_token_id": 50256  # For better generation with latest models
             }
         }
         
@@ -189,9 +193,11 @@ class ModelCaller:
         if success and isinstance(result, list) and len(result) > 0:
             generated_text = result[0].get('generated_text', '').strip()
             
-            # Clean up the response
-            if generated_text.startswith('### Assistant:'):
-                generated_text = generated_text.replace('### Assistant:', '').strip()
+            # Advanced text cleanup for latest models
+            cleanup_patterns = ['### Assistant:', '### Human:', 'Assistant:', 'Human:']
+            for pattern in cleanup_patterns:
+                if generated_text.startswith(pattern):
+                    generated_text = generated_text.replace(pattern, '').strip()
             
             # Limit response length
             if len(generated_text) > Config.MAX_RESPONSE_LENGTH:
@@ -199,39 +205,57 @@ class ModelCaller:
             
             return True, generated_text
         
-        # Try fallback model if primary fails
-        if not success and model_name != Config.FALLBACK_TEXT_MODEL:
-            logger.info(f"Trying fallback model {Config.FALLBACK_TEXT_MODEL}")
-            return await self.generate_text(prompt, api_key, chat_history, Config.FALLBACK_TEXT_MODEL)
+        # Smart fallback system - try multiple models
+        fallback_models = [Config.FALLBACK_TEXT_MODEL, Config.ADVANCED_TEXT_MODEL]
+        for fallback_model in fallback_models:
+            if not success and model_name != fallback_model:
+                logger.info(f"Trying fallback model {fallback_model}")
+                success, result = await self._make_api_call(fallback_model, payload, api_key)
+                if success and isinstance(result, list) and len(result) > 0:
+                    generated_text = result[0].get('generated_text', '').strip()
+                    return True, generated_text
         
-        return False, result if isinstance(result, str) else "Failed to generate text."
+        return False, result if isinstance(result, str) else "Failed to generate text with all available models."
     
-    async def generate_code(self, prompt: str, api_key: str, language: str = "python") -> Tuple[bool, str]:
+    async def generate_code(self, prompt: str, api_key: str, language: str = "python", special_params: Optional[Dict] = None) -> Tuple[bool, str]:
         """
-        Generate code using specialized code generation models
+        Generate code using latest StarCoder2-15B and enhanced models
         
         Args:
             prompt (str): Code generation prompt
             api_key (str): Hugging Face API key
             language (str): Programming language
+            special_params (dict): Special parameters for model
             
         Returns:
             Tuple[bool, str]: (success, generated_code)
         """
-        model_name = Config.DEFAULT_CODE_MODEL
+        special_params = special_params or {}
+        model_name = Config.DEFAULT_CODE_MODEL  # StarCoder2-15B
         
-        # Enhance prompt for better code generation
-        enhanced_prompt = f"# Generate {language} code for the following request:\n# {prompt}\n\n"
+        # Enhanced prompt formatting for StarCoder2
+        if language.lower() in ['python', 'javascript', 'typescript', 'java', 'cpp', 'c++']:
+            enhanced_prompt = f"""<fim_prefix># Task: {prompt}
+# Language: {language}
+# Instructions: Generate clean, well-documented {language} code
+
+<fim_suffix>
+
+<fim_middle>"""
+        else:
+            enhanced_prompt = f"# Generate {language} code for: {prompt}\n\n"
         
+        # Optimized parameters for StarCoder2
         payload = {
             "inputs": enhanced_prompt,
             "parameters": {
-                "max_new_tokens": 800,
-                "temperature": 0.3,
+                "max_new_tokens": special_params.get('max_new_tokens', 1200),
+                "temperature": special_params.get('temperature', 0.2),
                 "do_sample": True,
-                "top_p": 0.95,
-                "repetition_penalty": 1.05,
-                "return_full_text": False
+                "top_p": special_params.get('top_p', 0.95),
+                "repetition_penalty": special_params.get('repetition_penalty', 1.05),
+                "return_full_text": False,
+                "stop": ["<fim_prefix>", "<fim_suffix>", "<fim_middle>"]  # Stop tokens for StarCoder
             }
         }
         
@@ -240,37 +264,69 @@ class ModelCaller:
         if success and isinstance(result, list) and len(result) > 0:
             generated_code = result[0].get('generated_text', '').strip()
             
-            # Format code response
+            # Clean up StarCoder2 specific tokens
+            cleanup_tokens = ['<fim_prefix>', '<fim_suffix>', '<fim_middle>']
+            for token in cleanup_tokens:
+                generated_code = generated_code.replace(token, '')
+            
+            generated_code = generated_code.strip()
+            
+            # Format code response with proper markdown
             if not generated_code.startswith('```'):
                 generated_code = f"```{language}\n{generated_code}\n```"
             
             return True, generated_code
         
-        return False, result if isinstance(result, str) else "Failed to generate code."
+        # Try fallback CodeLlama model
+        if not success:
+            logger.info(f"Trying fallback code model {Config.FALLBACK_CODE_MODEL}")
+            fallback_payload = {
+                "inputs": f"# Generate {language} code for: {prompt}\n\n",
+                "parameters": {
+                    "max_new_tokens": 800,
+                    "temperature": 0.3,
+                    "do_sample": True,
+                    "top_p": 0.95,
+                    "return_full_text": False
+                }
+            }
+            success, result = await self._make_api_call(Config.FALLBACK_CODE_MODEL, fallback_payload, api_key)
+            if success and isinstance(result, list) and len(result) > 0:
+                generated_code = result[0].get('generated_text', '').strip()
+                if not generated_code.startswith('```'):
+                    generated_code = f"```{language}\n{generated_code}\n```"
+                return True, generated_code
+        
+        return False, result if isinstance(result, str) else "Failed to generate code with available models."
     
-    async def generate_image(self, prompt: str, api_key: str) -> Tuple[bool, bytes]:
+    async def generate_image(self, prompt: str, api_key: str, special_params: Optional[Dict] = None) -> Tuple[bool, bytes]:
         """
-        Generate image using text-to-image models
+        Generate image using state-of-the-art FLUX.1 model
         
         Args:
             prompt (str): Image generation prompt
             api_key (str): Hugging Face API key
+            special_params (dict): Special parameters for model
             
         Returns:
             Tuple[bool, bytes]: (success, image_bytes)
         """
-        model_name = Config.DEFAULT_IMAGE_MODEL
+        special_params = special_params or {}
+        model_name = Config.DEFAULT_IMAGE_MODEL  # FLUX.1-schnell
         
-        # Enhance prompt for better image generation
-        enhanced_prompt = f"{prompt}, high quality, detailed, professional"
+        # Enhanced prompt for FLUX.1 - more detailed and artistic
+        style_enhancers = "professional photography, high quality, detailed, sharp focus, vibrant colors"
+        enhanced_prompt = f"{prompt}, {style_enhancers}"
         
+        # FLUX.1-schnell optimized parameters (4 steps for speed)
         payload = {
             "inputs": enhanced_prompt,
             "parameters": {
-                "guidance_scale": 7.5,
-                "num_inference_steps": 50,
-                "width": 1024,
-                "height": 1024
+                "guidance_scale": special_params.get('guidance_scale', 7.5),
+                "num_inference_steps": special_params.get('num_inference_steps', 4),  # FLUX.1-schnell optimized
+                "width": special_params.get('width', 1024),
+                "height": special_params.get('height', 1024),
+                "seed": -1  # Random seed for variety
             }
         }
         
@@ -279,29 +335,63 @@ class ModelCaller:
         if success and isinstance(result, bytes):
             return True, result
         
+        # Try fallback Stable Diffusion XL if FLUX.1 fails
+        if not success:
+            logger.info(f"Trying fallback image model {Config.FALLBACK_IMAGE_MODEL}")
+            fallback_payload = {
+                "inputs": enhanced_prompt,
+                "parameters": {
+                    "guidance_scale": 7.5,
+                    "num_inference_steps": 50,  # More steps for SDXL
+                    "width": 1024,
+                    "height": 1024
+                }
+            }
+            success, result = await self._make_api_call(Config.FALLBACK_IMAGE_MODEL, fallback_payload, api_key)
+            if success and isinstance(result, bytes):
+                return True, result
+        
         return False, b""
     
-    async def analyze_sentiment(self, text: str, api_key: str) -> Tuple[bool, Dict]:
+    async def analyze_sentiment(self, text: str, api_key: str, use_emotion_detection: bool = False) -> Tuple[bool, Dict]:
         """
-        Analyze sentiment of text
+        Analyze sentiment with advanced emotion detection
         
         Args:
             text (str): Text to analyze
             api_key (str): Hugging Face API key
+            use_emotion_detection (bool): Use advanced emotion model
             
         Returns:
             Tuple[bool, Dict]: (success, sentiment_data)
         """
-        model_name = "cardiffnlp/twitter-roberta-base-sentiment-latest"
+        # Choose model based on requirements
+        model_name = Config.EMOTION_MODEL if use_emotion_detection else Config.DEFAULT_SENTIMENT_MODEL
         
         payload = {"inputs": text}
         
         success, result = await self._make_api_call(model_name, payload, api_key)
         
         if success and isinstance(result, list):
-            return True, result[0] if result else {}
+            # Enhanced result formatting for emotion detection
+            if use_emotion_detection and result:
+                # Process emotion results (go_emotions has 28 emotion categories)
+                emotion_data = result[0] if result else {}
+                return True, {
+                    'emotion_type': 'advanced',
+                    'emotions': result,  # All emotion scores
+                    'primary_emotion': emotion_data,
+                    'model_used': 'go_emotions'
+                }
+            else:
+                # Standard sentiment analysis
+                return True, {
+                    'emotion_type': 'sentiment',
+                    'result': result[0] if result else {},
+                    'model_used': 'roberta_sentiment'
+                }
         
-        return False, {}
+        return False, {'error': 'Failed to analyze sentiment'}
 
 # Global model caller instance
 model_caller = ModelCaller()
