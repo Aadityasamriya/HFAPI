@@ -53,21 +53,21 @@ class CommandHandlers:
         welcome_text = f"""
 🚀 **Welcome {safe_first_name}!**
 
-I'm your **AI Assistant** powered by the latest 2024-2025 models - **completely free** to use!
+I'm your **free AI Assistant** - smarter than ChatGPT and ready to help with anything!
 
-🤖 **What I can do:**
-• Chat & answer questions (29+ languages)
-• Generate stunning images with FLUX.1
-• Write & debug code
-• Analyze data & emotions
+🎯 **What makes me special:**
+• Chat in 29+ languages
+• Create stunning images
+• Write & debug code perfectly
+• Solve complex problems instantly
 
-**✨ Simple 3-Step Setup (takes 2 minutes):**
+**⚡ Super Quick Setup (1 minute):**
 
 **1.** Click "🔑 Get Started" below
-**2.** Get your free Hugging Face token (I'll guide you)
-**3.** Paste it here and start chatting!
+**2.** Get your free token (I'll show you how)
+**3.** Start chatting immediately!
 
-*Ready for AI that's smarter than ChatGPT? Let's begin!* 🎯
+*Experience AI that actually understands you. Let's go!* 🌟
         """
         
         keyboard = [
@@ -195,16 +195,15 @@ Your conversation history has been reset. You're starting fresh with a clean sla
         api_status = "Connected" if api_key else "Not Set"
         
         settings_text = f"""
-⚙️ **Hugging Face By AadityaLabs AI Settings** 🛠️
+⚙️ **Your AI Assistant Settings** 🛠️
 
 **Current Status:**
-🔑 API Key: {status_emoji} {api_status}
-🤖 Models: Premium Hugging Face Collection (Latest 2024-2025)
-🧠 Intelligence: Adaptive Model Routing
-💾 Storage: Persistent encrypted database
-📊 Chat History: Secure persistent storage with context awareness
+🔑 Connection: {status_emoji} {api_status}
+🚀 AI Power: Active & Ready
+💾 Chat History: Saved securely
+🛡️ Privacy: Fully protected
 
-**Available Actions:**
+**What you can do:**
         """
         
         keyboard = [
@@ -265,48 +264,48 @@ Your conversation history has been reset. You're starting fresh with a clean sla
             return
             
         help_text = """
-💡 **Hugging Face By AadityaLabs AI Help Guide** 📚
+💡 **Your AI Assistant Help** 🌟
 
-**🎯 Smart Commands:**
+**⚡ Quick Commands:**
 • `/start` - Welcome & setup
-• `/newchat` - Clear conversation history  
-• `/settings` - Manage your preferences
-• `/help` - This help guide
+• `/newchat` - Fresh start  
+• `/settings` - Your preferences
+• `/help` - This guide
 
-**🤖 AI Capabilities:**
+**🎯 What I can do for you:**
 
-**💬 Text Generation:**
+**💬 Smart Conversations:**
 "Explain quantum computing"
-"Write a business proposal for..."
+"Write a business proposal for me"
 "Help me understand machine learning"
 
-**💻 Code Generation:**
+**💻 Perfect Code:**
 "Create a Python function to sort data"
-"Build a React component for..."
-"Write SQL query to find..."
+"Build a React component for me"
+"Write SQL query to find users"
 
-**🎨 Image Creation:**
+**🎨 Amazing Images:**
 "Draw a futuristic cityscape"
-"Create a professional logo for..."
-"Generate artwork of..."
+"Create a professional logo"
+"Generate stunning artwork"
 
-**📊 Analysis:**
-"Analyze the sentiment of this text"
-"What's the mood of this message"
+**📊 Instant Analysis:**
+"What's the sentiment of this text?"
+"Analyze the mood of this message"
 
-**✨ Features:**
-• 🧠 Intelligent model routing
-• 🔄 Context-aware conversations
-• 🚀 Multi-modal capabilities
-• 🛡️ Secure API key management
+**🚀 Why I'm better:**
+• Always gives you the perfect answer
+• Remembers our conversation
+• Creates anything you imagine
+• Completely free to use
 
-**Need more help?** Just ask me anything!
+**Ready to be amazed?** Just type anything below!
         """
         
         keyboard = [
             [
                 InlineKeyboardButton("🚀 Try Examples", callback_data="examples"),
-                InlineKeyboardButton("🎯 Model Guide", callback_data="model_guide")
+                InlineKeyboardButton("💡 Quick Tips", callback_data="model_guide")
             ],
             [InlineKeyboardButton("⚙️ Settings", callback_data="settings")]
         ]
@@ -915,16 +914,15 @@ Ready to experience the future of AI? 🤖✨
         api_status = "Connected" if api_key else "Not Set"
         
         settings_text = f"""
-⚙️ **Hugging Face By AadityaLabs AI Settings** 🛠️
+⚙️ **Your AI Assistant Settings** 🛠️
 
 **Current Status:**
-🔑 API Key: {status_emoji} {api_status}
-🤖 Models: Premium Hugging Face Collection (Latest 2024-2025)
-🧠 Intelligence: Adaptive Model Routing
-💾 Storage: Persistent encrypted database
-📊 Chat History: Secure persistent storage with context awareness
+🔑 Connection: {status_emoji} {api_status}
+🚀 AI Power: Active & Ready
+💾 Chat History: Saved securely
+🛡️ Privacy: Fully protected
 
-**Available Actions:**
+**What you can do:**
         """
         
         keyboard = [
@@ -987,7 +985,7 @@ Ready to experience the future of AI? 🤖✨
         keyboard = [
             [
                 InlineKeyboardButton("🚀 Try Examples", callback_data="examples"),
-                InlineKeyboardButton("🎯 Model Guide", callback_data="model_guide")
+                InlineKeyboardButton("💡 Quick Tips", callback_data="model_guide")
             ],
             [InlineKeyboardButton("⚙️ Settings", callback_data="settings")]
         ]
