@@ -1247,29 +1247,88 @@ ENCRYPTION_SEED='{sample_seed}'
             return 0
     
     async def _ensure_rate_limit_indexes(self):
-        """Create rate limiting indexes for optimal performance"""
+        """Create rate limiting indexes for optimal performance with robust TTL migration"""
         try:
             if not self.connected or self.db is None:
                 logger.warning("Cannot create rate limit indexes - database not connected")
                 return
             
             # Rate limiting indexes for efficient queries
-            await self.db.rate_limits.create_index("user_id")  # For user-specific queries
-            await self.db.rate_limits.create_index("timestamp")  # For time-based cleanup
+            try:
+                await self.db.rate_limits.create_index("user_id")  # For user-specific queries
+            except Exception:
+                pass  # Index might already exist
             
             # Compound index for user + timestamp queries (most common)
-            await self.db.rate_limits.create_index([
-                ("user_id", 1),
-                ("timestamp", -1)
-            ])
+            try:
+                await self.db.rate_limits.create_index([
+                    ("user_id", 1),
+                    ("timestamp", -1)
+                ])
+            except Exception:
+                pass  # Index might already exist
             
-            # TTL index to automatically cleanup old entries after 24 hours
-            await self.db.rate_limits.create_index(
-                "timestamp", 
-                expireAfterSeconds=86400  # 24 hours in seconds
-            )
+            # Handle TTL index with robust migration logic
+            await self._ensure_ttl_index_migration()
             
             logger.info("✅ Rate limiting indexes created successfully")
             
         except Exception as e:
             logger.error(f"Failed to create rate limit indexes: {e}")
+    
+    async def _ensure_ttl_index_migration(self):
+        """
+        Robust TTL index migration that handles IndexOptionsConflict
+        Checks existing index and recreates if TTL value differs
+        """
+        try:
+            target_ttl = 86400  # 24 hours in seconds
+            
+            # Get existing indexes for the collection
+            existing_indexes = await self.db.rate_limits.index_information()
+            
+            # Check if timestamp_1 index exists and get its TTL value
+            timestamp_index_name = None
+            current_ttl = None
+            
+            for index_name, index_info in existing_indexes.items():
+                if index_name.startswith("timestamp_"):
+                    timestamp_index_name = index_name
+                    current_ttl = index_info.get("expireAfterSeconds")
+                    break
+            
+            # If no timestamp TTL index exists, create it
+            if not timestamp_index_name:
+                logger.info("🔄 Creating new TTL index for rate limiting cleanup")
+                await self.db.rate_limits.create_index(
+                    "timestamp", 
+                    expireAfterSeconds=target_ttl
+                )
+                logger.info(f"✅ TTL index created with {target_ttl} seconds expiration")
+                return
+            
+            # If TTL value is different, recreate the index
+            if current_ttl != target_ttl:
+                logger.info(f"🔄 Migrating TTL index: current={current_ttl}s, target={target_ttl}s")
+                
+                # Drop the existing TTL index
+                await self.db.rate_limits.drop_index(timestamp_index_name)
+                logger.info(f"🗑️ Dropped existing TTL index: {timestamp_index_name}")
+                
+                # Create new TTL index with correct value
+                await self.db.rate_limits.create_index(
+                    "timestamp", 
+                    expireAfterSeconds=target_ttl
+                )
+                logger.info(f"✅ TTL index recreated with {target_ttl} seconds expiration")
+            else:
+                logger.info(f"✅ TTL index already exists with correct value ({target_ttl}s)")
+                
+        except Exception as e:
+            logger.error(f"Failed to handle TTL index migration: {e}")
+            # Fallback: try to create basic timestamp index without TTL
+            try:
+                await self.db.rate_limits.create_index("timestamp")
+                logger.warning("⚠️ Created basic timestamp index without TTL due to migration error")
+            except Exception:
+                logger.error("💥 Failed to create any timestamp index - rate limiting may be degraded")

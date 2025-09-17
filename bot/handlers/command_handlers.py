@@ -51,29 +51,29 @@ class CommandHandlers:
         safe_first_name = escape_markdown(user.first_name or "User")
         
         welcome_text = f"""
-🚀 **Welcome {safe_first_name}!**
+🌟 **Hey {safe_first_name}, you just discovered something amazing!**
 
-I'm your **free AI Assistant** - smarter than ChatGPT and ready to help with anything!
+I'm your **personal AI genius** - free with generous limits and incredibly powerful!
 
-🎯 **What makes me special:**
-• Chat in 29+ languages
-• Create stunning images
-• Write & debug code perfectly
-• Solve complex problems instantly
+✨ **Imagine having an AI that can:**
+• Answer any question you throw at it
+• Write perfect code in seconds
+• Create beautiful artwork from your ideas
+• Help with work, study, or creative projects
 
-**⚡ Super Quick Setup (1 minute):**
+**🚀 Ready to be amazed? Just 3 quick steps:**
 
-**1.** Click "🔑 Get Started" below
-**2.** Get your free token (I'll show you how)
-**3.** Start chatting immediately!
+**1.** Tap "✨ Let's Go!" below
+**2.** Get your free API token (takes 30 seconds)
+**3.** Start creating magic immediately!
 
-*Experience AI that actually understands you. Let's go!* 🌟
+*Join thousands who switched from ChatGPT and never looked back!* 🔥
         """
         
         keyboard = [
-            [InlineKeyboardButton("🔑 Get Started (Step 1)", callback_data="set_api_key")],
+            [InlineKeyboardButton("✨ Let's Go! (30 seconds setup)", callback_data="set_api_key")],
             [
-                InlineKeyboardButton("❓ Need Help?", callback_data="quick_start"),
+                InlineKeyboardButton("❓ How does this work?", callback_data="quick_start"),
                 InlineKeyboardButton("⚙️ Settings", callback_data="settings")
             ]
         ]
@@ -264,42 +264,42 @@ Your conversation history has been reset. You're starting fresh with a clean sla
             return
             
         help_text = """
-💡 **Your AI Assistant Help** 🌟
+💡 **Your AI Genius Help Guide** 🌟
 
 **⚡ Quick Commands:**
-• `/start` - Welcome & setup
-• `/newchat` - Fresh start  
+• `/start` - Get started & setup
+• `/newchat` - Start fresh  
 • `/settings` - Your preferences
 • `/help` - This guide
 
-**🎯 What I can do for you:**
+**🎯 What magic can I create for you:**
 
-**💬 Smart Conversations:**
-"Explain quantum computing"
-"Write a business proposal for me"
-"Help me understand machine learning"
+**💬 Brilliant Conversations:**
+"Explain quantum physics simply"
+"Write a winning business proposal"
+"Help me understand anything complex"
 
-**💻 Perfect Code:**
-"Create a Python function to sort data"
-"Build a React component for me"
-"Write SQL query to find users"
+**💻 Perfect Code (any language):**
+"Create a calculator app"
+"Build a website component"
+"Write code that actually works"
 
-**🎨 Amazing Images:**
-"Draw a futuristic cityscape"
+**🎨 Stunning Visual Art:**
+"Draw a magical forest scene"
 "Create a professional logo"
-"Generate stunning artwork"
+"Generate breathtaking artwork"
 
-**📊 Instant Analysis:**
-"What's the sentiment of this text?"
-"Analyze the mood of this message"
+**📊 Smart Analysis:**
+"What's the emotion in this text?"
+"Analyze the mood of my message"
 
-**🚀 Why I'm better:**
-• Always gives you the perfect answer
-• Remembers our conversation
-• Creates anything you imagine
-• Completely free to use
+**🚀 Why users love me:**
+• Always delivers exactly what you need
+• Remembers our entire conversation
+• Creates anything you can imagine
+• Free tier with generous usage limits
 
-**Ready to be amazed?** Just type anything below!
+**Ready for some AI magic?** Just type your request below!
         """
         
         keyboard = [
@@ -403,6 +403,47 @@ Your conversations are stored securely in our encrypted database. This will remo
             logger.info(f"🏁 RESETDB command completed for user_id:{user_id}")
     
     @staticmethod
+    async def _handle_main_menu(query, context) -> None:
+        """Handle main menu display"""
+        user = query.from_user
+        safe_first_name = escape_markdown(user.first_name or "User")
+        
+        main_menu_text = f"""
+🌟 **Welcome back {safe_first_name}!**
+
+I'm your **personal AI genius** - free with generous limits and incredibly powerful!
+
+✨ **Imagine having an AI that can:**
+• Answer any question you throw at it
+• Write perfect code in seconds
+• Create beautiful artwork from your ideas
+• Help with work, study, or creative projects
+
+**🚀 Ready to be amazed? Just 3 quick steps:**
+
+**1.** Tap "✨ Let's Go!" below
+**2.** Get your free API token (takes 30 seconds)
+**3.** Start creating magic immediately!
+
+*Join thousands who switched from ChatGPT and never looked back!* 🔥
+        """
+        
+        keyboard = [
+            [InlineKeyboardButton("✨ Let's Go! (30 seconds setup)", callback_data="set_api_key")],
+            [
+                InlineKeyboardButton("❓ How does this work?", callback_data="quick_start"),
+                InlineKeyboardButton("⚙️ Settings", callback_data="settings")
+            ]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await query.edit_message_text(
+            main_menu_text,
+            reply_markup=reply_markup,
+            parse_mode='Markdown'
+        )
+    
+    @staticmethod
     async def button_handler(update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """
         Handle all inline keyboard button interactions with entity parsing protection
@@ -461,6 +502,9 @@ Your conversations are stored securely in our encrypted database. This will remo
             elif data == "quick_start":
                 await CommandHandlers._handle_quick_start(query, context)
             
+            elif data == "model_guide":
+                await CommandHandlers._handle_model_guide(query, context)
+            
             elif data == "resetdb_confirmed":
                 await CommandHandlers._handle_resetdb_execution(query, context)
             
@@ -508,6 +552,9 @@ Your conversations are stored securely in our encrypted database. This will remo
                 conversation_id = data.replace("delete_conv_no_", "")
                 await CommandHandlers._handle_view_conversation(query, context, conversation_id)
             
+            elif data == "main_menu":
+                await CommandHandlers._handle_main_menu(query, context)
+            
             else:
                 await query.edit_message_text("🔄 Processing your request...")
                 
@@ -524,25 +571,28 @@ Your conversations are stored securely in our encrypted database. This will remo
     async def _handle_api_key_setup(query, context) -> None:
         """Handle API key setup process"""
         text = """
-🔑 **Step 2: Get Your Free API Key**
+🌟 **Almost there! One quick step to unlock your AI superpowers**
 
-📱 **Super simple - takes 1 minute:**
+✨ **30-second setup (seriously, it's that easy!):**
 
-**1.** Click this link: https://huggingface.co/settings/tokens
-**2.** Click "**New token**" 
-**3.** Keep default settings (**Read** permission)
-**4.** Click "**Generate**" and copy your token
-**5.** Come back and **paste it here** as your next message
+**1.** Tap "🚀 Get My Free Token" below
+**2.** Sign up (or login) - free with generous limits!
+**3.** Click "**New token**" → "**Generate**"
+**4.** Copy your shiny new token
+**5.** Come back and paste it here
 
-🔐 **Your key is stored securely and encrypted**
-🆓 **Completely free - generous daily limits**
+🎁 **What you get:**
+• Unlimited conversations with your AI genius
+• Create any image you can imagine
+• Code that actually works perfectly
+• Zero cost, maximum power!
 
-*That's it! After pasting your key, you can start chatting immediately!*
+*Once you paste your token, the magic begins instantly!* ✨
         """
         
         keyboard = [
-            [InlineKeyboardButton("🌐 Open Hugging Face", url="https://huggingface.co/settings/tokens")],
-            [InlineKeyboardButton("❌ Cancel", callback_data="settings")]
+            [InlineKeyboardButton("🚀 Get My Free Token", url="https://huggingface.co/settings/tokens")],
+            [InlineKeyboardButton("← Back to start", callback_data="main_menu")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
@@ -862,6 +912,51 @@ I automatically choose the optimal model based on your request complexity and ty
         
         await query.edit_message_text(
             examples_text,
+            reply_markup=reply_markup,
+            parse_mode='Markdown'
+        )
+    
+    @staticmethod
+    async def _handle_model_guide(query, context) -> None:
+        """Show model usage guide and best practices"""
+        guide_text = """
+💡 **AI Model Guide - Master Your AI Assistant**
+
+**🎯 Best Prompting Practices:**
+• Be specific: "Write a Python function that..." vs "Help with code"
+• Add context: "I'm a beginner, explain simply" or "Advanced level"
+• Use examples: "Like this example... but for my situation"
+
+**⚡ Getting Better Results:**
+• **For Code:** Specify language, libraries, and complexity level
+• **For Images:** Include style, mood, colors, and composition details
+• **For Analysis:** Provide clear context and desired output format
+• **For Conversations:** Ask follow-up questions for deeper insights
+
+**🚀 Pro Tips:**
+• Start conversations with your goal: "I need help building..."
+• Use bullet points for complex requests
+• Ask for explanations: "Explain each step"
+• Request alternatives: "Show me 3 different approaches"
+
+**🔄 Model Selection (Automatic):**
+• **Text & Chat:** Llama-3.2 / Qwen2.5 (context-aware)
+• **Coding:** StarCoder2-15B (latest 2024 models)
+• **Images:** FLUX.1-schnell (4-step lightning generation)
+• **Analysis:** RoBERTa + go_emotions (28+ emotions)
+
+**💬 Conversation Memory:**
+I remember our chat history (up to 15 messages) for context-aware responses!
+        """
+        
+        keyboard = [
+            [InlineKeyboardButton("🚀 Try Examples", callback_data="examples")],
+            [InlineKeyboardButton("⚙️ Settings", callback_data="settings")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await query.edit_message_text(
+            guide_text,
             reply_markup=reply_markup,
             parse_mode='Markdown'
         )

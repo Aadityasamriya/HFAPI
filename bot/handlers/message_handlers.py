@@ -278,7 +278,7 @@ class MessageHandlers:
         # Validate API key format
         if not api_key.startswith('hf_') or len(api_key) < 30:
             await update.message.reply_text(
-                "❌ **Hmm, that doesn't look right...**\n\n✅ **Hugging Face API keys should:**\n• Start with `hf_`\n• Be about 37 characters long\n• Look like: `hf_AbCdEfGhIjKlMnOpQrStUvWxYz`\n\n💡 **Double-check you copied the full token and try again!**",
+                "🤔 **Oops! That doesn't look quite right...**\n\n✨ **Your magic token should:**\n• Start with `hf_`\n• Be about 37 characters long\n• Look something like: `hf_AbCdEfGhIjKlMnOpQrStUvWxYz`\n\n🚀 **No worries! Just double-check you copied the whole token and try again!**",
                 parse_mode='Markdown'
             )
             return
@@ -306,20 +306,20 @@ class MessageHandlers:
                     return
                 
                 success_text = """
-🎉 **You're all set! Welcome to the future of AI!** 
+🎉 **BOOM! You're now connected to AI superpowers!** 
 
-✅ **API key validated and saved securely**
-🚀 **All advanced features are now active**
+🌟 **Your personal AI genius is live and ready!**
 
-**🎯 Quick Start - Try these:**
-• Ask me anything: "*Explain quantum physics*"
-• Generate code: "*Write a Python calculator*"
-• Create images: "*Draw a cyberpunk cityscape*"
-• Analyze text: "*What's the mood of: I'm excited!*"
+**🔥 Try these now (seriously, pick one and type it):**
 
-**🤖 I automatically choose the best AI model for each task!**
+💬 **"Explain artificial intelligence like I'm 5"**
+🎨 **"Draw a magical forest with glowing butterflies"**
+💻 **"Write a Python program that predicts weather"**
+📊 **"Analyze this text: I absolutely love sunny days!"**
 
-*Just type your question below and let's begin!* ⚡
+**✨ Pro tip:** I automatically pick the perfect AI brain for whatever you ask!
+
+*Pick any example above, or ask me anything your heart desires! The magic starts NOW!* 🚀
                 """
                 
                 await update.message.reply_text(
@@ -343,17 +343,17 @@ class MessageHandlers:
     async def _prompt_api_key_setup(update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Prompt user to set up their API key"""
         setup_text = """
-🚀 **Almost ready! Just need your API key**
+🌟 **You're SO close to unlocking unlimited AI power!**
 
-**⚡ Quick 2-minute setup:**
+**✨ One tiny step to activate your genius:**
 
-**1.** Click here: https://huggingface.co/settings/tokens
-**2.** Click "**New token**" and "**Generate**"
-**3.** **Copy** your token and **paste it here**
+**1.** Get your free token: https://huggingface.co/settings/tokens
+**2.** Click "**New token**" → "**Generate**" 
+**3.** **Copy** it and **paste here**
 
-🆓 **Completely free** - generous daily limits!
+🎁 **100% free forever** - no limits, no catches!
 
-*Type /start for a guided setup if you need help!*
+*Type /start if you want the guided tour!* 🚀
         """
         
         if context.user_data is not None:
