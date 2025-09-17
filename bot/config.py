@@ -28,7 +28,7 @@ class Config:
     MONGODB_URI = os.getenv('MONGODB_URI') or os.getenv('MONGO_URI')  # Support both variable names
     
     # ===== CORE BOT CONFIGURATION =====
-    BOT_NAME = os.getenv('BOT_NAME', 'AI Assistant Pro')
+    BOT_NAME = os.getenv('BOT_NAME', 'Hugging Face By AadityaLabs AI')
     BOT_DESCRIPTION = "Sophisticated Telegram Bot with Intelligent AI Routing"
     BOT_VERSION = "2025.1.0"
     
