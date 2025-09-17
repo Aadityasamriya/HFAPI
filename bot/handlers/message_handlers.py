@@ -278,7 +278,7 @@ class MessageHandlers:
         # Validate API key format
         if not api_key.startswith('hf_') or len(api_key) < 30:
             await update.message.reply_text(
-                "❌ **Invalid API Key Format**\n\nHugging Face API keys start with 'hf_' and are longer than 30 characters.\n\nPlease check your key and try again.",
+                "❌ **Hmm, that doesn't look right...**\n\n✅ **Hugging Face API keys should:**\n• Start with `hf_`\n• Be about 37 characters long\n• Look like: `hf_AbCdEfGhIjKlMnOpQrStUvWxYz`\n\n💡 **Double-check you copied the full token and try again!**",
                 parse_mode='Markdown'
             )
             return
@@ -300,33 +300,26 @@ class MessageHandlers:
                         context.user_data['waiting_for_api_key'] = False
                 else:
                     await update.message.reply_text(
-                        "❌ **Storage Error**\n\n"
-                        "Failed to save your API key to the database. "
-                        "Please try again or contact support if the problem persists.",
+                        "❌ **Saving Issue**\n\n💾 **Couldn't save your API key** - this is unusual!\n\n🔄 **Please try sending your key again** - it should work the second time.\n\n*If it keeps failing, try /start and set it up again.*",
                         parse_mode='Markdown'
                     )
                     return
                 
                 success_text = """
-✅ **API Key Configured Successfully!** 🎉
+🎉 **You're all set! Welcome to the future of AI!** 
 
-Your Hugging Face API key has been validated and stored for this session.
+✅ **API key validated and saved securely**
+🚀 **All advanced features are now active**
 
-🚀 **You're ready to go!** Try asking me:
-• "Explain machine learning"
-• "Create a Python function to sort numbers" 
-• "Draw a sunset over mountains"
-• "What's the sentiment of: I love this!"
+**🎯 Quick Start - Try these:**
+• Ask me anything: "*Explain quantum physics*"
+• Generate code: "*Write a Python calculator*"
+• Create images: "*Draw a cyberpunk cityscape*"
+• Analyze text: "*What's the mood of: I'm excited!*"
 
-💡 **Smart Features Unlocked:**
-• 🧠 Intelligent model routing
-• 🎨 Multi-modal AI (text, images, code)
-• 💬 Context-aware conversations
-• 🔄 Automatic model selection
+**🤖 I automatically choose the best AI model for each task!**
 
-🔒 **Privacy Note:** Your API key is stored securely in our encrypted database as specified, allowing you to use the bot seamlessly across sessions.
-
-What would you like to explore first? 🤖✨
+*Just type your question below and let's begin!* ⚡
                 """
                 
                 await update.message.reply_text(
@@ -335,14 +328,14 @@ What would you like to explore first? 🤖✨
                 )
             else:
                 await update.message.reply_text(
-                    "❌ **API Key Invalid**\n\nThe provided API key couldn't be verified. Please check:\n\n• Key is copied correctly\n• Token has 'Read' permissions\n• Account is in good standing\n\nTry again with a valid key.",
+                    "❌ **API Key Not Working**\n\n🔍 **Let's troubleshoot:**\n• Make sure you copied the **complete** token\n• Check it has **Read** permissions (default setting)\n• Try creating a **new token** if this one is old\n\n🌐 Create a fresh token: https://huggingface.co/settings/tokens\n\n*Paste your new token here when ready!*",
                     parse_mode='Markdown'
                 )
                 
         except Exception as e:
             _safe_log_error(logger.error, f"Error validating API key for user {user_id}: {e}")
             await update.message.reply_text(
-                "🔄 **Validation Error**\n\nCouldn't verify your API key due to a network issue. Please try again.",
+                "🔄 **Connection Issue**\n\n⚡ **Temporary network problem** - this happens sometimes!\n\n💡 **Please try again in a few seconds** - your API key is probably fine.\n\n*Just paste it again when ready!*",
                 parse_mode='Markdown'
             )
     
@@ -350,18 +343,17 @@ What would you like to explore first? 🤖✨
     async def _prompt_api_key_setup(update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Prompt user to set up their API key"""
         setup_text = """
-🔑 **API Key Required** 
+🚀 **Almost ready! Just need your API key**
 
-To use AI Assistant Pro, you need to configure your Hugging Face API key.
+**⚡ Quick 2-minute setup:**
 
-**Quick Setup:**
-1️⃣ Visit: https://huggingface.co/settings/tokens
-2️⃣ Create a new token with 'Read' permissions  
-3️⃣ Send the token here as your next message
+**1.** Click here: https://huggingface.co/settings/tokens
+**2.** Click "**New token**" and "**Generate**"
+**3.** **Copy** your token and **paste it here**
 
-🆓 **Free to use** - Hugging Face offers generous free tier access!
+🆓 **Completely free** - generous daily limits!
 
-Use `/start` for detailed setup instructions.
+*Type /start for a guided setup if you need help!*
         """
         
         if context.user_data is not None:

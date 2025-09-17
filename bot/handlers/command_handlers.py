@@ -51,40 +51,30 @@ class CommandHandlers:
         safe_first_name = escape_markdown(user.first_name or "User")
         
         welcome_text = f"""
-🤖 **Welcome to Hugging Face By AadityaLabs AI** 🚀
+🚀 **Welcome {safe_first_name}!**
 
-Hello {safe_first_name}! I'm **Hugging Face By AadityaLabs AI** - powered by the **most advanced 2024-2025 AI models** available!
+I'm your **AI Assistant** powered by the latest 2024-2025 models - **completely free** to use!
 
-**🔥 Revolutionary AI Models I Use:**
-🧠 **Llama-3.2 & Qwen2.5** - Next-gen text AI (29+ languages)
-💻 **StarCoder2-15B** - State-of-the-art coding assistant  
-🎨 **FLUX.1** - Breakthrough image generation technology
-📊 **Advanced Emotion AI** - 28 emotion categories
-🌐 **Universal Translation** - Professional multilingual support
+🤖 **What I can do:**
+• Chat & answer questions (29+ languages)
+• Generate stunning images with FLUX.1
+• Write & debug code
+• Analyze data & emotions
 
-**🎯 Why Choose Hugging Face By AadityaLabs AI:**
-✨ **Intelligent Model Routing** - I automatically select the perfect AI for each task
-⚡ **Lightning Fast** - Optimized for speed and quality
-🛡️ **Privacy First** - Your data stays secure and encrypted
-🆓 **Completely Free** - Generous Hugging Face quotas
-🏆 **Superior to ChatGPT** - Access to newest 2024-2025 models
+**✨ Simple 3-Step Setup (takes 2 minutes):**
 
-**⚡ Quick 5-Minute Setup Tutorial:**
+**1.** Click "🔑 Get Started" below
+**2.** Get your free Hugging Face token (I'll guide you)
+**3.** Paste it here and start chatting!
 
-**Step 1** (1 min): Click "🔑 Set API Key" below
-**Step 2** (2 min): Get free Hugging Face token
-**Step 3** (1 min): Paste it back here
-**Step 4** (30 sec): Start chatting with advanced AI
-**Step 5** (30 sec): Experience the future of AI!
-
-*Ready to access AI more advanced than ChatGPT?* 🚀✨
+*Ready for AI that's smarter than ChatGPT? Let's begin!* 🎯
         """
         
         keyboard = [
-            [InlineKeyboardButton("🔑 Set API Key (Step 1)", callback_data="set_api_key")],
+            [InlineKeyboardButton("🔑 Get Started (Step 1)", callback_data="set_api_key")],
             [
-                InlineKeyboardButton("⚙️ Settings & Help", callback_data="settings"),
-                InlineKeyboardButton("🚀 Quick Start Guide", callback_data="quick_start")
+                InlineKeyboardButton("❓ Need Help?", callback_data="quick_start"),
+                InlineKeyboardButton("⚙️ Settings", callback_data="settings")
             ]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -535,32 +525,24 @@ Your conversations are stored securely in our encrypted database. This will remo
     async def _handle_api_key_setup(query, context) -> None:
         """Handle API key setup process"""
         text = """
-🔑 **Hugging Face API Key Setup** (Easy & Fast!)
+🔑 **Step 2: Get Your Free API Key**
 
-**🚀 Why you'll love this:**
-• Access to 2024-2025's most advanced AI models
-• FLUX.1 image generation (state-of-the-art)
-• StarCoder2-15B coding assistant
-• Llama-3.2 & Qwen2.5 text models
-• All completely FREE with generous limits!
+📱 **Super simple - takes 1 minute:**
 
-**📋 Super Simple Setup:**
-1️⃣ Visit: https://huggingface.co/settings/tokens
-2️⃣ Click "Create new token"
-3️⃣ Choose "Read" permissions (default)
-4️⃣ Copy your token (starts with hf_)
-5️⃣ Send it here as your next message
+**1.** Click this link: https://huggingface.co/settings/tokens
+**2.** Click "**New token**" 
+**3.** Keep default settings (**Read** permission)
+**4.** Click "**Generate**" and copy your token
+**5.** Come back and **paste it here** as your next message
 
-🛡️ **Security:** Your API key is stored securely in our encrypted database as specified.
+🔐 **Your key is stored securely and encrypted**
+🆓 **Completely free - generous daily limits**
 
-💸 **Cost:** Completely FREE for personal use! Hugging Face offers generous quotas for all latest models.
-
-🔒 **Privacy First:** API keys are stored persistently but securely encrypted for seamless access.
-
-✨ **You're about to access AI technology that rivals ChatGPT, but with the newest 2024-2025 models!**
+*That's it! After pasting your key, you can start chatting immediately!*
         """
         
         keyboard = [
+            [InlineKeyboardButton("🌐 Open Hugging Face", url="https://huggingface.co/settings/tokens")],
             [InlineKeyboardButton("❌ Cancel", callback_data="settings")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
