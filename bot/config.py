@@ -14,21 +14,33 @@ class Config:
     # Telegram Bot Configuration
     TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
     
-    # Storage Provider Configuration
-    STORAGE_PROVIDER = os.getenv('STORAGE_PROVIDER', 'mongodb').lower()  # Default to MongoDB for backward compatibility
-    
-    # MongoDB Configuration (backward compatibility)
-    MONGO_URI = os.getenv('MONGO_URI')
-    MONGODB_URI = os.getenv('MONGODB_URI')  # Alternative naming
-    
-    # Supabase Configuration
-    SUPABASE_URL = os.getenv('SUPABASE_URL')
-    SUPABASE_ANON_KEY = os.getenv('SUPABASE_ANON_KEY')
-    SUPABASE_SERVICE_KEY = os.getenv('SUPABASE_SERVICE_KEY')  # Optional for admin operations
+    # MongoDB Configuration
+    MONGODB_URI = os.getenv('MONGODB_URI') or os.getenv('MONGO_URI')  # Support both variable names
     
     # Security Configuration
     ENCRYPTION_SEED = os.getenv('ENCRYPTION_SEED')
     API_ENCRYPTION_KEY = os.getenv('API_ENCRYPTION_KEY')  # Advanced encryption override
+    
+    # API Configuration
+    REQUEST_TIMEOUT = int(os.getenv('REQUEST_TIMEOUT', '30'))  # Request timeout in seconds
+    MAX_RETRIES = int(os.getenv('MAX_RETRIES', '3'))  # Maximum number of retries
+    RETRY_DELAY = float(os.getenv('RETRY_DELAY', '1.0'))  # Delay between retries in seconds
+    MAX_CHAT_HISTORY = int(os.getenv('MAX_CHAT_HISTORY', '20'))  # Maximum chat history length
+    MAX_RESPONSE_LENGTH = int(os.getenv('MAX_RESPONSE_LENGTH', '4000'))  # Maximum response length
+    
+    # Model-specific parameters
+    DEEPSEEK_TEMPERATURE = float(os.getenv('DEEPSEEK_TEMPERATURE', '0.8'))  # DeepSeek model temperature
+    QWEN_TEMPERATURE = float(os.getenv('QWEN_TEMPERATURE', '0.7'))  # Qwen model temperature
+    DEEPSEEK_MAX_TOKENS = int(os.getenv('DEEPSEEK_MAX_TOKENS', '2000'))  # DeepSeek max tokens
+    DEEPSEEK_USE_FLASH_ATTENTION = os.getenv('DEEPSEEK_USE_FLASH_ATTENTION', 'true').lower() == 'true'
+    
+    # Additional model parameters referenced in code
+    STARCODER_TEMPERATURE = float(os.getenv('STARCODER_TEMPERATURE', '0.6'))  # StarCoder temperature
+    VISION_TEMPERATURE = float(os.getenv('VISION_TEMPERATURE', '0.5'))  # Vision model temperature
+    QWEN_VL_IMAGE_SIZE = int(os.getenv('QWEN_VL_IMAGE_SIZE', '1024'))  # Qwen VL image size
+    FLUX_INFERENCE_STEPS = int(os.getenv('FLUX_INFERENCE_STEPS', '20'))  # FLUX inference steps
+    FLUX_MAX_RESOLUTION = int(os.getenv('FLUX_MAX_RESOLUTION', '1024'))  # FLUX max resolution
+    QWEN_MAX_TOKENS = int(os.getenv('QWEN_MAX_TOKENS', '2000'))  # Qwen max tokens
     
     # 2024-2025 STATE-OF-THE-ART Hugging Face Models - SUPERIOR TO CHATGPT/GROK/GEMINI
     # Text Generation Models - Optimized for speed and reliability while maintaining quality
@@ -74,63 +86,54 @@ class Config:
     MULTILINGUAL_SENTIMENT_MODEL = "cardiffnlp/twitter-xlm-roberta-base-sentiment"  # 8+ languages
     FALLBACK_SENTIMENT_MODEL = "distilbert-base-uncased-finetuned-sst-2-english"  # DistilBERT, reliable
     
-    # Translation Models - Latest 2024-2025 translation models
-    DEFAULT_TRANSLATION_MODEL = "facebook/nllb-200-3.3B"  # NLLB-200, 200+ languages, SOTA
-    ADVANCED_TRANSLATION_MODEL = "Helsinki-NLP/opus-mt-mul-en"  # Multilingual to English
-    FALLBACK_TRANSLATION_MODEL = "t5-base"  # T5-base for text-to-text translation tasks
+    # Translation Models - Optimized for accuracy and speed
+    DEFAULT_TRANSLATION_MODEL = "google/madlad400-3b-mt"  # 3B params, 400+ languages
+    ADVANCED_TRANSLATION_MODEL = "google/madlad400-10b-mt"  # 10B params for complex translations
+    FAST_TRANSLATION_MODEL = "Helsinki-NLP/opus-mt-mul-en"  # Fast multilingual to English
+    SPECIALIZED_TRANSLATION_MODEL = "facebook/m2m100_1.2B"  # Many-to-many translation
+    FALLBACK_TRANSLATION_MODEL = "t5-base"  # T5 base for basic translation tasks
     
-    # Summarization Models - Latest 2024-2025 summarization models
-    DEFAULT_SUMMARIZATION_MODEL = "facebook/bart-large-cnn"  # BART Large CNN, news summarization
-    ADVANCED_SUMMARIZATION_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # Qwen2.5-7B for high-quality summarization
-    FALLBACK_SUMMARIZATION_MODEL = "t5-base"  # T5-base for summarization tasks
+    # Question Answering Models - For complex Q&A tasks
+    DEFAULT_QA_MODEL = "deepset/roberta-base-squad2"  # RoBERTa trained on SQuAD 2.0
+    ADVANCED_QA_MODEL = "microsoft/DialoGPT-medium"  # Conversational QA
+    FACTUAL_QA_MODEL = "facebook/dpr-question_encoder-single-nq-base"  # Dense passage retrieval
+    FALLBACK_QA_MODEL = "distilbert-base-cased-distilled-squad"  # DistilBERT for QA
     
-    # Bot Configuration
-    MAX_CHAT_HISTORY = 15
-    MAX_RESPONSE_LENGTH = 4000
-    REQUEST_TIMEOUT = 60  # Balanced for performance and reliability
-    API_RETRY_TIMEOUT = 30  # Faster individual API call timeout
-    MAX_CONCURRENT_REQUESTS = 6  # Optimized for stability and speed
+    # Summarization Models - For document and text summarization
+    DEFAULT_SUMMARIZATION_MODEL = "facebook/bart-large-cnn"  # BART for CNN/Daily Mail summaries
+    ADVANCED_SUMMARIZATION_MODEL = "google/pegasus-large"  # Pegasus for abstractive summaries
+    FAST_SUMMARIZATION_MODEL = "sshleifer/distilbart-cnn-12-6"  # DistilBART for speed
+    FALLBACK_SUMMARIZATION_MODEL = "t5-small"  # T5 small for basic summaries
     
-    # Performance Settings - Optimized for reliability and speed
-    MAX_RETRIES = 4  # Reasonable retry logic without excessive delays
-    RETRY_DELAY = 2  # Faster recovery for better UX
-    EXPONENTIAL_BACKOFF = True  # Smart backoff strategy for large models
+    # Text Classification Models - For content categorization
+    DEFAULT_CLASSIFICATION_MODEL = "microsoft/DialoGPT-medium"  # General classification
+    TOPIC_CLASSIFICATION_MODEL = "cardiffnlp/tweet-topic-21-multi"  # Topic classification
+    INTENT_CLASSIFICATION_MODEL = "facebook/bart-large-mnli"  # Intent classification via NLI
+    FALLBACK_CLASSIFICATION_MODEL = "distilbert-base-uncased"  # DistilBERT for classification
     
-    # Advanced Model Parameters for 2024-2025 State-of-the-Art Models
-    QWEN_MAX_TOKENS = 131072  # Qwen2.5 supports up to 131K context length
-    QWQ_MAX_TOKENS = 32768    # QwQ reasoning model context window
-    DEEPSEEK_MAX_TOKENS = 32768  # DeepSeek-R1 context window
-    DEEPSEEK_CODER_MAX_TOKENS = 131072  # DeepSeek-Coder-V2 extended context
-    STARCODER_MAX_TOKENS = 16384  # StarCoder2 context window
-    CODELLAMA_MAX_TOKENS = 100000  # CodeLlama extended context
-    LLAMA_VISION_MAX_TOKENS = 128000  # Llama 3.2 Vision context
-    FLUX_MAX_RESOLUTION = 1024  # FLUX.1 native resolution
-    QWEN_VL_MAX_TOKENS = 32768  # Qwen2.5-VL context window
-    PALIGEMMA_MAX_RESOLUTION = 896  # PaliGemma2 max resolution (224, 448, 896)
+    # Audio Processing Models (for future voice features)
+    DEFAULT_ASR_MODEL = "openai/whisper-small"  # Whisper Small for ASR
+    ADVANCED_ASR_MODEL = "openai/whisper-large-v3"  # Whisper Large v3 for high-quality ASR
+    FAST_ASR_MODEL = "openai/whisper-tiny"  # Whisper Tiny for fast ASR
     
-    # Model-specific optimal parameters
-    QWEN_TEMPERATURE = 0.7  # Optimal for Qwen2.5 creativity vs accuracy
-    QWQ_TEMPERATURE = 0.3   # Lower temp for QwQ reasoning precision
-    DEEPSEEK_TEMPERATURE = 0.8  # DeepSeek-R1 optimal for reasoning
-    DEEPSEEK_CODER_TEMPERATURE = 0.2  # Lower temp for precise code generation
-    MATH_MODEL_TEMPERATURE = 0.1  # Ultra-low temp for mathematical accuracy
-    STARCODER_TEMPERATURE = 0.2  # Lower temp for precise code generation
-    CODELLAMA_TEMPERATURE = 0.15  # Very low temp for algorithm precision
-    VISION_TEMPERATURE = 0.5  # Vision models optimal temperature
-    LLAMA_VISION_TEMPERATURE = 0.4  # Slightly lower for Llama Vision precision
-    FLUX_INFERENCE_STEPS = 4  # FLUX.1-schnell optimized for 1-4 steps
-    FLUX_DEV_INFERENCE_STEPS = 20  # FLUX.1-dev quality steps
-    SD35_INFERENCE_STEPS = 28  # SD3.5 optimal inference steps
-    SDXL_INFERENCE_STEPS = 25  # SDXL optimal steps for quality
+    # Named Entity Recognition Models
+    DEFAULT_NER_MODEL = "dbmdz/bert-large-cased-finetuned-conll03-english"  # BERT NER
+    MULTILINGUAL_NER_MODEL = "dbmdz/bert-large-cased-finetuned-conll03-english"  # Multilingual NER
+    FALLBACK_NER_MODEL = "distilbert-base-cased"  # DistilBERT NER
     
-    # Vision model specific parameters
-    QWEN_VL_IMAGE_SIZE = 448  # Qwen2.5-VL optimal image size
-    PALIGEMMA_RESOLUTION_MODES = [224, 448, 896]  # PaliGemma2 supported resolutions
-    FLORENCE2_MAX_IMAGE_SIZE = 1024  # Florence-2 maximum image processing size
+    # 2025 Model Performance Optimizations
+    # Enable specific optimizations for each model type
+    QWEN_FLASH_ATTENTION = True             # Qwen models flash attention
+    DEEPSEEK_OPTIMIZED_INFERENCE = True     # DeepSeek models optimized inference
+    STARCODER_FAST_GENERATION = True        # StarCoder fast code generation
+    FLUX_SCHNELL_ACCELERATION = True        # FLUX.1-schnell acceleration
+    LLAMA_VISION_FAST_PROCESSING = True     # Llama Vision fast processing
+    BERT_SENTIMENT_BATCH_OPT = True         # BERT sentiment batch optimization
+    T5_TRANSLATION_STREAMING = True         # T5 translation streaming
+    BART_SUMMARIZATION_CACHING = True       # BART summarization caching
+    WHISPER_AUDIO_OPTIMIZATION = True       # Whisper audio processing optimization
     
-    # Performance optimization for new models
-    DEEPSEEK_USE_FLASH_ATTENTION = True  # DeepSeek-R1 flash attention support
-    QWQ_USE_FLASH_ATTENTION = True      # QwQ flash attention for speed
+    # 2025 Specific Model Optimizations
     QWEN_VL_DYNAMIC_RESOLUTION = True   # Qwen2.5-VL dynamic resolution
     LLAMA_VISION_OPTIMIZE_MEMORY = True # Llama Vision memory optimization
     FLUX_SCHNELL_TURBO_MODE = True      # FLUX.1-schnell turbo optimization
@@ -160,24 +163,9 @@ class Config:
     PERFORMANCE_MONITORING = True  # Track model performance
     
     @classmethod
-    def get_storage_provider(cls) -> str:
-        """Get the configured storage provider"""
-        return cls.STORAGE_PROVIDER
-    
-    @classmethod
     def get_mongodb_uri(cls) -> str | None:
         """Get MongoDB URI with fallback options"""
-        return cls.MONGO_URI or cls.MONGODB_URI
-    
-    @classmethod
-    def has_mongodb_config(cls) -> bool:
-        """Check if MongoDB configuration is available"""
-        return bool(cls.get_mongodb_uri())
-    
-    @classmethod
-    def has_supabase_config(cls) -> bool:
-        """Check if Supabase configuration is available"""
-        return bool(cls.SUPABASE_URL and cls.SUPABASE_ANON_KEY)
+        return cls.MONGODB_URI
     
     @classmethod
     def get_model_fallback_chain(cls, model_type: str) -> list:
@@ -222,7 +210,7 @@ class Config:
     
     @classmethod
     def validate_config(cls):
-        """Validate configuration based on storage provider and available options"""
+        """Validate basic configuration requirements"""
         import logging
         logger = logging.getLogger(__name__)
         
@@ -234,204 +222,17 @@ class Config:
         if cls.TELEGRAM_BOT_TOKEN and not cls.TELEGRAM_BOT_TOKEN.count(':') == 1:
             logger.warning("Telegram bot token format may be invalid")
         
-        # Storage provider validation
-        storage_provider = cls.get_storage_provider()
-        logger.info(f"🔧 Configured storage provider: {storage_provider}")
-        
-        # Provider-specific validation
-        if storage_provider == 'mongodb':
-            cls._validate_mongodb_config(logger)
-        elif storage_provider == 'supabase':
-            cls._validate_supabase_config(logger)
-        else:
-            # Auto-detect if provider is not explicitly set or invalid
-            logger.info(f"🔍 Storage provider '{storage_provider}' not recognized, attempting auto-detection...")
-            cls._auto_detect_and_validate_storage(logger)
-        
-        # Validate encryption configuration
-        cls._validate_encryption_config(logger)
-        
-        # Production security validation
-        cls._validate_production_security(logger)
-        
-        # Success logging
-        cls._log_successful_validation(logger, storage_provider)
-        
-        return True
-    
-    @classmethod
-    def _validate_mongodb_config(cls, logger):
-        """Validate MongoDB-specific configuration"""
+        # MongoDB validation
         mongo_uri = cls.get_mongodb_uri()
         if not mongo_uri:
             raise ValueError(
-                "CRITICAL: MongoDB provider requires MONGO_URI or MONGODB_URI environment variable. "
-                "Set one of these variables or switch to Supabase with STORAGE_PROVIDER=supabase"
+                "CRITICAL: MONGODB_URI environment variable is required. "
+                "Set MONGODB_URI with your MongoDB connection string."
             )
         
         # Validate MongoDB URI format
         if not (mongo_uri.startswith('mongodb://') or mongo_uri.startswith('mongodb+srv://')):
-            raise ValueError("MONGO_URI must be a valid MongoDB connection string (mongodb:// or mongodb+srv://)")
+            raise ValueError("MONGODB_URI must be a valid MongoDB connection string (mongodb:// or mongodb+srv://)")
         
-        logger.info("✅ MongoDB configuration validated successfully")
-    
-    @classmethod
-    def _validate_supabase_config(cls, logger):
-        """Validate Supabase-specific configuration"""
-        if not cls.has_supabase_config():
-            raise ValueError(
-                "CRITICAL: Supabase provider requires SUPABASE_URL and SUPABASE_ANON_KEY environment variables. "
-                "Set these variables or switch to MongoDB with STORAGE_PROVIDER=mongodb"
-            )
-        
-        # Validate Supabase URL format
-        if cls.SUPABASE_URL and not cls.SUPABASE_URL.startswith('https://'):
-            raise ValueError("SUPABASE_URL must be a valid HTTPS URL")
-        
-        if cls.SUPABASE_ANON_KEY and len(cls.SUPABASE_ANON_KEY) < 100:  # Supabase keys are typically long JWT tokens
-            logger.warning("⚠️ SUPABASE_ANON_KEY appears unusually short - please verify it's correct")
-        
-        logger.info("✅ Supabase configuration validated successfully")
-    
-    @classmethod
-    def _auto_detect_and_validate_storage(cls, logger):
-        """Auto-detect and validate available storage providers"""
-        available_providers = []
-        
-        # Check MongoDB availability
-        if cls.has_mongodb_config():
-            available_providers.append('mongodb')
-            try:
-                cls._validate_mongodb_config(logger)
-                logger.info("🔍 Auto-detected working MongoDB configuration")
-                # Update the storage provider to mongodb
-                cls.STORAGE_PROVIDER = 'mongodb'
-                return
-            except ValueError as e:
-                logger.warning(f"MongoDB config detected but invalid: {e}")
-        
-        # Check Supabase availability
-        if cls.has_supabase_config():
-            available_providers.append('supabase')
-            try:
-                cls._validate_supabase_config(logger)
-                logger.info("🔍 Auto-detected working Supabase configuration")
-                # Update the storage provider to supabase
-                cls.STORAGE_PROVIDER = 'supabase'
-                return
-            except ValueError as e:
-                logger.warning(f"Supabase config detected but invalid: {e}")
-        
-        # No working providers found
-        if not available_providers:
-            raise ValueError(
-                "CRITICAL: No storage provider configuration found. Please configure either:\n"
-                "MongoDB: Set MONGO_URI or MONGODB_URI\n"
-                "Supabase: Set SUPABASE_URL and SUPABASE_ANON_KEY\n"
-                "Or explicitly set STORAGE_PROVIDER=mongodb/supabase"
-            )
-        else:
-            providers_str = ', '.join(available_providers)
-            raise ValueError(
-                f"CRITICAL: Storage providers detected ({providers_str}) but none are properly configured. "
-                f"Please fix the configuration or set STORAGE_PROVIDER to a working provider."
-            )
-    
-    @classmethod
-    def _validate_encryption_config(cls, logger):
-        """Validate encryption configuration"""
-        if cls.API_ENCRYPTION_KEY:
-            # Validate custom encryption key
-            try:
-                import base64
-                decoded = base64.b64decode(cls.API_ENCRYPTION_KEY)
-                if len(decoded) == 32:
-                    logger.info("✅ Using custom API_ENCRYPTION_KEY (32 bytes)")
-                else:
-                    logger.warning(f"⚠️ API_ENCRYPTION_KEY should be 32 bytes when base64 decoded, got {len(decoded)} bytes")
-            except Exception:
-                # Try hex decoding
-                try:
-                    if len(cls.API_ENCRYPTION_KEY) == 64:
-                        bytes.fromhex(cls.API_ENCRYPTION_KEY)
-                        logger.info("✅ Using custom API_ENCRYPTION_KEY (hex format)")
-                    else:
-                        logger.warning("⚠️ API_ENCRYPTION_KEY should be 64 hex characters or 44 base64 characters")
-                except Exception:
-                    logger.warning("⚠️ API_ENCRYPTION_KEY format appears invalid - should be base64 or hex encoded 32-byte key")
-        
-        if cls.ENCRYPTION_SEED:
-            if len(cls.ENCRYPTION_SEED) < 32:
-                logger.warning("🚨 SECURITY WARNING: ENCRYPTION_SEED should be at least 32 characters for strong security")
-            if cls.ENCRYPTION_SEED.lower() in ['test', 'development', 'default', 'password', '12345678901234567890123456789012']:
-                raise ValueError("🚨 CRITICAL: ENCRYPTION_SEED must not use weak/default values. Use a strong, random string.")
-            logger.info("✅ Using ENCRYPTION_SEED from environment variable")
-        else:
-            logger.info("🔐 ENCRYPTION_SEED not provided - will auto-generate and persist in storage backend")
-    
-    @classmethod
-    def _validate_production_security(cls, logger):
-        """Validate security settings for production environments"""
-        is_production = os.getenv('ENVIRONMENT', '').lower() == 'production'
-        if is_production:
-            logger.info("🏭 Production environment detected - performing enhanced security validation")
-            
-            # MongoDB-specific production checks
-            if cls.get_storage_provider() == 'mongodb':
-                mongo_uri = cls.get_mongodb_uri()
-                if mongo_uri and not ('tls=true' in mongo_uri or mongo_uri.startswith('mongodb+srv://')):
-                    logger.warning("🚨 SECURITY WARNING: Production MongoDB should use TLS encryption")
-            
-            # Supabase automatically uses HTTPS/TLS
-            elif cls.get_storage_provider() == 'supabase':
-                if cls.SUPABASE_URL and not cls.SUPABASE_URL.startswith('https://'):
-                    raise ValueError("🚨 CRITICAL: Production Supabase URL must use HTTPS")
-            
-            # Warn if using default/weak encryption
-            if not cls.ENCRYPTION_SEED and not cls.API_ENCRYPTION_KEY:
-                logger.warning("🚨 PRODUCTION WARNING: Consider setting ENCRYPTION_SEED or API_ENCRYPTION_KEY for deterministic encryption keys")
-    
-    @classmethod
-    def _log_successful_validation(cls, logger, storage_provider):
-        """Log successful validation with provider-specific information"""
-        logger.info("✅ Configuration validation completed successfully")
-        logger.info(f"🚀 Using optimized 2024-2025 AI models with fallback chains for reliability")
-        
-        # Provider-specific logging
-        if storage_provider == 'mongodb':
-            logger.info("🗄️ Storage: MongoDB with auto-generated encryption")
-            logger.info("🎯 Deployment: TELEGRAM_BOT_TOKEN + MONGO_URI required")
-        elif storage_provider == 'supabase':
-            logger.info("🗄️ Storage: Supabase PostgreSQL with real-time capabilities")
-            logger.info("🎯 Deployment: TELEGRAM_BOT_TOKEN + SUPABASE_URL + SUPABASE_ANON_KEY required")
-        
-        logger.info("🔒 Encryption: Per-user AES-256-GCM with persistent seeds")
-        logger.info("🏆 Bot powered by optimized models for SUPERIOR speed and reliability vs ChatGPT/Grok/Gemini")
-        logger.info("⚡ Text: Qwen2.5-14B | Code: StarCoder2-7B | Images: FLUX.1 | Sentiment: BERT Multilingual")
-        logger.info(f"🔄 Storage Provider: {storage_provider} (auto-detection enabled)")
-        
-        # Log available providers
-        available = []
-        if cls.has_mongodb_config():
-            available.append("MongoDB")
-        if cls.has_supabase_config():
-            available.append("Supabase")
-        
-        if len(available) > 1:
-            logger.info(f"🔀 Multiple storage providers available: {', '.join(available)} (using {storage_provider})")
-        elif len(available) == 1:
-            logger.info(f"🎯 Single storage provider configured: {available[0]}")
-        
-    @classmethod
-    def get_storage_config_summary(cls) -> dict:
-        """Get a summary of storage configuration for debugging"""
-        return {
-            "storage_provider": cls.get_storage_provider(),
-            "mongodb_available": cls.has_mongodb_config(),
-            "supabase_available": cls.has_supabase_config(),
-            "mongodb_uri_set": bool(cls.get_mongodb_uri()),
-            "supabase_url_set": bool(cls.SUPABASE_URL),
-            "supabase_key_set": bool(cls.SUPABASE_ANON_KEY),
-            "encryption_seed_set": bool(cls.ENCRYPTION_SEED),
-            "api_encryption_key_set": bool(cls.API_ENCRYPTION_KEY)
-        }
+        logger.info("✅ Configuration validated successfully")
+        return True

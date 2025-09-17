@@ -282,7 +282,7 @@ class StorageProvider(ABC):
         pass
     
     @abstractmethod
-    async def log_admin_action(self, admin_id: int, action: str, details: Dict[str, Any] = None) -> bool:
+    async def log_admin_action(self, admin_id: int, action: str, details: Optional[Dict[str, Any]] = None) -> bool:
         """
         Log admin action for audit trail
         

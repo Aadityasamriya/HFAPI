@@ -75,9 +75,9 @@ class StorageManager:
             try:
                 logger.info("🚀 Initializing global storage manager...")
                 
-                # Create storage provider instance
-                self._storage = create_storage_provider(provider_name)
-                logger.info(f"📦 Created storage provider: {type(self._storage).__name__}")
+                # Create MongoDB storage provider instance
+                self._storage = create_storage_provider()
+                logger.info(f"📦 Created MongoDB storage provider: {type(self._storage).__name__}")
                 
                 # Connect to storage backend
                 await self._storage.connect()

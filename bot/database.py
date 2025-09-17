@@ -498,14 +498,17 @@ class Database:
     async def connect(self):
         """Establish connection to MongoDB with TLS security validation"""
         try:
-            if not Config.MONGO_URI:
+            if not Config.get_mongodb_uri():
                 raise ValueError("MONGO_URI is not configured")
             
             # Security validation: Ensure TLS is enabled for production
             is_production = os.getenv('ENVIRONMENT', '').lower() == 'production'
             
             # Safe TLS detection without corrupting the original URI
-            has_tls = self._check_tls_enabled(Config.MONGO_URI)
+            mongo_uri = Config.get_mongodb_uri()
+            if not mongo_uri:
+                raise ValueError("MONGODB_URI is not configured")
+            has_tls = self._check_tls_enabled(mongo_uri)
             
             if is_production and not has_tls:
                 raise ValueError(
@@ -519,7 +522,7 @@ class Database:
                     "This is acceptable for development but NOT for production."
                 )
                 
-            self.client = AsyncIOMotorClient(Config.MONGO_URI)
+            self.client = AsyncIOMotorClient(mongo_uri)
             self.db = self.client.ai_assistant_bot
             
             # Test connection with retry logic
