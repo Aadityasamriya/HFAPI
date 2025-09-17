@@ -43,22 +43,26 @@ class Config:
     QWEN_MAX_TOKENS = int(os.getenv('QWEN_MAX_TOKENS', '2000'))  # Qwen max tokens
     
     # 2024-2025 STATE-OF-THE-ART Hugging Face Models - SUPERIOR TO CHATGPT/GROK/GEMINI
-    # Text Generation Models - Optimized for speed and reliability while maintaining quality
-    DEFAULT_TEXT_MODEL = "Qwen/Qwen2.5-14B-Instruct"  # 14B params, excellent speed/quality balance as default
-    ADVANCED_TEXT_MODEL = "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B"  # DeepSeek-R1 for complex reasoning tasks
+    # Text Generation Models - Latest releases with enhanced capabilities
+    DEFAULT_TEXT_MODEL = "Qwen/Qwen3-32B"  # Latest Qwen3 series, superior architecture
+    FLAGSHIP_TEXT_MODEL = "Qwen/Qwen3-235B-A22B-Instruct-2507"  # Flagship MoE, competitive with O1/O3-mini
+    ADVANCED_TEXT_MODEL = "deepseek-ai/DeepSeek-R1-0528"  # Latest R1 with 87.5% AIME 2025 accuracy
     REASONING_TEXT_MODEL = "Qwen/QwQ-32B-Preview"  # QwQ for advanced reasoning and problem solving
-    FAST_TEXT_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # 7B params, fast and reliable
+    EFFICIENT_TEXT_MODEL = "Qwen/Qwen3-Next-80B-A3B-Instruct"  # 80B params, only 3B activated (10x speed)
+    FAST_TEXT_MODEL = "Qwen/Qwen3-14B"  # Latest Qwen3 14B with Apache 2.0 license
+    COMPACT_TEXT_MODEL = "DeepSeek-R1-0528-Qwen3-8B"  # Compact 8B achieving SOTA performance
     MATH_TEXT_MODEL = "deepseek-ai/deepseek-math-7b-instruct"  # Specialized for mathematical reasoning
-    FALLBACK_TEXT_MODEL = "meta-llama/Llama-3.2-3B-Instruct"  # Lightweight but capable fallback
-    LIGHTWEIGHT_TEXT_MODEL = "microsoft/Phi-3.5-mini-instruct"  # Ultra-fast 3.8B model
+    FALLBACK_TEXT_MODEL = "Qwen/Qwen3-8B"  # Qwen3-8B as primary fallback
+    LIGHTWEIGHT_TEXT_MODEL = "Qwen/Qwen3-4B"  # Qwen3-4B rivals Qwen2.5-72B performance
     
-    # Code Generation Models - Optimized for fast, reliable coding assistance
-    DEFAULT_CODE_MODEL = "deepseek-ai/DeepSeek-Coder-V2-Instruct"  # Top coding model, now default for superiority
-    ADVANCED_CODE_MODEL = "Qwen/Qwen2.5-Coder-32B-Instruct"  # 32B coding specialist, beats GitHub Copilot
-    FAST_CODE_MODEL = "bigcode/starcoder2-7b"  # 7B params, moved from default for speed
+    # Code Generation Models - Enhanced with latest coding AI models
+    DEFAULT_CODE_MODEL = "Qwen/Qwen2.5-Coder-32B-Instruct"  # Currently best open-source, matches GPT-4o
+    ADVANCED_CODE_MODEL = "deepseek-ai/DeepSeek-Coder-V2-Instruct"  # Top coding model for complex algorithms
+    FAST_CODE_MODEL = "Qwen/Qwen2.5-Coder-14B-Instruct"  # Balanced performance for general coding
     SPECIALIZED_CODE_MODEL = "codellama/CodeLlama-34b-Instruct-hf"  # Meta's CodeLlama for complex algorithms
-    FALLBACK_CODE_MODEL = "bigcode/starcoder2-3b"  # Upgraded fallback, was too weak
-    LIGHTWEIGHT_CODE_MODEL = "microsoft/CodeBERT-base"  # Lightweight code understanding
+    EFFICIENT_CODE_MODEL = "Qwen/Qwen2.5-Coder-7B-Instruct"  # 7B outperforms larger models
+    FALLBACK_CODE_MODEL = "bigcode/starcoder2-7b"  # Reliable StarCoder2 fallback
+    LIGHTWEIGHT_CODE_MODEL = "bigcode/starcoder2-3b"  # Fast code completion
     
     # Vision/Multimodal Models - Optimized for fast visual understanding
     DEFAULT_VISION_MODEL = "Qwen/Qwen2.5-VL-7B-Instruct"  # 7B VL, efficient and capable as default
@@ -70,10 +74,13 @@ class Config:
     FALLBACK_VISION_MODEL = "microsoft/Phi-3.5-vision-instruct"  # Microsoft Phi-3.5 Vision
     LIGHTWEIGHT_VISION_MODEL = "microsoft/Florence-2-base"  # Ultra-fast vision tasks
     
-    # Image Generation Models - Latest 2024-2025 FLUX.1 and SD3.5 series (FLUX is #1)
+    # Image Generation Models - Enhanced with Qwen-Image and latest FLUX variants
     DEFAULT_IMAGE_MODEL = "black-forest-labs/FLUX.1-dev"  # Best quality, research use, beats DALL-E 3
-    COMMERCIAL_IMAGE_MODEL = "black-forest-labs/FLUX.1-schnell"  # Commercial license, superior text rendering
+    FLAGSHIP_IMAGE_MODEL = "Qwen/Qwen-Image"  # 20B params, superior text rendering and Chinese support
+    COMMERCIAL_IMAGE_MODEL = "black-forest-labs/FLUX.1-schnell"  # Commercial license, 1-4 steps generation
     ADVANCED_IMAGE_MODEL = "black-forest-labs/FLUX.1-redux"  # FLUX Redux for style transfer and variations
+    EDITING_IMAGE_MODEL = "Qwen/Qwen-Image-Edit"  # Specialized editing with dual-encoding
+    KONTEXT_IMAGE_MODEL = "black-forest-labs/FLUX.1-Kontext-dev"  # In-context editing and control
     TURBO_IMAGE_MODEL = "stabilityai/stable-diffusion-3.5-large-turbo"  # SD3.5 Large Turbo, ultra-fast
     ARTISTIC_IMAGE_MODEL = "stabilityai/stable-diffusion-3.5-medium"  # SD3.5 Medium for artistic styles
     REALISTIC_IMAGE_MODEL = "stabilityai/stable-diffusion-xl-base-1.0"  # SDXL for photorealistic images
@@ -169,14 +176,16 @@ class Config:
     
     @classmethod
     def get_model_fallback_chain(cls, model_type: str) -> list:
-        """Get fallback chain for different model types with validated models"""
+        """Enhanced fallback chains with latest 2025 models for optimal performance"""
         fallback_chains = {
-            'text': [cls.DEFAULT_TEXT_MODEL, cls.FAST_TEXT_MODEL, cls.FALLBACK_TEXT_MODEL, cls.LIGHTWEIGHT_TEXT_MODEL],
-            'code': [cls.DEFAULT_CODE_MODEL, cls.FAST_CODE_MODEL, cls.FALLBACK_CODE_MODEL, cls.LIGHTWEIGHT_CODE_MODEL],
-            'vision': [cls.DEFAULT_VISION_MODEL, cls.FAST_VISION_MODEL, cls.FALLBACK_VISION_MODEL, cls.LIGHTWEIGHT_VISION_MODEL],
-            'sentiment': [cls.DEFAULT_SENTIMENT_MODEL, cls.FALLBACK_SENTIMENT_MODEL, "cardiffnlp/twitter-roberta-base-sentiment-latest"],
-            'summarization': [cls.DEFAULT_SUMMARIZATION_MODEL, cls.FALLBACK_SUMMARIZATION_MODEL, "facebook/bart-large-cnn"],
-            'translation': [cls.DEFAULT_TRANSLATION_MODEL, cls.FALLBACK_TRANSLATION_MODEL, "t5-base"]
+            'text': [cls.DEFAULT_TEXT_MODEL, cls.ADVANCED_TEXT_MODEL, cls.FAST_TEXT_MODEL, cls.FALLBACK_TEXT_MODEL, cls.LIGHTWEIGHT_TEXT_MODEL],
+            'reasoning': [cls.ADVANCED_TEXT_MODEL, cls.REASONING_TEXT_MODEL, cls.COMPACT_TEXT_MODEL, cls.DEFAULT_TEXT_MODEL],
+            'code': [cls.DEFAULT_CODE_MODEL, cls.ADVANCED_CODE_MODEL, cls.FAST_CODE_MODEL, cls.FALLBACK_CODE_MODEL, cls.LIGHTWEIGHT_CODE_MODEL],
+            'vision': [cls.DEFAULT_VISION_MODEL, cls.ADVANCED_VISION_MODEL, cls.FAST_VISION_MODEL, cls.FALLBACK_VISION_MODEL, cls.LIGHTWEIGHT_VISION_MODEL],
+            'image_generation': [cls.DEFAULT_IMAGE_MODEL, cls.FLAGSHIP_IMAGE_MODEL, cls.COMMERCIAL_IMAGE_MODEL, cls.TURBO_IMAGE_MODEL, cls.FALLBACK_IMAGE_MODEL],
+            'sentiment': [cls.DEFAULT_SENTIMENT_MODEL, cls.ADVANCED_SENTIMENT_MODEL, cls.FALLBACK_SENTIMENT_MODEL],
+            'summarization': [cls.DEFAULT_SUMMARIZATION_MODEL, cls.ADVANCED_SUMMARIZATION_MODEL, cls.FALLBACK_SUMMARIZATION_MODEL],
+            'translation': [cls.DEFAULT_TRANSLATION_MODEL, cls.ADVANCED_TRANSLATION_MODEL, cls.FALLBACK_TRANSLATION_MODEL]
         }
         return fallback_chains.get(model_type, [])
     

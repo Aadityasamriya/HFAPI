@@ -627,46 +627,76 @@ class IntelligentRouter:
         
         # Advanced model selection based on complexity and context
         if intent == IntentType.TEXT_GENERATION:
-            # DeepSeek-R1-Distill for complex reasoning, Qwen2.5 series for other tasks
+            # Enhanced model selection with latest 2025 models
             complexity = analysis.get('complexity_score', 0)
             selected_model = None
-            if complexity > 7 or 'reasoning' in original_prompt.lower() or 'logic' in original_prompt.lower():
-                selected_model = Config.ADVANCED_TEXT_MODEL  # DeepSeek-R1-Distill for reasoning (matches o1)
-            elif complexity > 5 or analysis.get('requires_context'):
-                selected_model = Config.DEFAULT_TEXT_MODEL  # Qwen2.5-14B for balanced performance
-            elif complexity > 3:
-                selected_model = Config.FAST_TEXT_MODEL  # Qwen2.5-7B for general tasks
-            else:
-                selected_model = Config.FALLBACK_TEXT_MODEL  # Llama-3.2-3B for simple tasks
             
-            # Enhanced decision logging for text generation
-            reasoning = "ADVANCED (DeepSeek-R1)" if complexity > 7 else "DEFAULT (Qwen2.5-14B)" if complexity > 5 else "FAST (Qwen2.5-7B)" if complexity > 3 else "FALLBACK (Llama-3.2-3B)"
+            # Advanced reasoning tasks - Use latest DeepSeek-R1-0528
+            if complexity > 8 or 'reasoning' in original_prompt.lower() or 'logic' in original_prompt.lower() or 'philosophy' in original_prompt.lower():
+                selected_model = Config.ADVANCED_TEXT_MODEL  # DeepSeek-R1-0528 (87.5% AIME 2025)
+            # High complexity - Use flagship MoE model
+            elif complexity > 6 or word_count > 500:
+                selected_model = Config.FLAGSHIP_TEXT_MODEL  # Qwen3-235B-A22B (competitive with O1/O3-mini)
+            # Balanced performance - Use efficient 80B/3B model
+            elif complexity > 4 or analysis.get('requires_context'):
+                selected_model = Config.EFFICIENT_TEXT_MODEL  # Qwen3-Next-80B-A3B (10x speed improvement)
+            # General tasks - Use Qwen3-32B
+            elif complexity > 2:
+                selected_model = Config.DEFAULT_TEXT_MODEL  # Qwen3-32B (latest architecture)
+            # Simple tasks - Use compact high-performance model
+            else:
+                selected_model = Config.COMPACT_TEXT_MODEL  # DeepSeek-R1-0528-Qwen3-8B (SOTA 8B)
+            
+            # Enhanced decision logging for text generation with latest models
+            if complexity > 8:
+                reasoning = "ADVANCED (DeepSeek-R1-0528)"
+            elif complexity > 6:
+                reasoning = "FLAGSHIP (Qwen3-235B-MoE)"
+            elif complexity > 4:
+                reasoning = "EFFICIENT (Qwen3-Next-80B/3B)"
+            elif complexity > 2:
+                reasoning = "DEFAULT (Qwen3-32B)"
+            else:
+                reasoning = "COMPACT (R1-Qwen3-8B)"
+                
             logger.info(f"🤖 TEXT_GENERATION: complexity={complexity} → {reasoning}")
-            logger.info(f"🎯 MODEL_SELECTED: {selected_model} (Superior to GPT-4/Claude/Gemini)")
-            logger.info(f"⚡ REASONING: {'Complex reasoning task' if complexity > 7 else 'Balanced performance' if complexity > 5 else 'General task' if complexity > 3 else 'Simple query'}")
+            logger.info(f"🎯 MODEL_SELECTED: {selected_model} (2025 SOTA, Superior to GPT-4o/Claude/Gemini)")
+            logger.info(f"⚡ REASONING: {'Complex reasoning (DeepSeek-R1-0528)' if complexity > 8 else 'High complexity (Flagship MoE)' if complexity > 6 else 'Balanced performance (Efficient)' if complexity > 4 else 'General task (Qwen3)' if complexity > 2 else 'Simple query (Compact SOTA)'}")
             return self._validate_model_selection(selected_model, intent)
         
         elif intent == IntentType.CODE_GENERATION:
-            # DeepSeek-Coder-V2 beats GPT-4 in coding, with smart fallbacks
+            # Enhanced coding model selection with latest 2025 models
             complexity = analysis.get('complexity_score', 0)
             language = analysis.get('language_detected', 'python')
             
-            # Use top coding models for complex tasks
+            # Select optimal coding model based on complexity and language
             selected_model = None
-            if complexity > 6 or language in ['rust', 'go', 'c++', 'java']:
-                selected_model = Config.ADVANCED_CODE_MODEL  # DeepSeek-Coder-V2-Instruct (beats GPT-4)
-            elif complexity > 4:
-                selected_model = Config.DEFAULT_CODE_MODEL  # StarCoder2-7B for balanced tasks
-            elif complexity > 2:
-                selected_model = Config.FAST_CODE_MODEL  # StarCoder2-3B for simple code
+            if complexity > 7 or language in ['rust', 'go', 'c++', 'java', 'assembly'] or 'algorithm' in original_prompt.lower():
+                selected_model = Config.ADVANCED_CODE_MODEL  # DeepSeek-Coder-V2-Instruct for complex algorithms
+            elif complexity > 5 or word_count > 300:
+                selected_model = Config.DEFAULT_CODE_MODEL  # Qwen2.5-Coder-32B (matches GPT-4o)
+            elif complexity > 3:
+                selected_model = Config.FAST_CODE_MODEL  # Qwen2.5-Coder-14B for balanced performance
+            elif complexity > 1:
+                selected_model = Config.EFFICIENT_CODE_MODEL  # Qwen2.5-Coder-7B (outperforms larger models)
             else:
-                selected_model = Config.FALLBACK_CODE_MODEL  # CodeGen-350M for basic tasks
+                selected_model = Config.FALLBACK_CODE_MODEL  # StarCoder2-7B for basic tasks
             
-            # Enhanced decision logging for code generation
-            reasoning = "ADVANCED (DeepSeek-Coder-V2)" if complexity > 6 else "DEFAULT (StarCoder2-7B)" if complexity > 4 else "FAST (StarCoder2-3B)" if complexity > 2 else "FALLBACK (CodeGen-350M)"
+            # Enhanced decision logging for code generation with latest models
+            if complexity > 7:
+                reasoning = "ADVANCED (DeepSeek-Coder-V2)"
+            elif complexity > 5:
+                reasoning = "DEFAULT (Qwen2.5-Coder-32B)"
+            elif complexity > 3:
+                reasoning = "FAST (Qwen2.5-Coder-14B)"
+            elif complexity > 1:
+                reasoning = "EFFICIENT (Qwen2.5-Coder-7B)"
+            else:
+                reasoning = "FALLBACK (StarCoder2-7B)"
+                
             logger.info(f"💻 CODE_GENERATION: complexity={complexity}, language={language} → {reasoning}")
-            logger.info(f"🎯 MODEL_SELECTED: {selected_model} (Beats GitHub Copilot/ChatGPT Code)")
-            logger.info(f"⚡ REASONING: {'Complex algorithms/architecture' if complexity > 6 else 'Standard development' if complexity > 4 else 'Simple scripts' if complexity > 2 else 'Basic code snippets'}")
+            logger.info(f"🎯 MODEL_SELECTED: {selected_model} (2025 SOTA, Superior to GitHub Copilot/GPT-4o Code)")
+            logger.info(f"⚡ REASONING: {'Complex algorithms (DeepSeek-V2)' if complexity > 7 else 'Production-ready code (Qwen-32B)' if complexity > 5 else 'Standard development (Qwen-14B)' if complexity > 3 else 'Efficient coding (Qwen-7B)' if complexity > 1 else 'Basic code snippets'}")
             return self._validate_model_selection(selected_model, intent)
         
         elif intent == IntentType.IMAGE_ANALYSIS:
@@ -698,25 +728,47 @@ class IntelligentRouter:
             return self._validate_model_selection(selected_model, intent)
         
         elif intent == IntentType.IMAGE_GENERATION:
-            # FLUX.1 models (SUPERIOR to DALL-E 3, Midjourney competitors)
+            # Enhanced image generation with Qwen-Image and latest FLUX models
             prompt_lower = original_prompt.lower()
             selected_model = None
-            if 'commercial' in prompt_lower or 'business' in prompt_lower:
-                selected_model = Config.COMMERCIAL_IMAGE_MODEL  # FLUX.1-schnell (commercial license)
-            elif 'artistic' in prompt_lower or 'creative' in prompt_lower:
-                selected_model = Config.ARTISTIC_IMAGE_MODEL  # Playground V2.5 (artistic style)
-            elif 'fast' in prompt_lower or 'quick' in prompt_lower:
-                selected_model = Config.ADVANCED_IMAGE_MODEL  # SD3.5-Large-Turbo (fast)
-            else:
-                selected_model = Config.DEFAULT_IMAGE_MODEL  # FLUX.1-dev (best quality)
             
-            # Enhanced decision logging for image generation
-            is_commercial = 'commercial' in prompt_lower or 'business' in prompt_lower
+            # Advanced model selection based on prompt requirements
+            if 'text' in prompt_lower or 'chinese' in prompt_lower or 'typography' in prompt_lower:
+                selected_model = Config.FLAGSHIP_IMAGE_MODEL  # Qwen-Image (20B, superior text rendering)
+            elif 'edit' in prompt_lower or 'modify' in prompt_lower or 'change' in prompt_lower:
+                selected_model = Config.EDITING_IMAGE_MODEL  # Qwen-Image-Edit (specialized editing)
+            elif 'commercial' in prompt_lower or 'business' in prompt_lower or 'fast' in prompt_lower:
+                selected_model = Config.COMMERCIAL_IMAGE_MODEL  # FLUX.1-schnell (1-4 steps, commercial)
+            elif 'artistic' in prompt_lower or 'creative' in prompt_lower:
+                selected_model = Config.ARTISTIC_IMAGE_MODEL  # SD3.5-Medium (artistic styles)
+            elif 'control' in prompt_lower or 'precise' in prompt_lower:
+                selected_model = Config.KONTEXT_IMAGE_MODEL  # FLUX.1-Kontext (in-context control)
+            else:
+                selected_model = Config.DEFAULT_IMAGE_MODEL  # FLUX.1-dev (best overall quality)
+            
+            # Enhanced decision logging for image generation with latest models
+            has_text = 'text' in prompt_lower or 'chinese' in prompt_lower or 'typography' in prompt_lower
+            is_editing = 'edit' in prompt_lower or 'modify' in prompt_lower
+            is_commercial = 'commercial' in prompt_lower or 'business' in prompt_lower or 'fast' in prompt_lower
             is_artistic = 'artistic' in prompt_lower or 'creative' in prompt_lower
-            reasoning = "COMMERCIAL (FLUX.1-schnell)" if is_commercial else "ARTISTIC (Playground V2.5)" if is_artistic else "DEFAULT (FLUX.1-dev)"
-            logger.info(f"🎨 IMAGE_GENERATION: commercial={is_commercial}, artistic={is_artistic} → {reasoning}")
-            logger.info(f"🎯 MODEL_SELECTED: {selected_model} (Superior to DALL-E 3/Midjourney/Firefly)")
-            logger.info(f"⚡ REASONING: {'Business/commercial use' if is_commercial else 'Artistic/creative style' if is_artistic else 'Best quality research model'}")
+            is_controlled = 'control' in prompt_lower or 'precise' in prompt_lower
+            
+            if has_text:
+                reasoning = "FLAGSHIP (Qwen-Image-20B)"
+            elif is_editing:
+                reasoning = "EDITING (Qwen-Image-Edit)"
+            elif is_commercial:
+                reasoning = "COMMERCIAL (FLUX.1-schnell)"
+            elif is_artistic:
+                reasoning = "ARTISTIC (SD3.5-Medium)"
+            elif is_controlled:
+                reasoning = "KONTEXT (FLUX.1-Kontext)"
+            else:
+                reasoning = "DEFAULT (FLUX.1-dev)"
+                
+            logger.info(f"🎨 IMAGE_GENERATION: text={has_text}, edit={is_editing}, commercial={is_commercial} → {reasoning}")
+            logger.info(f"🎯 MODEL_SELECTED: {selected_model} (2025 SOTA, Superior to DALL-E 3/Midjourney/Firefly)")
+            logger.info(f"⚡ REASONING: {'Superior text rendering (Qwen-Image)' if has_text else 'Advanced editing capabilities' if is_editing else 'Fast commercial generation' if is_commercial else 'Artistic style generation' if is_artistic else 'Precise control generation' if is_controlled else 'Best overall quality (FLUX.1-dev)'}")
             return self._validate_model_selection(selected_model, intent)
         
         elif intent == IntentType.SENTIMENT_ANALYSIS:
