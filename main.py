@@ -15,7 +15,7 @@ except ImportError as e:
     exit(1)
 
 from bot.config import Config
-from bot.database import db
+from bot.storage_manager import storage_manager
 from bot.handlers.command_handlers import command_handlers
 from bot.handlers.message_handlers import message_handlers, MessageHandlers
 
@@ -46,6 +46,7 @@ class HuggingFaceBot:
     
     def __init__(self):
         self.application = None
+        self.storage = None
         logger.info("🤖 HuggingFaceBot instance created")
     
     async def _perform_startup_health_checks(self, app: Application):
@@ -97,37 +98,37 @@ class HuggingFaceBot:
         logger.info("🩺 Health checks completed successfully")
     
     async def post_init(self, app: Application) -> None:
-        """Post-initialization hook for database connection and health checks"""
+        """Post-initialization hook for storage connection and health checks"""
         logger.info("🔄 Post-initialization started...")
         
         try:
-            if not db.connected:
-                logger.info("🔗 Connecting to database via post_init...")
-                await db.connect()
-                logger.info("✅ Database connected successfully via post_init")
+            if not storage_manager.connected:
+                logger.info("🔗 Connecting to storage backend via post_init...")
+                await storage_manager.initialize()
+                logger.info("✅ Storage backend connected successfully via post_init")
             else:
-                logger.info("✅ Database already connected - skipping duplicate connection")
+                logger.info("✅ Storage backend already connected - skipping duplicate connection")
                 
-            # Perform health checks after database is ready
+            # Perform health checks after storage is ready
             await self._perform_startup_health_checks(app)
             logger.info("🎯 Post-initialization completed successfully")
             
         except Exception as e:
             logger.error(f"❌ CRITICAL: Post-initialization failed: {e}")
-            logger.error("🚨 Database is required for API key storage and bot functionality")
-            # This is critical - don't let the bot continue without database
-            raise RuntimeError(f"Post-initialization failed: {e}. Bot cannot operate without database.")
+            logger.error("🚨 Storage backend is required for API key storage and bot functionality")
+            # This is critical - don't let the bot continue without storage
+            raise RuntimeError(f"Post-initialization failed: {e}. Bot cannot operate without storage backend.")
     
     async def post_shutdown(self, app: Application) -> None:
         """Post-shutdown hook for comprehensive cleanup"""
         logger.info("🔄 Starting post-shutdown cleanup...")
         
         try:
-            if db.connected:
-                await db.disconnect()
-                logger.info("✅ Database disconnected successfully")
+            if storage_manager.connected:
+                await storage_manager.disconnect()
+                logger.info("✅ Storage backend disconnected successfully")
             else:
-                logger.info("ℹ️ Database already disconnected")
+                logger.info("ℹ️ Storage backend already disconnected")
                 
             logger.info("🎯 Post-shutdown cleanup completed")
             
@@ -135,15 +136,15 @@ class HuggingFaceBot:
             logger.error(f"❌ Error during post-shutdown cleanup: {e}")
     
     async def initialize(self):
-        """Initialize bot application and database"""
+        """Initialize bot application and storage backend"""
         try:
             # Validate configuration
             Config.validate_config()
             logger.info("Configuration validated successfully")
             
-            # Connect to database
-            await db.connect()
-            logger.info("Database connected successfully")
+            # Initialize storage backend
+            await storage_manager.initialize()
+            logger.info("Storage backend connected successfully")
             
             # Create application with enhanced logging
             if not Config.TELEGRAM_BOT_TOKEN:

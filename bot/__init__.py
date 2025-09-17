@@ -17,13 +17,13 @@ __author__ = "AI Assistant Pro Team"
 __description__ = "Advanced Telegram bot with intelligent AI routing"
 
 # Core components
-from . import config, database, security_utils
+from . import config, security_utils, storage_manager
 from .core import router, model_caller  
 from .handlers import command_handlers, message_handlers
 
 __all__ = [
     'config',
-    'database', 
+    'storage_manager', 
     'security_utils',
     'router',
     'model_caller',

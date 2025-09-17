@@ -11,7 +11,7 @@ import re
 from telegram.ext import ContextTypes
 from telegram.constants import ChatAction
 
-from bot.database import db
+from bot.storage_manager import db
 from bot.core.router import router, IntentType
 from bot.core.model_caller import ModelCaller, _redact_sensitive_data, _safe_log_error
 from bot.config import Config

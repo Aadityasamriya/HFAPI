@@ -14,7 +14,7 @@ except ImportError as e:
     print(f"Telegram library import error: {e}")
     print("Please ensure python-telegram-bot is installed: pip install python-telegram-bot[ext]==22.4")
     raise
-from bot.database import db
+from bot.storage_manager import db
 from bot.config import Config
 from bot.security_utils import escape_markdown, safe_markdown_format, check_rate_limit
 

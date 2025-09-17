@@ -14,11 +14,21 @@ class Config:
     # Telegram Bot Configuration
     TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
     
-    # Database Configuration
+    # Storage Provider Configuration
+    STORAGE_PROVIDER = os.getenv('STORAGE_PROVIDER', 'mongodb').lower()  # Default to MongoDB for backward compatibility
+    
+    # MongoDB Configuration (backward compatibility)
     MONGO_URI = os.getenv('MONGO_URI')
+    MONGODB_URI = os.getenv('MONGODB_URI')  # Alternative naming
+    
+    # Supabase Configuration
+    SUPABASE_URL = os.getenv('SUPABASE_URL')
+    SUPABASE_ANON_KEY = os.getenv('SUPABASE_ANON_KEY')
+    SUPABASE_SERVICE_KEY = os.getenv('SUPABASE_SERVICE_KEY')  # Optional for admin operations
     
     # Security Configuration
     ENCRYPTION_SEED = os.getenv('ENCRYPTION_SEED')
+    API_ENCRYPTION_KEY = os.getenv('API_ENCRYPTION_KEY')  # Advanced encryption override
     
     # 2024-2025 STATE-OF-THE-ART Hugging Face Models - SUPERIOR TO CHATGPT/GROK/GEMINI
     # Text Generation Models - Latest cutting-edge models outperforming GPT-4
@@ -80,27 +90,165 @@ class Config:
     PERFORMANCE_MONITORING = True  # Track model performance
     
     @classmethod
+    def get_storage_provider(cls) -> str:
+        """Get the configured storage provider"""
+        return cls.STORAGE_PROVIDER
+    
+    @classmethod
+    def get_mongodb_uri(cls) -> str:
+        """Get MongoDB URI with fallback options"""
+        return cls.MONGO_URI or cls.MONGODB_URI
+    
+    @classmethod
+    def has_mongodb_config(cls) -> bool:
+        """Check if MongoDB configuration is available"""
+        return bool(cls.get_mongodb_uri())
+    
+    @classmethod
+    def has_supabase_config(cls) -> bool:
+        """Check if Supabase configuration is available"""
+        return bool(cls.SUPABASE_URL and cls.SUPABASE_ANON_KEY)
+    
+    @classmethod
     def validate_config(cls):
-        """Validate that all required environment variables are set"""
-        required_vars = ['TELEGRAM_BOT_TOKEN', 'MONGO_URI']
-        missing_vars = [var for var in required_vars if not getattr(cls, var)]
-        
-        if missing_vars:
-            error_msg = f"CRITICAL: Missing required environment variables: {', '.join(missing_vars)}"
-            raise ValueError(error_msg)
-        
+        """Validate configuration based on storage provider and available options"""
         import logging
         logger = logging.getLogger(__name__)
+        
+        # Always require Telegram bot token
+        if not cls.TELEGRAM_BOT_TOKEN:
+            raise ValueError("CRITICAL: TELEGRAM_BOT_TOKEN environment variable is required")
         
         # Validate Telegram bot token format
         if cls.TELEGRAM_BOT_TOKEN and not cls.TELEGRAM_BOT_TOKEN.count(':') == 1:
             logger.warning("Telegram bot token format may be invalid")
         
-        # Validate MongoDB URI format  
-        if cls.MONGO_URI and not (cls.MONGO_URI.startswith('mongodb://') or cls.MONGO_URI.startswith('mongodb+srv://')):
-            raise ValueError("MONGO_URI must be a valid MongoDB connection string")
+        # Storage provider validation
+        storage_provider = cls.get_storage_provider()
+        logger.info(f"🔧 Configured storage provider: {storage_provider}")
         
-        # Validate ENCRYPTION_SEED strength if provided (optional now)
+        # Provider-specific validation
+        if storage_provider == 'mongodb':
+            cls._validate_mongodb_config(logger)
+        elif storage_provider == 'supabase':
+            cls._validate_supabase_config(logger)
+        else:
+            # Auto-detect if provider is not explicitly set or invalid
+            logger.info(f"🔍 Storage provider '{storage_provider}' not recognized, attempting auto-detection...")
+            cls._auto_detect_and_validate_storage(logger)
+        
+        # Validate encryption configuration
+        cls._validate_encryption_config(logger)
+        
+        # Production security validation
+        cls._validate_production_security(logger)
+        
+        # Success logging
+        cls._log_successful_validation(logger, storage_provider)
+        
+        return True
+    
+    @classmethod
+    def _validate_mongodb_config(cls, logger):
+        """Validate MongoDB-specific configuration"""
+        mongo_uri = cls.get_mongodb_uri()
+        if not mongo_uri:
+            raise ValueError(
+                "CRITICAL: MongoDB provider requires MONGO_URI or MONGODB_URI environment variable. "
+                "Set one of these variables or switch to Supabase with STORAGE_PROVIDER=supabase"
+            )
+        
+        # Validate MongoDB URI format
+        if not (mongo_uri.startswith('mongodb://') or mongo_uri.startswith('mongodb+srv://')):
+            raise ValueError("MONGO_URI must be a valid MongoDB connection string (mongodb:// or mongodb+srv://)")
+        
+        logger.info("✅ MongoDB configuration validated successfully")
+    
+    @classmethod
+    def _validate_supabase_config(cls, logger):
+        """Validate Supabase-specific configuration"""
+        if not cls.has_supabase_config():
+            raise ValueError(
+                "CRITICAL: Supabase provider requires SUPABASE_URL and SUPABASE_ANON_KEY environment variables. "
+                "Set these variables or switch to MongoDB with STORAGE_PROVIDER=mongodb"
+            )
+        
+        # Validate Supabase URL format
+        if not cls.SUPABASE_URL.startswith('https://'):
+            raise ValueError("SUPABASE_URL must be a valid HTTPS URL")
+        
+        if len(cls.SUPABASE_ANON_KEY) < 100:  # Supabase keys are typically long JWT tokens
+            logger.warning("⚠️ SUPABASE_ANON_KEY appears unusually short - please verify it's correct")
+        
+        logger.info("✅ Supabase configuration validated successfully")
+    
+    @classmethod
+    def _auto_detect_and_validate_storage(cls, logger):
+        """Auto-detect and validate available storage providers"""
+        available_providers = []
+        
+        # Check MongoDB availability
+        if cls.has_mongodb_config():
+            available_providers.append('mongodb')
+            try:
+                cls._validate_mongodb_config(logger)
+                logger.info("🔍 Auto-detected working MongoDB configuration")
+                # Update the storage provider to mongodb
+                cls.STORAGE_PROVIDER = 'mongodb'
+                return
+            except ValueError as e:
+                logger.warning(f"MongoDB config detected but invalid: {e}")
+        
+        # Check Supabase availability
+        if cls.has_supabase_config():
+            available_providers.append('supabase')
+            try:
+                cls._validate_supabase_config(logger)
+                logger.info("🔍 Auto-detected working Supabase configuration")
+                # Update the storage provider to supabase
+                cls.STORAGE_PROVIDER = 'supabase'
+                return
+            except ValueError as e:
+                logger.warning(f"Supabase config detected but invalid: {e}")
+        
+        # No working providers found
+        if not available_providers:
+            raise ValueError(
+                "CRITICAL: No storage provider configuration found. Please configure either:\n"
+                "MongoDB: Set MONGO_URI or MONGODB_URI\n"
+                "Supabase: Set SUPABASE_URL and SUPABASE_ANON_KEY\n"
+                "Or explicitly set STORAGE_PROVIDER=mongodb/supabase"
+            )
+        else:
+            providers_str = ', '.join(available_providers)
+            raise ValueError(
+                f"CRITICAL: Storage providers detected ({providers_str}) but none are properly configured. "
+                f"Please fix the configuration or set STORAGE_PROVIDER to a working provider."
+            )
+    
+    @classmethod
+    def _validate_encryption_config(cls, logger):
+        """Validate encryption configuration"""
+        if cls.API_ENCRYPTION_KEY:
+            # Validate custom encryption key
+            try:
+                import base64
+                decoded = base64.b64decode(cls.API_ENCRYPTION_KEY)
+                if len(decoded) == 32:
+                    logger.info("✅ Using custom API_ENCRYPTION_KEY (32 bytes)")
+                else:
+                    logger.warning(f"⚠️ API_ENCRYPTION_KEY should be 32 bytes when base64 decoded, got {len(decoded)} bytes")
+            except Exception:
+                # Try hex decoding
+                try:
+                    if len(cls.API_ENCRYPTION_KEY) == 64:
+                        bytes.fromhex(cls.API_ENCRYPTION_KEY)
+                        logger.info("✅ Using custom API_ENCRYPTION_KEY (hex format)")
+                    else:
+                        logger.warning("⚠️ API_ENCRYPTION_KEY should be 64 hex characters or 44 base64 characters")
+                except Exception:
+                    logger.warning("⚠️ API_ENCRYPTION_KEY format appears invalid - should be base64 or hex encoded 32-byte key")
+        
         if cls.ENCRYPTION_SEED:
             if len(cls.ENCRYPTION_SEED) < 32:
                 logger.warning("🚨 SECURITY WARNING: ENCRYPTION_SEED should be at least 32 characters for strong security")
@@ -108,21 +256,71 @@ class Config:
                 raise ValueError("🚨 CRITICAL: ENCRYPTION_SEED must not use weak/default values. Use a strong, random string.")
             logger.info("✅ Using ENCRYPTION_SEED from environment variable")
         else:
-            logger.info("🔐 ENCRYPTION_SEED not provided - will auto-generate and persist in database")
-        
-        # Security validation for production
-        import os
+            logger.info("🔐 ENCRYPTION_SEED not provided - will auto-generate and persist in storage backend")
+    
+    @classmethod
+    def _validate_production_security(cls, logger):
+        """Validate security settings for production environments"""
         is_production = os.getenv('ENVIRONMENT', '').lower() == 'production'
         if is_production:
-            if cls.MONGO_URI and not ('tls=true' in cls.MONGO_URI or cls.MONGO_URI.startswith('mongodb+srv://')):
-                logger.warning("SECURITY WARNING: Production database should use TLS encryption")
-        
+            logger.info("🏭 Production environment detected - performing enhanced security validation")
+            
+            # MongoDB-specific production checks
+            if cls.get_storage_provider() == 'mongodb':
+                mongo_uri = cls.get_mongodb_uri()
+                if mongo_uri and not ('tls=true' in mongo_uri or mongo_uri.startswith('mongodb+srv://')):
+                    logger.warning("🚨 SECURITY WARNING: Production MongoDB should use TLS encryption")
+            
+            # Supabase automatically uses HTTPS/TLS
+            elif cls.get_storage_provider() == 'supabase':
+                if cls.SUPABASE_URL and not cls.SUPABASE_URL.startswith('https://'):
+                    raise ValueError("🚨 CRITICAL: Production Supabase URL must use HTTPS")
+            
+            # Warn if using default/weak encryption
+            if not cls.ENCRYPTION_SEED and not cls.API_ENCRYPTION_KEY:
+                logger.warning("🚨 PRODUCTION WARNING: Consider setting ENCRYPTION_SEED or API_ENCRYPTION_KEY for deterministic encryption keys")
+    
+    @classmethod
+    def _log_successful_validation(cls, logger, storage_provider):
+        """Log successful validation with provider-specific information"""
         logger.info("✅ Configuration validation completed successfully")
         logger.info(f"🚀 Using {len([m for m in dir(cls) if 'MODEL' in m and not m.startswith('_')])} state-of-the-art 2024-2025 AI models")
-        logger.info("💡 API keys stored persistently in MongoDB with auto-generated encryption")
-        logger.info("🔒 Encryption seed will be auto-generated and persisted for security")
+        
+        # Provider-specific logging
+        if storage_provider == 'mongodb':
+            logger.info("🗄️ Storage: MongoDB with auto-generated encryption")
+            logger.info("🎯 Deployment: TELEGRAM_BOT_TOKEN + MONGO_URI required")
+        elif storage_provider == 'supabase':
+            logger.info("🗄️ Storage: Supabase PostgreSQL with real-time capabilities")
+            logger.info("🎯 Deployment: TELEGRAM_BOT_TOKEN + SUPABASE_URL + SUPABASE_ANON_KEY required")
+        
+        logger.info("🔒 Encryption: Per-user AES-256-GCM with persistent seeds")
         logger.info("🏆 Bot powered by models SUPERIOR to ChatGPT, Grok, and Gemini")
         logger.info("⚡ Text: Qwen2.5-72B | Code: StarCoder2-15B | Images: FLUX.1 | Sentiment: CardiffNLP Latest")
-        logger.info("🎯 Simplified deployment: Only TELEGRAM_BOT_TOKEN and MONGO_URI required")
+        logger.info(f"🔄 Storage Provider: {storage_provider} (auto-detection enabled)")
         
-        return True
+        # Log available providers
+        available = []
+        if cls.has_mongodb_config():
+            available.append("MongoDB")
+        if cls.has_supabase_config():
+            available.append("Supabase")
+        
+        if len(available) > 1:
+            logger.info(f"🔀 Multiple storage providers available: {', '.join(available)} (using {storage_provider})")
+        elif len(available) == 1:
+            logger.info(f"🎯 Single storage provider configured: {available[0]}")
+        
+    @classmethod
+    def get_storage_config_summary(cls) -> dict:
+        """Get a summary of storage configuration for debugging"""
+        return {
+            "storage_provider": cls.get_storage_provider(),
+            "mongodb_available": cls.has_mongodb_config(),
+            "supabase_available": cls.has_supabase_config(),
+            "mongodb_uri_set": bool(cls.get_mongodb_uri()),
+            "supabase_url_set": bool(cls.SUPABASE_URL),
+            "supabase_key_set": bool(cls.SUPABASE_ANON_KEY),
+            "encryption_seed_set": bool(cls.ENCRYPTION_SEED),
+            "api_encryption_key_set": bool(cls.API_ENCRYPTION_KEY)
+        }
