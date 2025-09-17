@@ -184,11 +184,12 @@ class RateLimiter:
 
 # Global instances for use across the application  
 markdown_sanitizer = MarkdownSanitizer()
-rate_limiter = RateLimiter(max_requests=20, time_window=60)  # 20 requests per minute - enhanced for superior performance
 
-# Enhanced rate limiter for different user types
-premium_rate_limiter = RateLimiter(max_requests=50, time_window=60)  # For premium users if implemented
-admin_rate_limiter = RateLimiter(max_requests=100, time_window=60)  # For admin users
+# NOTE: Rate limiting is now handled by persistent database storage in storage_manager
+# The old in-memory rate limiters are kept for fallback compatibility only
+rate_limiter = RateLimiter(max_requests=20, time_window=60)  # FALLBACK ONLY - use database rate limiting
+premium_rate_limiter = RateLimiter(max_requests=50, time_window=60)  # FALLBACK ONLY
+admin_rate_limiter = RateLimiter(max_requests=100, time_window=60)  # FALLBACK ONLY
 
 # Convenience functions for easy import
 def escape_markdown(text: str) -> str:
@@ -199,7 +200,22 @@ def safe_markdown_format(text: str, preserve_code: bool = True) -> str:
     """Convenience function to safely format Markdown text"""
     return markdown_sanitizer.safe_markdown_format(text, preserve_code)
 
+async def check_rate_limit_persistent(user_id: int, storage_provider=None) -> tuple[bool, int]:
+    """Persistent database-based rate limiting (PRODUCTION VERSION)"""
+    if storage_provider and hasattr(storage_provider, 'check_rate_limit'):
+        try:
+            # Use persistent database rate limiting for production
+            is_allowed, wait_time = await storage_provider.check_rate_limit(user_id, max_requests=20, time_window=60)
+            return is_allowed, wait_time or 0
+        except Exception as e:
+            # Fallback to in-memory if database fails
+            logging.getLogger(__name__).warning(f"Persistent rate limiting failed, using fallback: {e}")
+            return check_rate_limit(user_id)
+    else:
+        # Fallback to in-memory rate limiting
+        return check_rate_limit(user_id)
+
 def check_rate_limit(user_id: int) -> tuple[bool, int]:
-    """Convenience function to check rate limit"""
+    """Fallback in-memory rate limiting (DEVELOPMENT/FALLBACK ONLY)"""
     is_allowed, wait_time = rate_limiter.is_allowed(user_id)
     return is_allowed, wait_time or 0

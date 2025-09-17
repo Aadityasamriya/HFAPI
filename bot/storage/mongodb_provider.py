@@ -7,16 +7,19 @@ import asyncio
 import os
 import base64
 import secrets
-from datetime import datetime
+from datetime import datetime, timedelta
 from urllib.parse import urlparse, parse_qs
 from typing import Optional, List, Dict, Any
 
-# MongoDB imports
+# MongoDB imports with proper typing
 try:
     from motor.motor_asyncio import AsyncIOMotorClient
     from pymongo.errors import PyMongoError
     MONGODB_AVAILABLE = True
 except ImportError:
+    # Define stub types for when MongoDB is not available
+    AsyncIOMotorClient = None
+    PyMongoError = Exception
     MONGODB_AVAILABLE = False
 
 # Encryption imports
@@ -40,7 +43,7 @@ class MongoDBProvider(StorageProvider):
     
     def __init__(self):
         super().__init__()
-        if not MONGODB_AVAILABLE:
+        if not MONGODB_AVAILABLE or AsyncIOMotorClient is None:
             raise ImportError("MongoDB dependencies not available. Install with: pip install motor pymongo")
         
         self.client = None
@@ -76,6 +79,8 @@ class MongoDBProvider(StorageProvider):
                     "This is acceptable for development but NOT for production."
                 )
                 
+            if AsyncIOMotorClient is None:
+                raise ImportError("AsyncIOMotorClient not available - MongoDB dependencies missing")
             self.client = AsyncIOMotorClient(mongo_uri)
             self.db = self.client.ai_assistant_bot
             
@@ -122,6 +127,9 @@ class MongoDBProvider(StorageProvider):
         
         # Ensure proper indexing
         await self._ensure_indexes()
+        
+        # Create rate limiting indexes for performance
+        await self._ensure_rate_limit_indexes()
         
         # Initialize encryption with persistent seed
         await self._initialize_encryption_with_persistent_seed()
@@ -191,9 +199,6 @@ class MongoDBProvider(StorageProvider):
                 success=False
             )
             return False
-        except PyMongoError as e:
-            logger.error(f"MongoDB error saving API key for user {user_id}: {e}")
-            return False
         except Exception as e:
             logger.error(f"Unexpected error saving API key for user {user_id}: {e}")
             return False
@@ -247,7 +252,7 @@ class MongoDBProvider(StorageProvider):
                 success=False
             )
             return None
-        except PyMongoError as e:
+        except Exception as e:
             logger.error(f"MongoDB error retrieving API key for user {user_id}: {e}")
             return None
         except Exception as e:
@@ -284,7 +289,7 @@ class MongoDBProvider(StorageProvider):
         except ValueError as e:
             self.secure_logger.error(f"Validation error deleting user data for user {user_id}: {e}")
             return False
-        except PyMongoError as e:
+        except Exception as e:
             logger.error(f"MongoDB error deleting user data for user {user_id}: {e}")
             self.secure_logger.audit(
                 event_type="USER_DATA_DELETE_FAILED",
@@ -374,7 +379,7 @@ class MongoDBProvider(StorageProvider):
         except ValueError as e:
             logger.error(f"Validation error saving conversation for user {user_id}: {e}")
             return False
-        except PyMongoError as e:
+        except Exception as e:
             logger.error(f"MongoDB error saving conversation for user {user_id}: {e}")
             return False
         except Exception as e:
@@ -416,7 +421,7 @@ class MongoDBProvider(StorageProvider):
         except ValueError as e:
             logger.error(f"Validation error retrieving conversations for user {user_id}: {e}")
             return []
-        except PyMongoError as e:
+        except Exception as e:
             logger.error(f"MongoDB error retrieving conversations for user {user_id}: {e}")
             return []
         except Exception as e:
@@ -459,7 +464,7 @@ class MongoDBProvider(StorageProvider):
         except ValueError as e:
             logger.error(f"Validation error retrieving conversation details for user {user_id}: {e}")
             return None
-        except PyMongoError as e:
+        except Exception as e:
             logger.error(f"MongoDB error retrieving conversation details for user {user_id}: {e}")
             return None
         except Exception as e:
@@ -501,7 +506,7 @@ class MongoDBProvider(StorageProvider):
         except ValueError as e:
             logger.error(f"Validation error deleting conversation for user {user_id}: {e}")
             return False
-        except PyMongoError as e:
+        except Exception as e:
             logger.error(f"MongoDB error deleting conversation for user {user_id}: {e}")
             return False
         except Exception as e:
@@ -528,7 +533,7 @@ class MongoDBProvider(StorageProvider):
                 logger.error(f"Failed to clear conversation history for user {user_id} - operation not acknowledged")
                 return False
                 
-        except PyMongoError as e:
+        except Exception as e:
             logger.error(f"MongoDB error clearing conversation history for user {user_id}: {e}")
             return False
         except Exception as e:
@@ -744,61 +749,52 @@ class MongoDBProvider(StorageProvider):
             
             logger.info("✅ Database indexes created successfully")
             
-        except PyMongoError as e:
+        except Exception as e:
             logger.error(f"Failed to create database indexes: {e}")
         except Exception as e:
             logger.error(f"Unexpected error creating indexes: {e}")
     
-    async def _get_or_create_encryption_seed(self) -> str:
-        """Get encryption seed from database or create and store a new one"""
-        try:
-            if not self.connected or self.db is None:
-                raise ValueError("Database must be connected to manage encryption seed")
-            
-            # Try to get existing seed from system collection
-            system_doc = await self.db.system_config.find_one({"type": "encryption_config"})
-            
-            if system_doc and "encryption_seed" in system_doc:
-                seed = system_doc["encryption_seed"]
-                if isinstance(seed, str) and len(seed) >= 32:
-                    logger.info("✅ Retrieved persistent encryption seed from database")
-                    return seed
-                else:
-                    logger.warning("⚠️ Stored encryption seed is invalid, generating new one")
-            
-            # Generate new strong encryption seed
-            logger.info("🔐 Generating new encryption seed for persistent storage...")
-            new_seed = base64.b64encode(secrets.token_bytes(32)).decode('ascii')
-            
-            # Store the seed in system collection with metadata
-            system_config = {
-                "type": "encryption_config",
-                "encryption_seed": new_seed,
-                "created_at": datetime.utcnow(),
-                "version": "1.0",
-                "description": "Auto-generated encryption seed for API key protection"
-            }
-            
-            await self.db.system_config.update_one(
-                {"type": "encryption_config"},
-                {"$set": system_config},
-                upsert=True
-            )
-            
-            logger.info("✅ Generated and stored new encryption seed in database")
-            return new_seed
-            
-        except Exception as e:
-            logger.error(f"CRITICAL: Failed to get/create encryption seed: {e}")
-            raise ValueError(f"Cannot manage encryption seed: {e}")
+    def _generate_encryption_seed_guidance(self) -> str:
+        """Provide guidance for setting up encryption seed environment variable"""
+        sample_seed = base64.b64encode(secrets.token_bytes(32)).decode('ascii')
+        
+        guidance = f"""
+🔐 ENCRYPTION SETUP REQUIRED 🔐
+
+For security, this bot requires an ENCRYPTION_SEED environment variable.
+NEVER store encryption keys in the database alongside encrypted data!
+
+Add this to your environment (.env file or deployment config):
+ENCRYPTION_SEED='{sample_seed}'
+
+🚨 IMPORTANT SECURITY NOTES:
+• Use a unique, random 32+ character string
+• NEVER commit this seed to version control
+• Store it securely in your deployment environment
+• If you change this seed, all existing encrypted data becomes unreadable
+
+💡 For production: Use your hosting platform's secret management system
+"""
+        return guidance
     
     async def _initialize_encryption_with_persistent_seed(self):
-        """Initialize encryption system with persistent seed from database"""
+        """Initialize encryption system with seed from environment variables (SECURITY FIX)"""
         try:
-            # Get or create the encryption seed from database
-            encryption_seed = await self._get_or_create_encryption_seed()
+            # SECURITY FIX: Get encryption seed from environment variables, not database!
+            encryption_seed = Config.ENCRYPTION_SEED
             
-            # Store the persistent seed for per-user key derivation
+            if not encryption_seed:
+                # Critical security: Never store seed in database!
+                logger.error("🚨 SECURITY ERROR: ENCRYPTION_SEED environment variable not set!")
+                logger.error("🔐 Add ENCRYPTION_SEED to your environment variables with a strong 32+ character value")
+                logger.error("💡 Example: export ENCRYPTION_SEED='your-secure-32-plus-character-encryption-seed-here'")
+                raise ValueError("ENCRYPTION_SEED environment variable is required for security")
+            
+            if len(encryption_seed) < 32:
+                logger.warning("🚨 SECURITY WARNING: ENCRYPTION_SEED should be at least 32 characters for security")
+                logger.warning("💡 Use a strong, random string with at least 32 characters")
+            
+            # Store the seed for per-user key derivation (from environment, not database)
             self._global_seed = encryption_seed
             
             # Generate the legacy global encryption key using PBKDF2
@@ -819,10 +815,10 @@ class MongoDBProvider(StorageProvider):
             if self.db is not None:
                 await self.db.system_config.create_index("type", unique=True)
             
-            logger.info("✅ Encryption system initialized with persistent seed from database")
+            logger.info("✅ Encryption system initialized with seed from environment variables (secure)")
             
         except Exception as e:
-            logger.error(f"CRITICAL: Failed to initialize encryption with persistent seed: {e}")
+            logger.error(f"CRITICAL: Failed to initialize encryption with environment seed: {e}")
             raise
     
     def _encrypt_api_key(self, api_key: str, user_id: int) -> str:
@@ -994,6 +990,8 @@ class MongoDBProvider(StorageProvider):
                 raise ValueError("Must be connected to get admin data")
             
             # Look for admin data in admin_config collection
+            if self.db is None:
+                raise ValueError("Database connection not available")
             admin_doc = await self.db.admin_config.find_one({'_id': 'admin_system'})
             
             if admin_doc:
@@ -1022,6 +1020,8 @@ class MongoDBProvider(StorageProvider):
             admin_doc['last_updated'] = datetime.utcnow()
             
             # Upsert the admin configuration
+            if self.db is None:
+                raise ValueError("Database connection not available")
             result = await self.db.admin_config.replace_one(
                 {'_id': 'admin_system'}, 
                 admin_doc, 
@@ -1039,7 +1039,7 @@ class MongoDBProvider(StorageProvider):
             logger.error(f"Failed to save admin data to MongoDB: {e}")
             return False
     
-    async def log_admin_action(self, admin_id: int, action: str, details: Dict[str, Any] = None) -> bool:
+    async def log_admin_action(self, admin_id: int, action: str, details: Optional[Dict[str, Any]] = None) -> bool:
         """Log admin action to MongoDB for audit trail"""
         try:
             if not self.connected:
@@ -1056,6 +1056,8 @@ class MongoDBProvider(StorageProvider):
             }
             
             # Insert into admin_logs collection
+            if self.db is None:
+                raise ValueError("Database connection not available")
             result = await self.db.admin_logs.insert_one(log_entry)
             
             if result.inserted_id:
@@ -1076,6 +1078,8 @@ class MongoDBProvider(StorageProvider):
                 raise ValueError("Must be connected to get admin logs")
             
             # Query admin logs with pagination, sorted by timestamp (newest first)
+            if self.db is None:
+                raise ValueError("Database connection not available")
             cursor = self.db.admin_logs.find().sort('timestamp', -1).skip(skip).limit(limit)
             
             logs = []
@@ -1091,3 +1095,181 @@ class MongoDBProvider(StorageProvider):
         except Exception as e:
             logger.error(f"Failed to get admin logs from MongoDB: {e}")
             return []
+    
+    # Rate Limiting (Persistent Implementation)
+    async def check_rate_limit(self, user_id: int, max_requests: int = 20, time_window: int = 60) -> tuple[bool, Optional[int]]:
+        """
+        Check if user is within rate limits using persistent database storage
+        
+        Args:
+            user_id (int): Telegram user ID
+            max_requests (int): Maximum requests per time window
+            time_window (int): Time window in seconds
+            
+        Returns:
+            tuple[bool, Optional[int]]: (is_allowed, seconds_until_reset)
+        """
+        try:
+            if not self.connected or self.db is None:
+                # Fallback to allow if database is unavailable
+                logger.warning("Database not available for rate limiting - allowing request")
+                return True, None
+            
+            user_id = self._validate_user_id(user_id)
+            current_time = datetime.utcnow()
+            cutoff_time = current_time - timedelta(seconds=time_window)
+            
+            # Remove old requests outside the time window
+            await self.db.rate_limits.delete_many({
+                "user_id": user_id,
+                "timestamp": {"$lt": cutoff_time}
+            })
+            
+            # Count current requests within the time window
+            request_count = await self.db.rate_limits.count_documents({
+                "user_id": user_id,
+                "timestamp": {"$gte": cutoff_time}
+            })
+            
+            # Check if user has exceeded rate limit
+            if request_count >= max_requests:
+                # Find the oldest request to calculate reset time
+                oldest_request = await self.db.rate_limits.find_one(
+                    {"user_id": user_id},
+                    sort=[("timestamp", 1)]
+                )
+                
+                if oldest_request:
+                    oldest_time = oldest_request["timestamp"]
+                    seconds_until_reset = int(time_window - (current_time - oldest_time).total_seconds())
+                    return False, max(1, seconds_until_reset)
+                else:
+                    return False, time_window
+            
+            # Add current request to the database
+            await self.db.rate_limits.insert_one({
+                "user_id": user_id,
+                "timestamp": current_time,
+                "action": "message",
+                "ip_address": None  # Can be added later if needed
+            })
+            
+            return True, None
+            
+        except Exception as e:
+            logger.error(f"Rate limiting check failed for user {user_id}: {e}")
+            # Fallback to allow if rate limiting fails
+            return True, None
+    
+    async def get_remaining_requests(self, user_id: int, max_requests: int = 20, time_window: int = 60) -> int:
+        """
+        Get number of remaining requests for user using persistent storage
+        
+        Args:
+            user_id (int): Telegram user ID
+            max_requests (int): Maximum requests per time window
+            time_window (int): Time window in seconds
+            
+        Returns:
+            int: Number of remaining requests
+        """
+        try:
+            if not self.connected or self.db is None:
+                return max_requests  # Return max if database unavailable
+            
+            user_id = self._validate_user_id(user_id)
+            current_time = datetime.utcnow()
+            cutoff_time = current_time - timedelta(seconds=time_window)
+            
+            # Count current requests within the time window
+            request_count = await self.db.rate_limits.count_documents({
+                "user_id": user_id,
+                "timestamp": {"$gte": cutoff_time}
+            })
+            
+            return max(0, max_requests - request_count)
+            
+        except Exception as e:
+            logger.error(f"Failed to get remaining requests for user {user_id}: {e}")
+            return max_requests  # Return max if check fails
+    
+    async def reset_user_rate_limit(self, user_id: int) -> bool:
+        """
+        Reset rate limit for specific user (admin function)
+        
+        Args:
+            user_id (int): Telegram user ID
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            if not self.connected or self.db is None:
+                raise ValueError("Database not connected")
+            
+            user_id = self._validate_user_id(user_id)
+            
+            # Delete all rate limit entries for this user
+            result = await self.db.rate_limits.delete_many({"user_id": user_id})
+            
+            logger.info(f"Rate limit reset for user {user_id}: {result.deleted_count} entries removed")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to reset rate limit for user {user_id}: {e}")
+            return False
+    
+    async def cleanup_old_rate_limits(self, days_old: int = 7) -> int:
+        """
+        Clean up old rate limit entries (maintenance function)
+        
+        Args:
+            days_old (int): Remove entries older than this many days
+            
+        Returns:
+            int: Number of entries cleaned up
+        """
+        try:
+            if not self.connected or self.db is None:
+                raise ValueError("Database not connected")
+            
+            cutoff_time = datetime.utcnow() - timedelta(days=days_old)
+            
+            result = await self.db.rate_limits.delete_many({
+                "timestamp": {"$lt": cutoff_time}
+            })
+            
+            logger.info(f"Cleaned up {result.deleted_count} old rate limit entries")
+            return result.deleted_count
+            
+        except Exception as e:
+            logger.error(f"Failed to cleanup old rate limits: {e}")
+            return 0
+    
+    async def _ensure_rate_limit_indexes(self):
+        """Create rate limiting indexes for optimal performance"""
+        try:
+            if not self.connected or self.db is None:
+                logger.warning("Cannot create rate limit indexes - database not connected")
+                return
+            
+            # Rate limiting indexes for efficient queries
+            await self.db.rate_limits.create_index("user_id")  # For user-specific queries
+            await self.db.rate_limits.create_index("timestamp")  # For time-based cleanup
+            
+            # Compound index for user + timestamp queries (most common)
+            await self.db.rate_limits.create_index([
+                ("user_id", 1),
+                ("timestamp", -1)
+            ])
+            
+            # TTL index to automatically cleanup old entries after 24 hours
+            await self.db.rate_limits.create_index(
+                "timestamp", 
+                expireAfterSeconds=86400  # 24 hours in seconds
+            )
+            
+            logger.info("✅ Rate limiting indexes created successfully")
+            
+        except Exception as e:
+            logger.error(f"Failed to create rate limit indexes: {e}")

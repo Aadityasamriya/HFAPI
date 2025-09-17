@@ -81,12 +81,12 @@ class HuggingFaceBot:
             logger.info("📋 Setting bot commands menu...")
             from telegram import BotCommand
             
+            # SECURITY FIX: Only show public commands, admin commands are handled privately
             commands = [
                 BotCommand("start", "🚀 Welcome and setup"),
                 BotCommand("newchat", "🔄 Clear chat history"),
                 BotCommand("settings", "⚙️ Bot settings"),
-                BotCommand("history", "📚 View previous chats"),
-                BotCommand("resetdb", "🗑️ Reset database")
+                BotCommand("history", "📚 View previous chats")
             ]
             
             await app.bot.set_my_commands(commands)
