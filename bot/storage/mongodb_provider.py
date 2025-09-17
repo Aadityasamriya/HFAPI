@@ -187,7 +187,7 @@ class MongoDBProvider(StorageProvider):
                 )
                 return True
             else:
-                logger.error(f"Failed to save API key for user {user_id} - operation not acknowledged")
+                self.secure_logger.error(f"Failed to save API key for user {user_id} - operation not acknowledged")
                 return False
                 
         except ValueError as e:
@@ -200,7 +200,7 @@ class MongoDBProvider(StorageProvider):
             )
             return False
         except Exception as e:
-            logger.error(f"Unexpected error saving API key for user {user_id}: {e}")
+            self.secure_logger.error(f"Unexpected error saving API key for user {user_id}: {e}")
             return False
     
     async def get_user_api_key(self, user_id: int) -> Optional[str]:
@@ -225,7 +225,7 @@ class MongoDBProvider(StorageProvider):
                     
                     # If it was a legacy plaintext key, re-encrypt it for future storage
                     if not self._is_encrypted_key(encrypted_api_key.strip()):
-                        logger.info(f"🔄 Converting legacy plaintext API key to encrypted format for user {user_id}")
+                        self.secure_logger.info(f"🔄 Converting legacy plaintext API key to encrypted format for user {user_id}")
                         # Re-save with encryption (background task, don't wait)
                         asyncio.create_task(self.save_user_api_key(user_id, decrypted_api_key))
                     
@@ -240,7 +240,7 @@ class MongoDBProvider(StorageProvider):
                     )
                     return decrypted_api_key
             
-            logger.info(f"No API key found for user {user_id}")
+            self.secure_logger.info(f"No API key found for user {user_id}")
             return None
                 
         except ValueError as e:
@@ -253,10 +253,10 @@ class MongoDBProvider(StorageProvider):
             )
             return None
         except Exception as e:
-            logger.error(f"MongoDB error retrieving API key for user {user_id}: {e}")
+            self.secure_logger.error(f"MongoDB error retrieving API key for user {user_id}: {e}")
             return None
         except Exception as e:
-            logger.error(f"Unexpected error retrieving API key for user {user_id}: {e}")
+            self.secure_logger.error(f"Unexpected error retrieving API key for user {user_id}: {e}")
             return None
     
     # User Data Management

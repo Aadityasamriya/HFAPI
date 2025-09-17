@@ -184,7 +184,7 @@ Your conversation history has been reset. You're starting fresh with a clean sla
         try:
             api_key = await db.get_user_api_key(user_id)
             if api_key:
-                logger.info(f"\u2705 API key found for user_id:{user_id} (last 4 chars: ...{api_key[-4:] if len(api_key) >= 4 else 'short'})")
+                logger.info(f"\u2705 API key found for user_id:{user_id} (key validated successfully)")
             else:
                 logger.info(f"\u274c No API key found for user_id:{user_id}")
         except Exception as e:

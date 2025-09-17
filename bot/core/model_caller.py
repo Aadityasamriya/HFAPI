@@ -30,8 +30,9 @@ def _redact_sensitive_data(text: str) -> str:
     if not isinstance(text, str):
         text = str(text)
     
-    # Redact Hugging Face tokens (hf_xxxx)
+    # Redact Hugging Face tokens (hf_xxxx) - Updated pattern for newer formats
     text = re.sub(r'hf_[a-zA-Z0-9]{20,}', 'hf_[REDACTED]', text)
+    text = re.sub(r'huggingface_hub[_-]token["\s]*[:=]["\s]*[a-zA-Z0-9_.-]{15,}', 'huggingface_hub_token: [REDACTED]', text, flags=re.IGNORECASE)
     
     # Redact OpenAI API keys (sk-xxxx)
     text = re.sub(r'sk-[a-zA-Z0-9]{20,}', 'sk-[REDACTED]', text)

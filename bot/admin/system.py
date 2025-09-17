@@ -61,6 +61,9 @@ class AdminSystem:
             # Load admin data from storage
             await self._load_admin_data()
             
+            # Auto-bootstrap with OWNER_ID if configured and no bootstrap completed
+            await self._auto_bootstrap_from_config()
+            
             # Check if bootstrap is needed
             await self._check_bootstrap_status()
             
@@ -68,7 +71,7 @@ class AdminSystem:
             logger.info(f"✅ Admin system initialized - {len(self._admin_users)} admin(s) loaded")
             
             if not self._bootstrap_completed:
-                logger.warning("⚠️ Bootstrap not completed - first admin not set")
+                logger.warning("⚠️ Bootstrap not completed - use /bootstrap command or set OWNER_ID environment variable")
                 
         except Exception as e:
             logger.error(f"❌ Admin system initialization failed: {e}")
@@ -145,11 +148,31 @@ class AdminSystem:
         logger.info(f"Admin data saved (fallback): {len(admin_data.get('admin_users', []))} admins")
         return True
     
+    async def _auto_bootstrap_from_config(self) -> None:
+        """Auto-bootstrap admin user from OWNER_ID environment variable if configured"""
+        if self._bootstrap_completed:
+            return
+            
+        if Config.OWNER_ID and Config.OWNER_ID > 0:
+            logger.info(f"🔐 Auto-bootstrapping admin system with OWNER_ID: {Config.OWNER_ID}")
+            
+            try:
+                success = await self.bootstrap_admin(Config.OWNER_ID, "Environment OWNER_ID")
+                if success:
+                    logger.info(f"✅ Successfully auto-bootstrapped owner from OWNER_ID environment variable")
+                else:
+                    logger.warning(f"⚠️ Failed to auto-bootstrap owner from OWNER_ID environment variable")
+            except Exception as e:
+                logger.error(f"❌ Error during auto-bootstrap from OWNER_ID: {e}")
+    
     async def _check_bootstrap_status(self) -> None:
         """Check if bootstrap process is completed"""
         if not self._bootstrap_completed and not self._admin_users:
             logger.warning("🔸 Bootstrap required - no admin users configured")
-            logger.info("💡 Use /bootstrap command to set the first admin user")
+            if Config.OWNER_ID:
+                logger.info("💡 OWNER_ID is configured but bootstrap failed - check logs above")
+            else:
+                logger.info("💡 Set OWNER_ID environment variable or use /bootstrap command to set the first admin user")
     
     async def bootstrap_admin(self, user_id: int, telegram_username: Optional[str] = None) -> bool:
         """

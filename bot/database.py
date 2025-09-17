@@ -60,7 +60,7 @@ class Database:
             return False
             
         except Exception as e:
-            logger.warning(f"Error parsing MongoDB URI for TLS detection: {e}")
+            secure_logger.warning(f"Error parsing MongoDB URI for TLS detection: {e}")
             # Default to False for safety in case of parsing errors
             return False
     
@@ -112,7 +112,7 @@ class Database:
             return new_seed
             
         except Exception as e:
-            logger.error(f"CRITICAL: Failed to get/create encryption seed: {e}")
+            secure_logger.error(f"CRITICAL: Failed to get/create encryption seed: {e}")
             raise ValueError(f"Cannot manage encryption seed: {e}")
     
     def _get_encryption_key(self) -> bytes:
@@ -131,7 +131,7 @@ class Database:
                 try:
                     decoded_key = base64.b64decode(env_key)
                     if len(decoded_key) == 32:
-                        logger.info("✅ Using API encryption key from environment variable")
+                        secure_logger.info("✅ Using API encryption key from environment variable")
                         return decoded_key
                 except Exception:
                     pass
@@ -140,7 +140,7 @@ class Database:
                 try:
                     if len(env_key) == 64:
                         decoded_key = bytes.fromhex(env_key)
-                        logger.info("✅ Using API encryption key from environment variable (hex)")
+                        secure_logger.info("✅ Using API encryption key from environment variable (hex)")
                         return decoded_key
                 except Exception:
                     pass
@@ -186,11 +186,11 @@ class Database:
             )
             
             derived_key = kdf.derive(password)
-            logger.info("✅ Generated secure encryption key using PBKDF2-SHA256")
+            secure_logger.info("✅ Generated secure encryption key using PBKDF2-SHA256")
             return derived_key
             
         except Exception as e:
-            logger.error(f"CRITICAL: Failed to generate encryption key: {e}")
+            secure_logger.error(f"CRITICAL: Failed to generate encryption key: {e}")
             raise ValueError(f"Cannot initialize encryption: {e}")
     
     def _initialize_encryption(self):
@@ -205,7 +205,7 @@ class Database:
             logger.info("🔒 AES-256-GCM encryption initialized successfully")
             
         except Exception as e:
-            logger.error(f"CRITICAL: Failed to initialize encryption: {e}")
+            secure_logger.error(f"CRITICAL: Failed to initialize encryption: {e}")
             raise
     
     def _encrypt_api_key(self, api_key: str, user_id: int) -> str:
@@ -444,7 +444,7 @@ class Database:
             return derived_key
             
         except Exception as e:
-            logger.error(f"CRITICAL: Failed to derive user encryption key for user {user_id}: {e}")
+            secure_logger.error(f"CRITICAL: Failed to derive user encryption key for user {user_id}: {e}")
             raise ValueError(f"Cannot derive user encryption key: {e}")
     
     def _is_encrypted_key(self, key: str) -> bool:
@@ -547,7 +547,7 @@ class Database:
             await self._initialize_encryption_with_persistent_seed()
             
         except Exception as e:
-            logger.error(f"Failed to connect to MongoDB: {e}")
+            secure_logger.error(f"Failed to connect to MongoDB: {e}")
             self.connected = False
             # Clean up partial state
             self.client = None
@@ -632,11 +632,11 @@ class Database:
                 await self.db.system_config.create_index("type", unique=True)
             
             logger.info("✅ Encryption system initialized with persistent seed from database")
-            logger.info("🔒 Per-user and legacy encryption keys derived from persistent seed")
-            logger.info("🔒 API keys will persist securely across bot restarts")
+            secure_logger.info("🔒 Per-user and legacy encryption keys derived from persistent seed")
+            secure_logger.info("🔒 API keys will persist securely across bot restarts")
             
         except Exception as e:
-            logger.error(f"CRITICAL: Failed to initialize encryption with persistent seed: {e}")
+            secure_logger.error(f"CRITICAL: Failed to initialize encryption with persistent seed: {e}")
             raise
     
     async def save_user_api_key(self, user_id: int, api_key: str) -> bool:
@@ -684,7 +684,7 @@ class Database:
                 )
                 return True
             else:
-                logger.error(f"Failed to save API key for user {user_id} - operation not acknowledged")
+                secure_logger.error(f"Failed to save API key for user {user_id} - operation not acknowledged")
                 return False
                 
         except ValueError as e:
@@ -703,7 +703,7 @@ class Database:
             logger.error(f"MongoDB error saving API key for user {user_id}: {e}")
             return False
         except Exception as e:
-            logger.error(f"Unexpected error saving API key for user {user_id}: {e}")
+            secure_logger.error(f"Unexpected error saving API key for user {user_id}: {e}")
             return False
     
     async def get_user_api_key(self, user_id: int) -> str | None:
@@ -815,7 +815,7 @@ class Database:
                     )
                 return True
             else:
-                logger.error(f"Failed to delete user data for user {user_id} - operation not acknowledged")
+                secure_logger.error(f"Failed to delete user data for user {user_id} - operation not acknowledged")
                 return False
                 
         except PyMongoError as e:
@@ -830,7 +830,7 @@ class Database:
             )
             return False
         except Exception as e:
-            logger.error(f"Unexpected error deleting user data for user {user_id}: {e}")
+            secure_logger.error(f"Unexpected error deleting user data for user {user_id}: {e}")
             return False
     
     async def save_conversation(self, user_id: int, conversation_data: dict) -> bool:

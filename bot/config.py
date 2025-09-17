@@ -9,38 +9,44 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Config:
-    """Configuration class for environment variables"""
+    """
+    Configuration class for environment variables
     
-    # Telegram Bot Configuration
+    REQUIRED VARIABLES for deployment:
+    - TELEGRAM_BOT_TOKEN: Bot token from @BotFather
+    - MONGODB_URI: MongoDB connection string
+    
+    OPTIONAL VARIABLES:
+    - BOT_NAME: Custom bot name (default: AI Assistant Pro)
+    - OWNER_ID: Telegram user ID for admin features
+    - ENCRYPTION_SEED: Custom encryption seed (auto-generated if not provided)
+    """
+    
+    # ===== REQUIRED CONFIGURATION =====
+    # These MUST be set for the bot to function
     TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
-    
-    # MongoDB Configuration
     MONGODB_URI = os.getenv('MONGODB_URI') or os.getenv('MONGO_URI')  # Support both variable names
     
-    # Security Configuration
-    ENCRYPTION_SEED = os.getenv('ENCRYPTION_SEED')
-    API_ENCRYPTION_KEY = os.getenv('API_ENCRYPTION_KEY')  # Advanced encryption override
+    # ===== CORE BOT CONFIGURATION =====
+    BOT_NAME = os.getenv('BOT_NAME', 'AI Assistant Pro')
+    BOT_DESCRIPTION = "Sophisticated Telegram Bot with Intelligent AI Routing"
+    BOT_VERSION = "2025.1.0"
     
-    # API Configuration
-    REQUEST_TIMEOUT = int(os.getenv('REQUEST_TIMEOUT', '30'))  # Request timeout in seconds
-    MAX_RETRIES = int(os.getenv('MAX_RETRIES', '3'))  # Maximum number of retries
-    RETRY_DELAY = float(os.getenv('RETRY_DELAY', '1.0'))  # Delay between retries in seconds
-    MAX_CHAT_HISTORY = int(os.getenv('MAX_CHAT_HISTORY', '20'))  # Maximum chat history length
-    MAX_RESPONSE_LENGTH = int(os.getenv('MAX_RESPONSE_LENGTH', '4000'))  # Maximum response length
+    # ===== SECURITY CONFIGURATION =====
+    # Optional but recommended for production
+    OWNER_ID = int(os.getenv('OWNER_ID', '0')) if os.getenv('OWNER_ID', '').isdigit() else None
+    ENCRYPTION_SEED = os.getenv('ENCRYPTION_SEED')  # Auto-generated if not provided
     
-    # Model-specific parameters
-    DEEPSEEK_TEMPERATURE = float(os.getenv('DEEPSEEK_TEMPERATURE', '0.8'))  # DeepSeek model temperature
-    QWEN_TEMPERATURE = float(os.getenv('QWEN_TEMPERATURE', '0.7'))  # Qwen model temperature
-    DEEPSEEK_MAX_TOKENS = int(os.getenv('DEEPSEEK_MAX_TOKENS', '2000'))  # DeepSeek max tokens
-    DEEPSEEK_USE_FLASH_ATTENTION = os.getenv('DEEPSEEK_USE_FLASH_ATTENTION', 'true').lower() == 'true'
+    # ===== PERFORMANCE TUNING =====
+    # These have sensible defaults but can be customized
+    REQUEST_TIMEOUT = int(os.getenv('REQUEST_TIMEOUT', '30'))
+    MAX_RETRIES = int(os.getenv('MAX_RETRIES', '3'))
+    RETRY_DELAY = float(os.getenv('RETRY_DELAY', '1.0'))
+    MAX_CHAT_HISTORY = int(os.getenv('MAX_CHAT_HISTORY', '20'))
+    MAX_RESPONSE_LENGTH = int(os.getenv('MAX_RESPONSE_LENGTH', '4000'))
     
-    # Additional model parameters referenced in code
-    STARCODER_TEMPERATURE = float(os.getenv('STARCODER_TEMPERATURE', '0.6'))  # StarCoder temperature
-    VISION_TEMPERATURE = float(os.getenv('VISION_TEMPERATURE', '0.5'))  # Vision model temperature
-    QWEN_VL_IMAGE_SIZE = int(os.getenv('QWEN_VL_IMAGE_SIZE', '1024'))  # Qwen VL image size
-    FLUX_INFERENCE_STEPS = int(os.getenv('FLUX_INFERENCE_STEPS', '20'))  # FLUX inference steps
-    FLUX_MAX_RESOLUTION = int(os.getenv('FLUX_MAX_RESOLUTION', '1024'))  # FLUX max resolution
-    QWEN_MAX_TOKENS = int(os.getenv('QWEN_MAX_TOKENS', '2000'))  # Qwen max tokens
+    # ===== AI MODEL PARAMETERS =====
+    # Optional fine-tuning parameters for advanced users
     
     # 2024-2025 STATE-OF-THE-ART Hugging Face Models - SUPERIOR TO CHATGPT/GROK/GEMINI
     # Text Generation Models - Latest releases with enhanced capabilities
@@ -229,7 +235,8 @@ class Config:
         
         # Validate Telegram bot token format
         if cls.TELEGRAM_BOT_TOKEN and not cls.TELEGRAM_BOT_TOKEN.count(':') == 1:
-            logger.warning("Telegram bot token format may be invalid")
+            from bot.core.model_caller import SecureLogger
+            SecureLogger(logger).warning("Telegram bot token format may be invalid")
         
         # MongoDB validation
         mongo_uri = cls.get_mongodb_uri()

@@ -1,6 +1,6 @@
 """
-Hugging Face By AadityaLabs AI - Advanced Telegram Bot
-Sophisticated AI orchestrator with intelligent model routing
+{Config.BOT_NAME} - Advanced Telegram Bot
+{Config.BOT_DESCRIPTION}
 """
 
 import asyncio
@@ -47,7 +47,7 @@ class HuggingFaceBot:
     def __init__(self):
         self.application = None
         self.storage = None
-        logger.info("🤖 HuggingFaceBot instance created")
+        logger.info(f"🤖 {Config.BOT_NAME} instance created")
     
     async def _perform_startup_health_checks(self, app: Application):
         """Perform comprehensive startup health checks"""
@@ -212,7 +212,7 @@ class HuggingFaceBot:
     def start_polling(self):
         """Start the bot with polling"""
         try:
-            logger.info("Starting Hugging Face By AadityaLabs AI bot...")
+            logger.info(f"Starting {Config.BOT_NAME} bot...")
             
             if self.application is None:
                 raise RuntimeError("Application not initialized")
@@ -241,7 +241,7 @@ class HuggingFaceBot:
 def main():
     """Main entry point - synchronous version for Replit compatibility"""
     # Welcome message
-    print("🤖 Hugging Face By AadityaLabs AI - Starting Up...")
+    print(f"🤖 {Config.BOT_NAME} v{Config.BOT_VERSION} - Starting Up...")
     print("🚀 Advanced Telegram Bot with Intelligent AI Routing")
     print("=" * 50)
     
@@ -263,7 +263,7 @@ def main():
         bot._register_handlers()
         logger.info("Bot handlers registered successfully")
         
-        logger.info("🚀 Starting Hugging Face By AadityaLabs AI bot...")
+        logger.info(f"🚀 Starting {Config.BOT_NAME} bot...")
         logger.info("🎯 Initializing Telegram polling with enhanced observability...")
         logger.info("📡 Bot is now LIVE and listening for messages...")
         logger.info("✨ AI Models: FLUX.1, StarCoder2-7B, Phi-3.5, Qwen2.5-14B (optimized for speed & reliability)")
@@ -294,7 +294,7 @@ def main():
         raise
     finally:
         logger.info("🔄 Bot shutdown sequence complete")
-        logger.info("👋 Hugging Face By AadityaLabs AI has stopped")
+        logger.info(f"👋 {Config.BOT_NAME} has stopped")
 
 if __name__ == "__main__":
     main()
