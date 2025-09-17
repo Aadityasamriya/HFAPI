@@ -257,6 +257,59 @@ class StorageProvider(ABC):
         """
         pass
     
+    # Admin Data Management
+    @abstractmethod
+    async def get_admin_data(self) -> Optional[Dict[str, Any]]:
+        """
+        Get admin system configuration data
+        
+        Returns:
+            Optional[Dict[str, Any]]: Admin data including user list, settings, etc.
+        """
+        pass
+    
+    @abstractmethod
+    async def save_admin_data(self, admin_data: Dict[str, Any]) -> bool:
+        """
+        Save admin system configuration data
+        
+        Args:
+            admin_data (Dict[str, Any]): Admin data to save
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        pass
+    
+    @abstractmethod
+    async def log_admin_action(self, admin_id: int, action: str, details: Dict[str, Any] = None) -> bool:
+        """
+        Log admin action for audit trail
+        
+        Args:
+            admin_id (int): Admin user ID
+            action (str): Action performed
+            details (Dict[str, Any]): Additional action details
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        pass
+    
+    @abstractmethod
+    async def get_admin_logs(self, limit: int = 100, skip: int = 0) -> List[Dict[str, Any]]:
+        """
+        Get admin action logs for audit trail
+        
+        Args:
+            limit (int): Maximum number of logs to return
+            skip (int): Number of logs to skip (for pagination)
+            
+        Returns:
+            List[Dict[str, Any]]: List of admin action logs
+        """
+        pass
+
     # Analytics and Metrics (for future use)
     @abstractmethod
     async def log_usage(self, user_id: int, action: str, model_used: str, tokens_used: int = 0) -> bool:

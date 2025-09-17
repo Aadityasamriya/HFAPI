@@ -881,3 +881,101 @@ class SupabaseProvider(StorageProvider):
                 
         except Exception:
             return False
+    
+    # Admin Data Management Implementation
+    async def get_admin_data(self) -> Optional[Dict[str, Any]]:
+        """Get admin system configuration data from Supabase"""
+        try:
+            if not self.connected:
+                raise ValueError("Must be connected to get admin data")
+            
+            # Query admin_config table for admin system data
+            result = self.client.from_('admin_config').select('*').eq('config_key', 'admin_system').execute()
+            
+            if result.data and len(result.data) > 0:
+                config_row = result.data[0]
+                admin_data = config_row.get('config_data', {})
+                logger.info("📊 Retrieved admin data from Supabase")
+                return admin_data
+            else:
+                logger.info("📊 No admin data found in Supabase")
+                return None
+                
+        except Exception as e:
+            logger.error(f"Failed to get admin data from Supabase: {e}")
+            return None
+    
+    async def save_admin_data(self, admin_data: Dict[str, Any]) -> bool:
+        """Save admin system configuration data to Supabase"""
+        try:
+            if not self.connected:
+                raise ValueError("Must be connected to save admin data")
+            
+            # Prepare upsert data
+            upsert_data = {
+                'config_key': 'admin_system',
+                'config_data': admin_data,
+                'updated_at': datetime.utcnow().isoformat()
+            }
+            
+            # Upsert admin configuration
+            result = self.client.from_('admin_config').upsert(upsert_data).execute()
+            
+            if result.data:
+                logger.info("💾 Admin data saved to Supabase successfully")
+                return True
+            else:
+                logger.warning("⚠️ Admin data save to Supabase had no effect")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Failed to save admin data to Supabase: {e}")
+            return False
+    
+    async def log_admin_action(self, admin_id: int, action: str, details: Dict[str, Any] = None) -> bool:
+        """Log admin action to Supabase for audit trail"""
+        try:
+            if not self.connected:
+                raise ValueError("Must be connected to log admin action")
+            
+            # Create admin action log entry
+            log_entry = {
+                'admin_id': admin_id,
+                'action': action,
+                'details': details or {},
+                'timestamp': datetime.utcnow().isoformat(),
+                'ip_address': None,  # Can be added later if needed
+                'user_agent': None   # Can be added later if needed
+            }
+            
+            # Insert into admin_logs table
+            result = self.client.from_('admin_logs').insert(log_entry).execute()
+            
+            if result.data:
+                logger.info(f"🔐 Admin action logged: {action} by admin {admin_id}")
+                return True
+            else:
+                logger.warning(f"⚠️ Failed to log admin action: {action}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Failed to log admin action to Supabase: {e}")
+            return False
+    
+    async def get_admin_logs(self, limit: int = 100, skip: int = 0) -> List[Dict[str, Any]]:
+        """Get admin action logs from Supabase for audit trail"""
+        try:
+            if not self.connected:
+                raise ValueError("Must be connected to get admin logs")
+            
+            # Query admin logs with pagination, sorted by timestamp (newest first)
+            result = self.client.from_('admin_logs').select('*').order('timestamp', desc=True).range(skip, skip + limit - 1).execute()
+            
+            logs = result.data if result.data else []
+            
+            logger.info(f"📋 Retrieved {len(logs)} admin log entries from Supabase")
+            return logs
+            
+        except Exception as e:
+            logger.error(f"Failed to get admin logs from Supabase: {e}")
+            return []

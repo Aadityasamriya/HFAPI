@@ -17,6 +17,7 @@ except ImportError as e:
 from bot.storage_manager import db
 from bot.config import Config
 from bot.security_utils import escape_markdown, safe_markdown_format, check_rate_limit
+from bot.admin import AdminCommands, admin_system
 
 logger = logging.getLogger(__name__)
 
@@ -1814,6 +1815,71 @@ You have {len(conversations)} saved conversation(s). Click any conversation to v
                 "❌ **History Error**\n\nSorry, there was a problem loading your conversation history. Please try again.",
                 parse_mode='Markdown'
             )
+    
+    # Admin Commands Integration
+    @staticmethod
+    async def admin_command(update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """
+        Admin panel command - integrates with admin system
+        Usage: /admin
+        """
+        await AdminCommands.admin_panel_command(update, context)
+    
+    @staticmethod
+    async def bootstrap_command(update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """
+        Bootstrap first admin command - integrates with admin system
+        Usage: /bootstrap
+        """
+        await AdminCommands.bootstrap_command(update, context)
+    
+    @staticmethod
+    async def admin_stats_command(update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """
+        Admin statistics command - integrates with admin system
+        Usage: /adminstats
+        """
+        await AdminCommands.stats_command(update, context)
+    
+    @staticmethod
+    async def maintenance_command(update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """
+        Maintenance mode command - integrates with admin system
+        Usage: /maintenance [on|off]
+        """
+        await AdminCommands.maintenance_command(update, context)
+    
+    @staticmethod
+    async def admin_logs_command(update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """
+        Admin logs command - integrates with admin system
+        Usage: /adminlogs [lines] [level]
+        """
+        await AdminCommands.logs_command(update, context)
+    
+    @staticmethod
+    async def broadcast_command(update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """
+        Broadcast message command - integrates with admin system
+        Usage: /broadcast <message>
+        """
+        await AdminCommands.broadcast_command(update, context)
+    
+    @staticmethod
+    async def admin_users_command(update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """
+        User management command - integrates with admin system
+        Usage: /adminusers [search_term]
+        """
+        await AdminCommands.users_command(update, context)
+    
+    @staticmethod
+    async def admin_help_command(update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """
+        Admin help command - integrates with admin system
+        Usage: /adminhelp
+        """
+        await AdminCommands.help_command(update, context)
 
 # Export command handlers
 command_handlers = CommandHandlers()

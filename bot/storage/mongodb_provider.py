@@ -985,3 +985,109 @@ class MongoDBProvider(StorageProvider):
                 
         except Exception:
             return False
+    
+    # Admin Data Management Implementation
+    async def get_admin_data(self) -> Optional[Dict[str, Any]]:
+        """Get admin system configuration data from MongoDB"""
+        try:
+            if not self.connected:
+                raise ValueError("Must be connected to get admin data")
+            
+            # Look for admin data in admin_config collection
+            admin_doc = await self.db.admin_config.find_one({'_id': 'admin_system'})
+            
+            if admin_doc:
+                # Remove MongoDB's _id field and return the data
+                admin_data = dict(admin_doc)
+                admin_data.pop('_id', None)
+                logger.info("📊 Retrieved admin data from MongoDB")
+                return admin_data
+            else:
+                logger.info("📊 No admin data found in MongoDB")
+                return None
+                
+        except Exception as e:
+            logger.error(f"Failed to get admin data from MongoDB: {e}")
+            return None
+    
+    async def save_admin_data(self, admin_data: Dict[str, Any]) -> bool:
+        """Save admin system configuration data to MongoDB"""
+        try:
+            if not self.connected:
+                raise ValueError("Must be connected to save admin data")
+            
+            # Add timestamp and prepare document
+            admin_doc = admin_data.copy()
+            admin_doc['_id'] = 'admin_system'
+            admin_doc['last_updated'] = datetime.utcnow()
+            
+            # Upsert the admin configuration
+            result = await self.db.admin_config.replace_one(
+                {'_id': 'admin_system'}, 
+                admin_doc, 
+                upsert=True
+            )
+            
+            if result.upserted_id or result.modified_count > 0:
+                logger.info("💾 Admin data saved to MongoDB successfully")
+                return True
+            else:
+                logger.warning("⚠️ Admin data save to MongoDB had no effect")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Failed to save admin data to MongoDB: {e}")
+            return False
+    
+    async def log_admin_action(self, admin_id: int, action: str, details: Dict[str, Any] = None) -> bool:
+        """Log admin action to MongoDB for audit trail"""
+        try:
+            if not self.connected:
+                raise ValueError("Must be connected to log admin action")
+            
+            # Create admin action log entry
+            log_entry = {
+                'admin_id': admin_id,
+                'action': action,
+                'details': details or {},
+                'timestamp': datetime.utcnow(),
+                'ip_address': None,  # Can be added later if needed
+                'user_agent': None   # Can be added later if needed
+            }
+            
+            # Insert into admin_logs collection
+            result = await self.db.admin_logs.insert_one(log_entry)
+            
+            if result.inserted_id:
+                logger.info(f"🔐 Admin action logged: {action} by admin {admin_id}")
+                return True
+            else:
+                logger.warning(f"⚠️ Failed to log admin action: {action}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Failed to log admin action to MongoDB: {e}")
+            return False
+    
+    async def get_admin_logs(self, limit: int = 100, skip: int = 0) -> List[Dict[str, Any]]:
+        """Get admin action logs from MongoDB for audit trail"""
+        try:
+            if not self.connected:
+                raise ValueError("Must be connected to get admin logs")
+            
+            # Query admin logs with pagination, sorted by timestamp (newest first)
+            cursor = self.db.admin_logs.find().sort('timestamp', -1).skip(skip).limit(limit)
+            
+            logs = []
+            async for log_doc in cursor:
+                # Remove MongoDB's _id field
+                log_entry = dict(log_doc)
+                log_entry.pop('_id', None)
+                logs.append(log_entry)
+            
+            logger.info(f"📋 Retrieved {len(logs)} admin log entries from MongoDB")
+            return logs
+            
+        except Exception as e:
+            logger.error(f"Failed to get admin logs from MongoDB: {e}")
+            return []
