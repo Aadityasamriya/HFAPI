@@ -276,12 +276,21 @@ class ModelCaller:
                         logger.info(f"404 for chat model {model_name}, retrying with standard inference")
                         return await self._make_api_call(model_name, payload, api_key, retries + 1, "inference")
                     
-                    return False, f"Model '{model_name}' not found or not accessible. This may be due to 2025 API changes."
+                    # 2025: Enhanced fallback system - suggest switching to validated small models
+                    fallback_msg = f"Model '{model_name}' not found or not accessible on HF Inference API. "
+                    fallback_msg += "Consider using validated models: 'Qwen/Qwen2.5-7B-Instruct', 'microsoft/Phi-3.5-mini-instruct', or 'google-bert/bert-base-uncased'."
+                    return False, fallback_msg
                 
                 elif response.status == 400:  # Bad request - often API format issues
                     error_text = await response.text()
                     _safe_log_error(logger.error, f"Bad request for model {model_name}: {error_text}")
-                    return False, f"Invalid request format for model '{model_name}'. This model may require a different API endpoint."
+                    
+                    # Check if it's a "model not supported" error specific to inference API
+                    if "not supported" in error_text.lower() or "inference" in error_text.lower():
+                        fallback_msg = f"Model '{model_name}' not supported on HF Inference API. Try using 'Inference Providers' or switch to a compatible model."
+                        return False, fallback_msg
+                    
+                    return False, f"Invalid request format for model '{model_name}'. This model may require a different API endpoint or format."
                 
                 else:
                     error_text = await response.text()

@@ -266,7 +266,7 @@ def main():
         logger.info("🚀 Starting Hugging Face By AadityaLabs AI bot...")
         logger.info("🎯 Initializing Telegram polling with enhanced observability...")
         logger.info("📡 Bot is now LIVE and listening for messages...")
-        logger.info("✨ AI Models: FLUX.1, StarCoder2-15B, Llama-3.2, Qwen2.5")
+        logger.info("✨ AI Models: FLUX.1, StarCoder2-7B, Phi-3.5, Qwen2.5-14B (optimized for speed & reliability)")
         logger.info("🔍 Enhanced logging: User interactions, API calls, and errors tracked")
         logger.info("🛡️ Security: API keys redacted, sensitive data protected")
         logger.info("📊 Observability: All handlers and database operations logged")
