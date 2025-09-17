@@ -485,7 +485,8 @@ class Database:
             self._aesgcm = AESGCM(self._encryption_key)
             
             # Create index for system_config collection
-            await self.db.system_config.create_index("type", unique=True)
+            if self.db is not None:
+                await self.db.system_config.create_index("type", unique=True)
             
             logger.info("✅ Encryption system initialized with persistent seed from database")
             logger.info("🔒 API keys will persist securely across bot restarts")

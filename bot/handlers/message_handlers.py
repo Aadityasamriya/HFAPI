@@ -642,25 +642,6 @@ Use `/start` for detailed setup instructions.
                 parse_mode='Markdown'
             )
     
-    @staticmethod
-    async def error_handler(update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Global error handler for the bot"""
-        error_message = str(context.error)
-        
-        # Handle entity parsing errors - silently ignore them since we handle them in message processing
-        if "Can't parse entities" in error_message or ("entity" in error_message.lower() and "offset" in error_message.lower()):
-            logger.warning(f"Entity parsing error detected (ignoring): {error_message}")
-            # Don't send any response to user - our message handler will process the message properly
-            return
-        
-        # Log other errors
-        _safe_log_error(logger.error, f"Exception while handling an update: {context.error}")
-        
-        if update and hasattr(update, 'effective_message') and update.effective_message:
-            await update.effective_message.reply_text(
-                "🚫 **Unexpected Error**\n\nSomething went wrong. Our team has been notified. Please try again.",
-                parse_mode='Markdown'
-            )
 
     # 2025: New advanced handler methods for enhanced AI capabilities
     @staticmethod

@@ -17,6 +17,7 @@ try:
     import fitz  # PyMuPDF
     PYMUPDF_AVAILABLE = True
 except ImportError:
+    fitz = None  # type: ignore
     PYMUPDF_AVAILABLE = False
     logging.warning("PyMuPDF not available - PDF processing will be limited")
 
@@ -32,8 +33,10 @@ try:
     def _check_tesseract_available() -> bool:
         """Check if tesseract binary is available on the system"""
         try:
-            pytesseract.get_tesseract_version()
-            return True
+            if pytesseract is not None:
+                pytesseract.get_tesseract_version()
+                return True
+            return False
         except Exception:
             return False
     
@@ -42,6 +45,10 @@ try:
         logging.warning("tesseract binary not found - OCR functionality will be disabled")
         
 except ImportError:
+    Image = None  # type: ignore
+    pytesseract = None  # type: ignore
+    cv2 = None  # type: ignore
+    np = None  # type: ignore
     IMAGE_PROCESSING_AVAILABLE = False
     TESSERACT_BINARY_AVAILABLE = False
     logging.warning("Image processing libraries not available - some features will be limited")
@@ -52,6 +59,8 @@ try:
     import filetype
     FILE_DETECTION_AVAILABLE = True
 except ImportError:
+    magic = None  # type: ignore
+    filetype = None  # type: ignore
     FILE_DETECTION_AVAILABLE = False
     logging.warning("File type detection libraries not available")
 
@@ -113,7 +122,7 @@ class FileProcessor:
                 return False, f"File type not allowed: {file_ext}"
             
             # Validate file type using magic numbers if available
-            if FILE_DETECTION_AVAILABLE:
+            if FILE_DETECTION_AVAILABLE and filetype is not None:
                 try:
                     detected_type = filetype.guess(file_data)
                     if detected_type:
@@ -193,19 +202,23 @@ class FileProcessor:
         
         try:
             # Open PDF from memory
+            if fitz is None:
+                return {'error': 'PDF processing not available - PyMuPDF not installed'}
+            
             pdf_document = fitz.open(stream=pdf_data, filetype="pdf")
             
-            # Extract metadata
+            # Extract metadata with proper None checks
+            doc_metadata = pdf_document.metadata or {}
             metadata = {
                 'filename': filename,
                 'pages': pdf_document.page_count,
-                'title': pdf_document.metadata.get('title', '').strip(),
-                'author': pdf_document.metadata.get('author', '').strip(),
-                'subject': pdf_document.metadata.get('subject', '').strip(),
-                'creator': pdf_document.metadata.get('creator', '').strip(),
-                'producer': pdf_document.metadata.get('producer', '').strip(),
-                'creation_date': pdf_document.metadata.get('creationDate', ''),
-                'modification_date': pdf_document.metadata.get('modDate', ''),
+                'title': doc_metadata.get('title', '').strip(),
+                'author': doc_metadata.get('author', '').strip(),
+                'subject': doc_metadata.get('subject', '').strip(),
+                'creator': doc_metadata.get('creator', '').strip(),
+                'producer': doc_metadata.get('producer', '').strip(),
+                'creation_date': doc_metadata.get('creationDate', ''),
+                'modification_date': doc_metadata.get('modDate', ''),
                 'encrypted': pdf_document.needs_pass,
                 'file_size': len(pdf_data)
             }
@@ -219,7 +232,7 @@ class FileProcessor:
                 page = pdf_document[page_num]
                 
                 # Extract text
-                page_text = page.get_text()
+                page_text = page.get_text()  # type: ignore
                 page_texts.append({
                     'page_number': page_num + 1,
                     'text': page_text.strip(),
@@ -308,7 +321,7 @@ class FileProcessor:
                         }
                         
                         # Determine file type with size safety check
-                        if FILE_DETECTION_AVAILABLE:
+                        if FILE_DETECTION_AVAILABLE and filetype is not None:
                             try:
                                 # Safety check - don't read files that are too large
                                 if zinfo.file_size > 50 * 1024 * 1024:  # 50MB limit
@@ -399,6 +412,12 @@ class FileProcessor:
         
         try:
             # Open image
+            if Image is None:
+                return {
+                    'success': False,
+                    'error': 'Image processing not available - PIL not installed'
+                }
+            
             image = Image.open(io.BytesIO(image_data))
             
             # Get basic image info
@@ -436,12 +455,18 @@ class FileProcessor:
                 else:
                     try:
                         # Use pytesseract for OCR
-                        extracted_text = pytesseract.image_to_string(rgb_image)
-                        results['ocr'] = {
-                            'text': extracted_text.strip(),
-                            'char_count': len(extracted_text.strip()),
-                            'has_text': bool(extracted_text.strip())
-                        }
+                        if pytesseract is None:
+                            results['ocr'] = {
+                                'error': 'OCR not available - pytesseract not installed',
+                                'has_text': False
+                            }
+                        else:
+                            extracted_text = pytesseract.image_to_string(rgb_image)
+                            results['ocr'] = {
+                                'text': extracted_text.strip(),
+                                'char_count': len(extracted_text.strip()),
+                                'has_text': bool(extracted_text.strip())
+                            }
                     except Exception as e:
                         results['ocr'] = {
                             'error': f'OCR failed: {str(e)}',
@@ -452,14 +477,19 @@ class FileProcessor:
             if analysis_type == 'comprehensive':
                 try:
                     # Convert to numpy array for analysis
-                    img_array = np.array(rgb_image)
-                    
-                    # Calculate color statistics
-                    results['color_analysis'] = {
-                        'mean_brightness': float(np.mean(img_array)),
-                        'dominant_colors': 'analysis_available',
-                        'is_grayscale': len(img_array.shape) == 2 or (len(img_array.shape) == 3 and img_array.shape[2] == 1)
-                    }
+                    if np is None:
+                        results['color_analysis'] = {
+                            'error': 'Color analysis not available - numpy not installed'
+                        }
+                    else:
+                        img_array = np.array(rgb_image)
+                        
+                        # Calculate color statistics
+                        results['color_analysis'] = {
+                            'mean_brightness': float(np.mean(img_array)),
+                            'dominant_colors': 'analysis_available',
+                            'is_grayscale': len(img_array.shape) == 2 or (len(img_array.shape) == 3 and img_array.shape[2] == 1)
+                        }
                     
                 except Exception as e:
                     logger.warning(f"Color analysis failed: {e}")
