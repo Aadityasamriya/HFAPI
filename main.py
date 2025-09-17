@@ -84,6 +84,7 @@ class HuggingFaceBot:
                 BotCommand("start", "🚀 Welcome and setup"),
                 BotCommand("newchat", "🔄 Clear chat history"),
                 BotCommand("settings", "⚙️ Bot settings"),
+                BotCommand("history", "📚 View previous chats"),
                 BotCommand("resetdb", "🗑️ Reset database")
             ]
             
@@ -172,6 +173,7 @@ class HuggingFaceBot:
         self.application.add_handler(CommandHandler("start", command_handlers.start_command))
         self.application.add_handler(CommandHandler("newchat", command_handlers.newchat_command))
         self.application.add_handler(CommandHandler("settings", command_handlers.settings_command))
+        self.application.add_handler(CommandHandler("history", command_handlers.history_command))
         self.application.add_handler(CommandHandler("resetdb", command_handlers.resetdb_command))
         
         # Callback query handler for inline keyboards
