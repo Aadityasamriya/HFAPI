@@ -19,13 +19,13 @@ logger = logging.getLogger(__name__)
 
 def _redact_sensitive_data(text: str) -> str:
     """
-    Redact sensitive data from log messages to prevent token leakage
+    Enhanced redaction of sensitive data from log messages to prevent token/credential leakage
     
     Args:
         text (str): Text that might contain sensitive information
         
     Returns:
-        str: Sanitized text with tokens redacted
+        str: Sanitized text with sensitive data redacted
     """
     if not isinstance(text, str):
         text = str(text)
@@ -33,12 +33,47 @@ def _redact_sensitive_data(text: str) -> str:
     # Redact Hugging Face tokens (hf_xxxx)
     text = re.sub(r'hf_[a-zA-Z0-9]{20,}', 'hf_[REDACTED]', text)
     
-    # Redact Authorization headers
-    text = re.sub(r'Bearer\s+[a-zA-Z0-9_.-]{20,}', 'Bearer [REDACTED]', text, flags=re.IGNORECASE)
+    # Redact OpenAI API keys (sk-xxxx)
+    text = re.sub(r'sk-[a-zA-Z0-9]{20,}', 'sk-[REDACTED]', text)
+    
+    # Redact Anthropic API keys (sk-ant-xxxx)
+    text = re.sub(r'sk-ant-[a-zA-Z0-9_-]{20,}', 'sk-ant-[REDACTED]', text)
+    
+    # Redact Google/Vertex AI keys
+    text = re.sub(r'AIza[a-zA-Z0-9_-]{35}', 'AIza[REDACTED]', text)
+    
+    # Redact JWT tokens (eyJ...)
+    text = re.sub(r'eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+', 'eyJ[REDACTED_JWT]', text)
+    
+    # Redact Authorization headers (various formats)
+    text = re.sub(r'Bearer\s+[a-zA-Z0-9_.-]{15,}', 'Bearer [REDACTED]', text, flags=re.IGNORECASE)
     text = re.sub(r'"Authorization":\s*"Bearer\s+[^"]+"', '"Authorization": "Bearer [REDACTED]"', text, flags=re.IGNORECASE)
+    text = re.sub(r"'Authorization':\s*'Bearer\s+[^']+'", "'Authorization': 'Bearer [REDACTED]'", text, flags=re.IGNORECASE)
     
     # Redact API keys in various formats
-    text = re.sub(r'api[_-]?key["\s]*[:=]["\s]*[a-zA-Z0-9_.-]{20,}', 'api_key: [REDACTED]', text, flags=re.IGNORECASE)
+    text = re.sub(r'api[_-]?key["\s]*[:=]["\s]*[a-zA-Z0-9_.-]{15,}', 'api_key: [REDACTED]', text, flags=re.IGNORECASE)
+    text = re.sub(r'token["\s]*[:=]["\s]*[a-zA-Z0-9_.-]{15,}', 'token: [REDACTED]', text, flags=re.IGNORECASE)
+    text = re.sub(r'secret["\s]*[:=]["\s]*[a-zA-Z0-9_.-]{15,}', 'secret: [REDACTED]', text, flags=re.IGNORECASE)
+    
+    # Redact MongoDB connection strings (prevent credential leakage)
+    text = re.sub(r'mongodb://[^@]+@[^/]+', 'mongodb://[REDACTED_USER]:[REDACTED_PASSWORD]@[REDACTED_HOST]', text, flags=re.IGNORECASE)
+    text = re.sub(r'mongodb\+srv://[^@]+@[^/]+', 'mongodb+srv://[REDACTED_USER]:[REDACTED_PASSWORD]@[REDACTED_HOST]', text, flags=re.IGNORECASE)
+    
+    # Redact URLs with tokens/credentials in query parameters
+    text = re.sub(r'([?&])(token|key|secret|password|auth)=([^&\s]+)', r'\1\2=[REDACTED]', text, flags=re.IGNORECASE)
+    
+    # Redact Telegram bot tokens (format: NNNNNNNNN:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX)
+    text = re.sub(r'\b\d{8,10}:[a-zA-Z0-9_-]{35}\b', '[REDACTED_BOT_TOKEN]', text)
+    
+    # Redact encryption seeds/keys (base64 or hex patterns that look like keys)
+    text = re.sub(r'\b[A-Za-z0-9+/]{32,}={0,2}\b', '[REDACTED_KEY_OR_SEED]', text)
+    text = re.sub(r'\b[a-fA-F0-9]{32,}\b', '[REDACTED_HEX_KEY]', text)
+    
+    # Redact email addresses in some contexts (privacy protection)
+    text = re.sub(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', '[REDACTED_EMAIL]', text)
+    
+    # Redact IP addresses (privacy protection)
+    text = re.sub(r'\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b', '[REDACTED_IP]', text)
     
     return text
 
@@ -60,6 +95,69 @@ def _safe_log_error(level, message: str, *args, **kwargs):
     safe_args = tuple(_redact_sensitive_data(str(arg)) for arg in args)
     
     level(safe_message, *safe_args, **kwargs)
+
+
+class SecureLogger:
+    """
+    Centralized secure logging system that automatically redacts sensitive data
+    from all log messages to prevent credential leakage
+    """
+    
+    def __init__(self, logger_instance):
+        self.logger = logger_instance
+    
+    def _safe_log(self, level_method, message: str, *args, **kwargs):
+        """
+        Safely log a message with automatic sensitive data redaction
+        
+        Args:
+            level_method: Logger level method (e.g., self.logger.info)
+            message (str): Log message that might contain sensitive data
+            *args: Additional args for logging
+            **kwargs: Additional kwargs for logging (exc_info will be disabled for security)
+        """
+        # Always disable exc_info to prevent credential leakage in tracebacks
+        kwargs.pop('exc_info', None)
+        
+        # Redact sensitive data from message and all args
+        safe_message = _redact_sensitive_data(str(message))
+        safe_args = tuple(_redact_sensitive_data(str(arg)) for arg in args)
+        
+        # Add security marker to identify secure logging
+        if not safe_message.startswith('🔒'):
+            safe_message = f"🔒 {safe_message}"
+        
+        level_method(safe_message, *safe_args, **kwargs)
+    
+    def info(self, message: str, *args, **kwargs):
+        """Secure info logging with automatic redaction"""
+        self._safe_log(self.logger.info, message, *args, **kwargs)
+    
+    def warning(self, message: str, *args, **kwargs):
+        """Secure warning logging with automatic redaction"""
+        self._safe_log(self.logger.warning, message, *args, **kwargs)
+    
+    def error(self, message: str, *args, **kwargs):
+        """Secure error logging with automatic redaction"""
+        self._safe_log(self.logger.error, message, *args, **kwargs)
+    
+    def debug(self, message: str, *args, **kwargs):
+        """Secure debug logging with automatic redaction"""
+        self._safe_log(self.logger.debug, message, *args, **kwargs)
+    
+    def critical(self, message: str, *args, **kwargs):
+        """Secure critical logging with automatic redaction"""
+        self._safe_log(self.logger.critical, message, *args, **kwargs)
+    
+    def audit(self, event_type: str, user_id: int, details: str, success: bool = True):
+        """Security audit logging for sensitive operations"""
+        status = "SUCCESS" if success else "FAILED"
+        audit_message = f"🔐 SECURITY_AUDIT | Event: {event_type} | User: {user_id} | Status: {status} | Details: {details}"
+        self._safe_log(self.logger.info, audit_message)
+
+
+# Create a secure logger instance for use throughout the module
+secure_logger = SecureLogger(logger)
 
 class ModelCaller:
     """Handles all Hugging Face API interactions with intelligent routing"""
@@ -215,8 +313,8 @@ class ModelCaller:
             return False, "Invalid JSON response from API. Please try again."
         
         except Exception as e:
-            # Use safe logging to prevent token leakage in tracebacks
-            _safe_log_error(logger.error, f"Unexpected error calling model {model_name}: {e}")
+            # Use secure logging to prevent token leakage in tracebacks
+            secure_logger.error(f"Unexpected error calling model {model_name}: {e}")
             return False, f"Unexpected error occurred. Please try again later."
     
     def _format_chat_history(self, chat_history: List[Dict], new_prompt: str) -> str:

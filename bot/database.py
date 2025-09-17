@@ -15,8 +15,11 @@ import logging
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from datetime import datetime
+from bot.core.model_caller import SecureLogger
 
 logger = logging.getLogger(__name__)
+secure_logger = SecureLogger(logger)
 
 class Database:
     """MongoDB database manager for user data"""
@@ -205,12 +208,14 @@ class Database:
             logger.error(f"CRITICAL: Failed to initialize encryption: {e}")
             raise
     
-    def _encrypt_api_key(self, api_key: str) -> str:
+    def _encrypt_api_key(self, api_key: str, user_id: int) -> str:
         """
-        Encrypt API key using AES-256-GCM
+        Encrypt API key using per-user AES-256-GCM encryption for enhanced security
+        Each user gets a unique encryption key derived from global seed + user_id
         
         Args:
             api_key (str): Plaintext API key
+            user_id (int): User ID for per-user key derivation
             
         Returns:
             str: Base64-encoded encrypted API key with nonce
@@ -221,18 +226,19 @@ class Database:
         try:
             if not api_key or not isinstance(api_key, str):
                 raise ValueError("API key must be a non-empty string")
-                
-            self._initialize_encryption()
             
-            # Ensure cipher was properly initialized
-            if self._aesgcm is None:
-                raise ValueError("Failed to initialize encryption cipher")
+            if not isinstance(user_id, int):
+                raise ValueError("User ID must be an integer")
+                
+            # Generate per-user encryption key
+            user_key = self._derive_user_encryption_key(user_id)
+            user_cipher = AESGCM(user_key)
             
             # Generate a random 12-byte nonce for GCM
             nonce = secrets.token_bytes(12)
             
             # Encrypt the API key
-            encrypted_data = self._aesgcm.encrypt(nonce, api_key.encode('utf-8'), None)
+            encrypted_data = user_cipher.encrypt(nonce, api_key.encode('utf-8'), None)
             
             # Combine nonce + encrypted data for storage
             combined = nonce + encrypted_data
@@ -240,75 +246,206 @@ class Database:
             # Encode to base64 for storage in MongoDB
             encoded = base64.b64encode(combined).decode('ascii')
             
-            logger.info("🔒 API key encrypted successfully using AES-256-GCM")
+            from bot.core.model_caller import SecureLogger
+            secure_logger = SecureLogger(logger)
+            secure_logger.info("🔒 API key encrypted successfully using per-user AES-256-GCM")
             return encoded
             
         except Exception as e:
-            logger.error(f"CRITICAL: Failed to encrypt API key: {e}")
+            from bot.core.model_caller import SecureLogger
+            secure_logger = SecureLogger(logger)
+            secure_logger.error(f"CRITICAL: Failed to encrypt API key for user {user_id}: {e}")
             raise ValueError(f"Encryption failed: {e}")
     
-    def _decrypt_api_key(self, encrypted_api_key: str) -> str:
+    def _decrypt_api_key(self, encrypted_api_key: str, user_id: int) -> str:
         """
-        Decrypt API key using AES-256-GCM with backward compatibility
+        Decrypt API key using 3-tier backward compatibility approach
+        Tries: per-user AES-256-GCM → legacy global AES-256-GCM → plaintext fallback
         
         Args:
-            encrypted_api_key (str): Base64-encoded encrypted API key with nonce
+            encrypted_api_key (str): Encrypted API key (various formats) or plaintext
+            user_id (int): User ID for per-user key derivation
             
         Returns:
             str: Decrypted plaintext API key
             
         Raises:
-            ValueError: If decryption fails
+            ValueError: If decryption fails for all approaches
         """
         try:
             if not encrypted_api_key or not isinstance(encrypted_api_key, str):
                 raise ValueError("Encrypted API key must be a non-empty string")
+                
+            if not isinstance(user_id, int):
+                raise ValueError("User ID must be an integer")
             
             # Additional validation for empty or whitespace-only strings
             if not encrypted_api_key.strip():
                 raise ValueError("Encrypted API key must be a non-empty string")
             
-            # Check if this looks like an encrypted key (base64 encoded, reasonable length)
-            # If not, assume it's a legacy plaintext key for backward compatibility
-            if not self._is_encrypted_key(encrypted_api_key):
-                logger.warning("🔓 Found legacy plaintext API key - will re-encrypt on next save")
-                return encrypted_api_key.strip()
+            cleaned_key = encrypted_api_key.strip()
             
-            self._initialize_encryption()
+            # TIER 1: Check if this looks like plaintext first (most efficient)
+            if not self._is_encrypted_key(cleaned_key):
+                from bot.core.model_caller import SecureLogger
+                secure_logger = SecureLogger(logger)
+                secure_logger.info("🔓 Found plaintext API key - will re-encrypt on next save")
+                return cleaned_key
             
-            # Ensure cipher was properly initialized
-            if self._aesgcm is None:
-                raise ValueError("Failed to initialize encryption cipher")
+            # TIER 2: Try per-user decryption (current/preferred method)
+            try:
+                user_key = self._derive_user_encryption_key(user_id)
+                user_cipher = AESGCM(user_key)
+                
+                # Decode from base64
+                combined = base64.b64decode(cleaned_key.encode('ascii'))
+                
+                # Extract nonce (first 12 bytes) and encrypted data
+                if len(combined) >= 13:  # At least 12 bytes nonce + 1 byte data
+                    nonce = combined[:12]
+                    encrypted_data = combined[12:]
+                    
+                    # Decrypt with per-user key
+                    decrypted_bytes = user_cipher.decrypt(nonce, encrypted_data, None)
+                    decrypted_key = decrypted_bytes.decode('utf-8')
+                    
+                    from bot.core.model_caller import SecureLogger
+                    secure_logger = SecureLogger(logger)
+                    secure_logger.info("🔓 API key decrypted successfully using per-user AES-256-GCM")
+                    return decrypted_key
+                    
+            except Exception as per_user_error:
+                # Per-user decryption failed, try legacy global
+                logger.debug(f"Per-user decryption failed for user {user_id}: {per_user_error}")
+            
+            # TIER 3: Try legacy global decryption (backward compatibility)
+            try:
+                decrypted_key = self._decrypt_legacy_global_key(cleaned_key)
+                from bot.core.model_caller import SecureLogger
+                secure_logger = SecureLogger(logger)
+                secure_logger.info("🔄 API key decrypted using legacy global cipher - will re-encrypt with per-user key on next save")
+                return decrypted_key
+                
+            except Exception as legacy_error:
+                # Legacy global decryption failed
+                logger.debug(f"Legacy global decryption failed for user {user_id}: {legacy_error}")
+            
+            # All decryption methods failed
+            from bot.core.model_caller import SecureLogger
+            secure_logger = SecureLogger(logger)
+            secure_logger.error(f"CRITICAL: All decryption methods failed for user {user_id}")
+            raise ValueError("Cannot decrypt API key with any available method")
+            
+        except ValueError:
+            # Re-raise ValueError for proper error handling
+            raise
+        except Exception as e:
+            from bot.core.model_caller import SecureLogger
+            secure_logger = SecureLogger(logger)
+            secure_logger.error(f"CRITICAL: Unexpected error decrypting API key for user {user_id}: {e}")
+            raise ValueError(f"Decryption failed: {e}")
+    
+    def _decrypt_legacy_global_key(self, encrypted_api_key: str) -> str:
+        """
+        Decrypt API key using legacy global AES-256-GCM encryption
+        This handles keys that were encrypted before the per-user encryption upgrade
+        
+        Args:
+            encrypted_api_key (str): Base64-encoded encrypted API key with nonce (legacy format)
+            
+        Returns:
+            str: Decrypted plaintext API key
+            
+        Raises:
+            ValueError: If decryption fails or global cipher not available
+        """
+        try:
+            if not encrypted_api_key or not isinstance(encrypted_api_key, str):
+                raise ValueError("Encrypted API key must be a non-empty string")
+            
+            # Check if global cipher is available
+            if not hasattr(self, '_aesgcm') or self._aesgcm is None:
+                raise ValueError("Legacy global cipher not initialized")
             
             # Decode from base64
             combined = base64.b64decode(encrypted_api_key.encode('ascii'))
             
             # Extract nonce (first 12 bytes) and encrypted data
             if len(combined) < 13:  # At least 12 bytes nonce + 1 byte data
-                raise ValueError("Invalid encrypted data format")
+                raise ValueError("Invalid legacy encrypted data format")
                 
             nonce = combined[:12]
             encrypted_data = combined[12:]
             
-            # Decrypt the API key
+            # Decrypt using legacy global key
             decrypted_bytes = self._aesgcm.decrypt(nonce, encrypted_data, None)
             decrypted_key = decrypted_bytes.decode('utf-8')
             
-            logger.info("🔓 API key decrypted successfully using AES-256-GCM")
+            from bot.core.model_caller import SecureLogger
+            secure_logger = SecureLogger(logger)
+            secure_logger.info("🔓 API key decrypted successfully using legacy global AES-256-GCM")
             return decrypted_key
             
-        except ValueError:
-            # Re-raise ValueError for proper error handling
-            raise
         except Exception as e:
-            logger.error(f"CRITICAL: Failed to decrypt API key: {e}")
-            # For backward compatibility, if decryption fails, assume it might be plaintext
-            # Only for non-empty strings
-            if encrypted_api_key and encrypted_api_key.strip():
-                logger.warning("🔓 Decryption failed - treating as legacy plaintext key")
-                return encrypted_api_key.strip()
+            from bot.core.model_caller import SecureLogger
+            secure_logger = SecureLogger(logger)
+            secure_logger.error(f"Failed to decrypt with legacy global cipher: {e}")
+            raise ValueError(f"Legacy global decryption failed: {e}")
+    
+    def _derive_user_encryption_key(self, user_id: int) -> bytes:
+        """
+        Derive a unique encryption key for each user to reduce security blast radius
+        Uses global encryption seed + user_id + salt for unique per-user keys
+        
+        Args:
+            user_id (int): User ID for key derivation
+            
+        Returns:
+            bytes: 32-byte AES-256 encryption key unique to this user
+            
+        Raises:
+            ValueError: If global encryption seed is not available (fail-closed security)
+        """
+        try:
+            # CRITICAL SECURITY: Only use persistent seed from database
+            if hasattr(self, '_global_seed') and self._global_seed:
+                encryption_seed = self._global_seed
             else:
-                raise ValueError("Cannot decrypt empty API key")
+                # Check environment as fallback (for advanced users)
+                encryption_seed = os.getenv('ENCRYPTION_SEED')
+                if not encryption_seed:
+                    # FAIL CLOSED: No predictable fallback values allowed
+                    raise ValueError(
+                        "CRITICAL SECURITY ERROR: No encryption seed available. "
+                        "Database initialization required before per-user encryption."
+                    )
+                logger.warning("⚠️ Using ENCRYPTION_SEED from environment - database seed preferred")
+            
+            # Validate seed quality
+            if len(encryption_seed) < 16:
+                raise ValueError("Encryption seed too short - minimum 16 characters required")
+            
+            # Create per-user password combining global seed + user_id
+            user_password = f"{encryption_seed}:user:{user_id}:v2"
+            password = user_password.encode('utf-8')
+            
+            # Use per-user salt for additional security
+            user_salt = f"telegram_bot_user_{user_id}_encryption_2025".encode('utf-8')[:32]  # Limit to 32 bytes
+            
+            # Use strong PBKDF2 with 150,000 iterations for per-user keys
+            kdf = PBKDF2HMAC(
+                algorithm=hashes.SHA256(),
+                length=32,  # 256 bits for AES-256
+                salt=user_salt,
+                iterations=150000,  # Enhanced security for per-user keys
+            )
+            
+            derived_key = kdf.derive(password)
+            return derived_key
+            
+        except Exception as e:
+            logger.error(f"CRITICAL: Failed to derive user encryption key for user {user_id}: {e}")
+            raise ValueError(f"Cannot derive user encryption key: {e}")
     
     def _is_encrypted_key(self, key: str) -> bool:
         """
@@ -470,7 +607,10 @@ class Database:
             # Get or create the encryption seed from database
             encryption_seed = await self._get_or_create_encryption_seed()
             
-            # Generate the encryption key using PBKDF2
+            # CRITICAL FIX: Store the persistent seed for per-user key derivation
+            self._global_seed = encryption_seed
+            
+            # Generate the legacy global encryption key using PBKDF2
             password = encryption_seed.encode('utf-8')
             salt = b'telegram_bot_api_key_encryption_2024_v2'
             
@@ -489,6 +629,7 @@ class Database:
                 await self.db.system_config.create_index("type", unique=True)
             
             logger.info("✅ Encryption system initialized with persistent seed from database")
+            logger.info("🔒 Per-user and legacy encryption keys derived from persistent seed")
             logger.info("🔒 API keys will persist securely across bot restarts")
             
         except Exception as e:
@@ -516,8 +657,8 @@ class Database:
             if not isinstance(api_key, str) or not api_key.strip():
                 raise ValueError("api_key must be a non-empty string")
             
-            # Encrypt the API key before storing
-            encrypted_api_key = self._encrypt_api_key(api_key.strip())
+            # Encrypt the API key before storing using per-user encryption
+            encrypted_api_key = self._encrypt_api_key(api_key.strip(), user_id)
             
             # Use upsert to insert or update the user document with encrypted key
             result = await self.db.users.update_one(
@@ -528,8 +669,16 @@ class Database:
             
             if result.acknowledged:
                 action = "updated" if result.matched_count > 0 else "created"
-                logger.info(f"🔒 Successfully {action} encrypted API key for user {user_id}")
-                logger.info("✅ API key securely stored with AES-256-GCM encryption")
+                secure_logger.info(f"🔒 Successfully {action} encrypted API key for user {user_id}")
+                secure_logger.info("✅ API key securely stored with per-user AES-256-GCM encryption")
+                
+                # Security audit log for API key operations
+                secure_logger.audit(
+                    event_type="API_KEY_SAVE",
+                    user_id=user_id,
+                    details=f"API key {action} successfully with per-user encryption",
+                    success=True
+                )
                 return True
             else:
                 logger.error(f"Failed to save API key for user {user_id} - operation not acknowledged")
@@ -537,7 +686,15 @@ class Database:
                 
         except ValueError as e:
             # Encryption errors are logged in _encrypt_api_key
-            logger.error(f"Validation/encryption error saving API key for user {user_id}: {e}")
+            secure_logger.error(f"Validation/encryption error saving API key for user {user_id}: {e}")
+            
+            # Security audit log for failed API key save
+            secure_logger.audit(
+                event_type="API_KEY_SAVE_FAILED",
+                user_id=user_id,
+                details=f"API key save failed due to validation/encryption error: {str(e)[:100]}",
+                success=False
+            )
             return False
         except PyMongoError as e:
             logger.error(f"MongoDB error saving API key for user {user_id}: {e}")
@@ -570,8 +727,8 @@ class Database:
                 encrypted_api_key = user_doc["hf_api_key"]
                 if isinstance(encrypted_api_key, str) and encrypted_api_key.strip():
                     
-                    # Decrypt the API key (handles both encrypted and legacy plaintext keys)
-                    decrypted_api_key = self._decrypt_api_key(encrypted_api_key.strip())
+                    # Decrypt the API key using per-user decryption (handles both encrypted and legacy plaintext keys)
+                    decrypted_api_key = self._decrypt_api_key(encrypted_api_key.strip(), user_id)
                     
                     # If it was a legacy plaintext key, re-encrypt it for future storage
                     if not self._is_encrypted_key(encrypted_api_key.strip()):
@@ -579,7 +736,15 @@ class Database:
                         # Re-save with encryption (background task, don't wait)
                         asyncio.create_task(self.save_user_api_key(user_id, decrypted_api_key))
                     
-                    logger.info(f"🔓 Successfully retrieved and decrypted API key for user {user_id}")
+                    secure_logger.info(f"🔓 Successfully retrieved and decrypted API key for user {user_id}")
+                    
+                    # Security audit log for successful API key retrieval
+                    secure_logger.audit(
+                        event_type="API_KEY_RETRIEVE",
+                        user_id=user_id,
+                        details="API key retrieved and decrypted successfully",
+                        success=True
+                    )
                     return decrypted_api_key
             
             logger.info(f"No API key found for user {user_id}")
@@ -587,7 +752,15 @@ class Database:
                 
         except ValueError as e:
             # Decryption errors are logged in _decrypt_api_key
-            logger.error(f"Validation/decryption error retrieving API key for user {user_id}: {e}")
+            secure_logger.error(f"Validation/decryption error retrieving API key for user {user_id}: {e}")
+            
+            # Security audit log for failed API key retrieval
+            secure_logger.audit(
+                event_type="API_KEY_RETRIEVE_FAILED",
+                user_id=user_id,
+                details=f"API key retrieval failed due to validation/decryption error: {str(e)[:100]}",
+                success=False
+            )
             return None
         except PyMongoError as e:
             logger.error(f"MongoDB error retrieving API key for user {user_id}: {e}")
@@ -618,16 +791,40 @@ class Database:
             
             if result.acknowledged:
                 if result.deleted_count > 0:
-                    logger.info(f"✅ Successfully deleted user data for user {user_id}")
+                    secure_logger.info(f"✅ Successfully deleted user data for user {user_id}")
+                    
+                    # Security audit log for user data deletion
+                    secure_logger.audit(
+                        event_type="USER_DATA_DELETE",
+                        user_id=user_id,
+                        details="User data (including encrypted API key) deleted successfully",
+                        success=True
+                    )
                 else:
-                    logger.info(f"No data found to delete for user {user_id}")
+                    secure_logger.info(f"No data found to delete for user {user_id}")
+                    
+                    # Security audit log for attempted deletion of non-existent user
+                    secure_logger.audit(
+                        event_type="USER_DATA_DELETE_NO_DATA",
+                        user_id=user_id,
+                        details="Attempted to delete user data but no data found",
+                        success=True
+                    )
                 return True
             else:
                 logger.error(f"Failed to delete user data for user {user_id} - operation not acknowledged")
                 return False
                 
         except PyMongoError as e:
-            logger.error(f"MongoDB error deleting user data for user {user_id}: {e}")
+            secure_logger.error(f"MongoDB error deleting user data for user {user_id}: {e}")
+            
+            # Security audit log for failed user data deletion
+            secure_logger.audit(
+                event_type="USER_DATA_DELETE_FAILED",
+                user_id=user_id,
+                details=f"User data deletion failed due to database error: {str(e)[:100]}",
+                success=False
+            )
             return False
         except Exception as e:
             logger.error(f"Unexpected error deleting user data for user {user_id}: {e}")
