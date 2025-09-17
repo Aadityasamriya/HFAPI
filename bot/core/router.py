@@ -41,6 +41,12 @@ class IntentType(Enum):
     BUSINESS_ANALYSIS = "business_analysis"             # Business intelligence, market analysis
     TECHNICAL_DOCUMENTATION = "technical_documentation" # API docs, technical writing
     MULTILINGUAL_PROCESSING = "multilingual_processing" # Advanced translation, cultural context
+    
+    # 2025: BREAKTHROUGH CAPABILITIES - Revolutionary new intent types
+    GUI_AUTOMATION = "gui_automation"                   # BREAKTHROUGH: UI-TARS GUI automation tasks
+    TOOL_USE = "tool_use"                               # BREAKTHROUGH: Function calling, API integration
+    PREMIUM_VISION = "premium_vision"                   # BREAKTHROUGH: Advanced vision with MiniCPM-V
+    SYSTEM_INTERACTION = "system_interaction"           # Advanced system-level interactions
 
 class IntelligentRouter:
     """
@@ -151,6 +157,60 @@ class IntelligentRouter:
                 r'(?:from|to)\s+(?:english|spanish|french|german|chinese|japanese|korean|arabic|portuguese|italian|russian|hindi|bengali|urdu|turkish|vietnamese|thai|dutch|swedish|norwegian|finnish|polish)',
                 r'\b(?:language|linguistic|multilingual)',
                 r'(?:what does.*mean in|how do you say.*in)',
+            ],
+            
+            # 2025: BREAKTHROUGH GUI Automation patterns - UI-TARS capabilities
+            IntentType.GUI_AUTOMATION: [
+                r'\b(?:automate|automation|automatic|auto).*(?:gui|ui|interface|window|screen|desktop|application|app)',
+                r'(?:click|tap|press|select|choose).*(?:button|link|menu|icon|element)',
+                r'(?:navigate|browse|scroll|swipe).*(?:website|page|app|interface|screen)',
+                r'(?:fill|enter|type|input).*(?:form|field|textbox|input)',
+                r'(?:test|testing|qa|quality.?assurance).*(?:ui|gui|interface|application|app)',
+                r'(?:screenshot|capture|image).*(?:screen|desktop|window|application)',
+                r'(?:interact|control|operate|manipulate).*(?:interface|gui|ui|application|software)',
+                r'\b(?:selenium|playwright|puppeteer|cypress|appium)\b',
+                r'(?:web.?scraping|data.?extraction|automation.?script)',
+                r'(?:browser.?automation|web.?automation|desktop.?automation)',
+                r'(?:rpa|robotic.?process.?automation)',
+                r'(?:ui.?testing|gui.?testing|end.?to.?end|e2e)',
+            ],
+            
+            # 2025: BREAKTHROUGH Tool Use patterns - Groq function calling excellence
+            IntentType.TOOL_USE: [
+                r'\b(?:function|api|tool|service|integration|webhook).*(?:call|calling|invoke|execute|run)',
+                r'(?:use|call|invoke|integrate|connect).*(?:api|service|tool|function|external)',
+                r'(?:external|third.?party|remote).*(?:api|service|integration|tool)',
+                r'(?:rest|graphql|soap|webhook|endpoint).*(?:call|request|integration)',
+                r'(?:database|sql|query).*(?:execute|run|call)',
+                r'(?:plugin|extension|addon|module).*(?:use|call|integrate)',
+                r'(?:json|xml|yaml).*(?:parse|process|transform)',
+                r'(?:http|https|request|response|api.?call)',
+                r'(?:authentication|auth|token|key).*(?:api|service)',
+                r'(?:payment|stripe|paypal|billing).*(?:integration|api)',
+                r'(?:email|sms|notification).*(?:send|api|service)',
+                r'(?:calendar|scheduling|booking).*(?:api|integration)',
+                r'(?:file|upload|download|storage).*(?:api|service)',
+                r'(?:search|elasticsearch|solr).*(?:api|query)',
+                r'(?:machine.?learning|ai|model).*(?:api|inference|prediction)',
+            ],
+            
+            # 2025: BREAKTHROUGH Premium Vision patterns - MiniCPM-V excellence
+            IntentType.PREMIUM_VISION: [
+                r'(?:analyze|examine|read|extract|understand).*(?:image|picture|photo|visual|diagram)',
+                r'(?:ocr|optical.?character.?recognition|text.?extraction).*(?:image|document|photo)',
+                r'(?:chart|graph|plot|diagram|visualization).*(?:analyze|read|interpret)',
+                r'(?:medical|x.?ray|mri|ct.?scan|radiology).*(?:image|analysis)',
+                r'(?:document|pdf|receipt|invoice|form).*(?:analysis|extraction|processing)',
+                r'(?:handwriting|handwritten|cursive).*(?:recognition|read|transcribe)',
+                r'(?:table|spreadsheet|data).*(?:extract|parse|analyze).*(?:image|photo)',
+                r'(?:face|facial|person|human).*(?:recognition|detection|analysis)',
+                r'(?:object|item|product).*(?:detection|recognition|identification)',
+                r'(?:scene|environment|location).*(?:understanding|analysis|description)',
+                r'(?:quality|defect|inspection).*(?:image|visual|analysis)',
+                r'(?:compare|similarity|matching).*(?:image|photo|visual)',
+                r'(?:caption|describe|explain).*(?:image|picture|photo|visual)',
+                r'(?:logo|brand|trademark).*(?:recognition|detection|identification)',
+                r'(?:barcode|qr.?code|code).*(?:scan|read|decode)',
             ],
             
             # 2025: New intent patterns
@@ -559,30 +619,51 @@ class IntelligentRouter:
         """Validate that the selected model exists in Config and return fallback if needed"""
         from bot.config import Config
         
-        # List of all valid model names from Config - 2025 Enhanced with specialized models
+        # List of all valid model names from Config - 2025 Enhanced with breakthrough specialized models
         valid_models = {
             # Text models - Enhanced with specialized reasoning models
             Config.DEFAULT_TEXT_MODEL, Config.ADVANCED_TEXT_MODEL, Config.FAST_TEXT_MODEL, 
             Config.FALLBACK_TEXT_MODEL, Config.LIGHTWEIGHT_TEXT_MODEL,
             getattr(Config, 'REASONING_TEXT_MODEL', Config.ADVANCED_TEXT_MODEL),
             getattr(Config, 'MATH_TEXT_MODEL', Config.ADVANCED_TEXT_MODEL),
+            getattr(Config, 'FLAGSHIP_TEXT_MODEL', Config.ADVANCED_TEXT_MODEL),
+            getattr(Config, 'EFFICIENT_TEXT_MODEL', Config.DEFAULT_TEXT_MODEL),
+            getattr(Config, 'COMPACT_TEXT_MODEL', Config.FAST_TEXT_MODEL),
             
-            # Code models - Enhanced with specialized coding models
+            # Code models - Enhanced with specialized coding and tool use models
             Config.DEFAULT_CODE_MODEL, Config.ADVANCED_CODE_MODEL, Config.FAST_CODE_MODEL,
             Config.FALLBACK_CODE_MODEL, Config.LIGHTWEIGHT_CODE_MODEL,
             getattr(Config, 'SPECIALIZED_CODE_MODEL', Config.ADVANCED_CODE_MODEL),
+            getattr(Config, 'TOOL_USE_CODE_MODEL', Config.ADVANCED_CODE_MODEL),
+            getattr(Config, 'EFFICIENT_CODE_MODEL', Config.FAST_CODE_MODEL),
             
-            # Vision models - Enhanced with medical and reasoning vision
+            # Vision models - Enhanced with premium, GUI, and specialized vision
             Config.DEFAULT_VISION_MODEL, Config.ADVANCED_VISION_MODEL, Config.FAST_VISION_MODEL,
             Config.FALLBACK_VISION_MODEL, Config.DOCUMENT_VISION_MODEL, Config.LIGHTWEIGHT_VISION_MODEL,
             getattr(Config, 'REASONING_VISION_MODEL', Config.ADVANCED_VISION_MODEL),
             getattr(Config, 'MEDICAL_VISION_MODEL', Config.ADVANCED_VISION_MODEL),
+            getattr(Config, 'GUI_AUTOMATION_MODEL', Config.DEFAULT_VISION_MODEL),
+            getattr(Config, 'PREMIUM_VISION_MODEL', Config.DEFAULT_VISION_MODEL),
+            getattr(Config, 'QUANTIZED_VISION_MODEL', Config.LIGHTWEIGHT_VISION_MODEL),
             
-            # Image generation models - Enhanced with new variants
+            # Image generation models - Enhanced with breakthrough 2025 models
             Config.DEFAULT_IMAGE_MODEL, Config.COMMERCIAL_IMAGE_MODEL, Config.ADVANCED_IMAGE_MODEL,
             Config.FALLBACK_IMAGE_MODEL, Config.ARTISTIC_IMAGE_MODEL,
+            getattr(Config, 'FLAGSHIP_IMAGE_MODEL', Config.DEFAULT_IMAGE_MODEL),
+            getattr(Config, 'PROFESSIONAL_IMAGE_MODEL', Config.ADVANCED_IMAGE_MODEL),
             getattr(Config, 'TURBO_IMAGE_MODEL', Config.ADVANCED_IMAGE_MODEL),
             getattr(Config, 'REALISTIC_IMAGE_MODEL', Config.DEFAULT_IMAGE_MODEL),
+            getattr(Config, 'EDITING_IMAGE_MODEL', Config.ADVANCED_IMAGE_MODEL),
+            
+            # 2025: BREAKTHROUGH SPECIALIZED MODELS
+            # GUI Automation models
+            getattr(Config, 'DEFAULT_GUI_MODEL', Config.DEFAULT_VISION_MODEL),
+            getattr(Config, 'ADVANCED_GUI_MODEL', Config.ADVANCED_VISION_MODEL),
+            getattr(Config, 'LIGHTWEIGHT_GUI_MODEL', Config.LIGHTWEIGHT_VISION_MODEL),
+            
+            # Tool Use & Function Calling models
+            getattr(Config, 'DEFAULT_TOOL_MODEL', Config.ADVANCED_CODE_MODEL),
+            getattr(Config, 'EFFICIENT_TOOL_MODEL', Config.DEFAULT_CODE_MODEL),
             
             # Sentiment & NLP models
             Config.DEFAULT_SENTIMENT_MODEL, Config.ADVANCED_SENTIMENT_MODEL, Config.EMOTION_MODEL,
@@ -606,6 +687,11 @@ class IntelligentRouter:
             IntentType.MULTI_MODAL: Config.DEFAULT_VISION_MODEL,
             IntentType.SENTIMENT_ANALYSIS: Config.DEFAULT_SENTIMENT_MODEL,
             IntentType.TRANSLATION: Config.DEFAULT_TRANSLATION_MODEL,
+            # 2025: BREAKTHROUGH intent fallbacks
+            IntentType.GUI_AUTOMATION: Config.DEFAULT_VISION_MODEL,
+            IntentType.TOOL_USE: Config.DEFAULT_CODE_MODEL,
+            IntentType.PREMIUM_VISION: Config.DEFAULT_VISION_MODEL,
+            IntentType.SYSTEM_INTERACTION: Config.DEFAULT_TEXT_MODEL,
         }
         
         return fallback_map.get(intent, Config.DEFAULT_TEXT_MODEL)
@@ -894,6 +980,39 @@ class IntelligentRouter:
             selected_model = Config.DEFAULT_TRANSLATION_MODEL  # NLLB-200 for 200+ languages
             logger.info(f"🌐 MULTILINGUAL_PROCESSING: model={selected_model}")
             logger.info(f"🎯 MODEL_SELECTED: {selected_model} (200+ language specialist)")
+            return self._validate_model_selection(selected_model, intent)
+        
+        # 2025: BREAKTHROUGH SPECIALIZED INTENT ROUTING - Revolutionary capabilities
+        elif intent == IntentType.GUI_AUTOMATION:
+            # BREAKTHROUGH: UI-TARS native GUI automation - Superior to GPT-4V for GUI tasks
+            selected_model = getattr(Config, 'DEFAULT_GUI_MODEL', Config.DEFAULT_VISION_MODEL)
+            logger.info(f"🖱️ GUI_AUTOMATION: model={selected_model} (UI-TARS DPO trained)")
+            logger.info(f"🎯 MODEL_SELECTED: {selected_model} (BREAKTHROUGH: Outperforms GPT-4V on GUI benchmarks)")
+            return self._validate_model_selection(selected_model, intent)
+        
+        elif intent == IntentType.TOOL_USE:
+            # BREAKTHROUGH: Groq function calling excellence - #1 on BFCL leaderboard
+            complexity = analysis.get('complexity_score', 0)
+            if complexity > 6 or 'complex' in original_prompt.lower():
+                selected_model = getattr(Config, 'DEFAULT_TOOL_MODEL', Config.ADVANCED_CODE_MODEL)  # 70B Tool Use
+            else:
+                selected_model = getattr(Config, 'EFFICIENT_TOOL_MODEL', Config.DEFAULT_CODE_MODEL)  # 8B Tool Use
+            logger.info(f"🔧 TOOL_USE: complexity={complexity}, model={selected_model}")
+            logger.info(f"🎯 MODEL_SELECTED: {selected_model} (BREAKTHROUGH: #1 on BFCL leaderboard, 90.76% accuracy)")
+            return self._validate_model_selection(selected_model, intent)
+        
+        elif intent == IntentType.PREMIUM_VISION:
+            # BREAKTHROUGH: MiniCPM-V excellence - Beats GPT-4V on OCRBench
+            selected_model = getattr(Config, 'PREMIUM_VISION_MODEL', Config.DEFAULT_VISION_MODEL)
+            logger.info(f"👁️ PREMIUM_VISION: model={selected_model} (MiniCPM-Llama3-V-2.5)")
+            logger.info(f"🎯 MODEL_SELECTED: {selected_model} (BREAKTHROUGH: 700+ OCRBench, beats GPT-4V)")
+            return self._validate_model_selection(selected_model, intent)
+        
+        elif intent == IntentType.SYSTEM_INTERACTION:
+            # Advanced system-level interactions
+            selected_model = Config.ADVANCED_TEXT_MODEL  # DeepSeek-R1-0528 for complex system tasks
+            logger.info(f"⚙️ SYSTEM_INTERACTION: model={selected_model}")
+            logger.info(f"🎯 MODEL_SELECTED: {selected_model} (Advanced reasoning for system tasks)")
             return self._validate_model_selection(selected_model, intent)
 
         elif intent == IntentType.QUESTION_ANSWERING:
