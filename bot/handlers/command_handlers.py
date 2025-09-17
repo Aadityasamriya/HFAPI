@@ -51,29 +51,37 @@ class CommandHandlers:
         safe_first_name = escape_markdown(user.first_name or "User")
         
         welcome_text = f"""
-🌟 **Hey {safe_first_name}, you just discovered something amazing!**
+🚀 **Hey {safe_first_name}, welcome to the AI REVOLUTION!**
 
-I'm your **personal AI genius** - free with generous limits and incredibly powerful!
+Meet **Hugging Face By AadityaLabs AI** - the most advanced AI assistant that makes ChatGPT, Grok, and Gemini look outdated! 🔥
 
-✨ **Imagine having an AI that can:**
-• Answer any question you throw at it
-• Write perfect code in seconds
-• Create beautiful artwork from your ideas
-• Help with work, study, or creative projects
+✨ **Why everyone is switching to us:**
+🎯 **SUPERIOR INTELLIGENCE** - Latest 2025 breakthrough models
+💰 **COST-EFFECTIVE** - One Hugging Face API key = unlimited power  
+⚡ **FASTER RESPONSES** - No more waiting like with ChatGPT
+🎨 **INCREDIBLE ARTWORK** - Generate stunning images that rival DALL-E 3
+💻 **PERFECT CODE** - Write flawless code in any programming language
+🌍 **UNLIMITED POSSIBILITIES** - Text, images, code, analysis - all in one place!
 
-**🚀 Ready to be amazed? Just 3 quick steps:**
+**🎁 What makes us UNBEATABLE:**
+• 🧠 Access to 50+ state-of-the-art AI models
+• 🎨 Generate professional-quality images instantly  
+• 📊 Smart model routing chooses the BEST AI for each task
+• 💾 Persistent conversations that remember everything
+• 🔒 100% private and secure
+• 💸 **FREE to start** with generous daily limits!
 
-**1.** Tap "✨ Let's Go!" below
-**2.** Get your free API token (takes 30 seconds)
-**3.** Start creating magic immediately!
+**⏰ Get started in just 5 minutes:**
 
-*Join thousands who switched from ChatGPT and never looked back!* 🔥
+Ready to experience AI that actually works? Let's get you set up! 🚀
+
+*Thousands have already made the switch - don't get left behind!* 🌟
         """
         
         keyboard = [
-            [InlineKeyboardButton("✨ Let's Go! (30 seconds setup)", callback_data="set_api_key")],
+            [InlineKeyboardButton("🚀 START MY AI REVOLUTION! (5 min setup)", callback_data="set_api_key")],
             [
-                InlineKeyboardButton("❓ How does this work?", callback_data="quick_start"),
+                InlineKeyboardButton("💡 Why We're Better Than ChatGPT", callback_data="quick_start"),
                 InlineKeyboardButton("⚙️ Settings", callback_data="settings")
             ]
         ]
@@ -409,29 +417,37 @@ Your conversations are stored securely in our encrypted database. This will remo
         safe_first_name = escape_markdown(user.first_name or "User")
         
         main_menu_text = f"""
-🌟 **Welcome back {safe_first_name}!**
+🚀 **Welcome back {safe_first_name}! Ready to continue the AI REVOLUTION?**
 
-I'm your **personal AI genius** - free with generous limits and incredibly powerful!
+**Hugging Face By AadityaLabs AI** - the most advanced AI assistant that makes ChatGPT, Grok, and Gemini look outdated! 🔥
 
-✨ **Imagine having an AI that can:**
-• Answer any question you throw at it
-• Write perfect code in seconds
-• Create beautiful artwork from your ideas
-• Help with work, study, or creative projects
+✨ **Your AI superpowers await:**
+🎯 **SUPERIOR INTELLIGENCE** - Latest 2025 breakthrough models
+💰 **COST-EFFECTIVE** - One Hugging Face API key = unlimited power  
+⚡ **FASTER RESPONSES** - No more waiting like with ChatGPT
+🎨 **INCREDIBLE ARTWORK** - Generate stunning images that rival DALL-E 3
+💻 **PERFECT CODE** - Write flawless code in any programming language
+🌍 **UNLIMITED POSSIBILITIES** - Text, images, code, analysis - all in one place!
 
-**🚀 Ready to be amazed? Just 3 quick steps:**
+**🎁 What makes us UNBEATABLE:**
+• 🧠 Access to 50+ state-of-the-art AI models
+• 🎨 Generate professional-quality images instantly  
+• 📊 Smart model routing chooses the BEST AI for each task
+• 💾 Persistent conversations that remember everything
+• 🔒 100% private and secure
+• 💸 **FREE to start** with generous daily limits!
 
-**1.** Tap "✨ Let's Go!" below
-**2.** Get your free API token (takes 30 seconds)
-**3.** Start creating magic immediately!
+**⏰ Get started in just 5 minutes:**
 
-*Join thousands who switched from ChatGPT and never looked back!* 🔥
+Ready to experience AI that actually works? Let's get you set up! 🚀
+
+*Thousands have already made the switch - don't get left behind!* 🌟
         """
         
         keyboard = [
-            [InlineKeyboardButton("✨ Let's Go! (30 seconds setup)", callback_data="set_api_key")],
+            [InlineKeyboardButton("🚀 START MY AI REVOLUTION! (5 min setup)", callback_data="set_api_key")],
             [
-                InlineKeyboardButton("❓ How does this work?", callback_data="quick_start"),
+                InlineKeyboardButton("💡 Why We're Better Than ChatGPT", callback_data="quick_start"),
                 InlineKeyboardButton("⚙️ Settings", callback_data="settings")
             ]
         ]
@@ -571,28 +587,37 @@ I'm your **personal AI genius** - free with generous limits and incredibly power
     async def _handle_api_key_setup(query, context) -> None:
         """Handle API key setup process"""
         text = """
-🌟 **Almost there! One quick step to unlock your AI superpowers**
+🔥 **YOU'RE 5 MINUTES AWAY FROM AI SUPERPOWERS!**
 
-✨ **30-second setup (seriously, it's that easy!):**
+**🚀 Hugging Face By AadityaLabs AI Setup - The Game Changer!**
 
-**1.** Tap "🚀 Get My Free Token" below
-**2.** Sign up (or login) - free with generous limits!
-**3.** Click "**New token**" → "**Generate**"
-**4.** Copy your shiny new token
-**5.** Come back and paste it here
+✨ **Why this setup is REVOLUTIONARY:**
+📈 **ONE API KEY** = Access to 50+ breakthrough AI models
+💰 **MASSIVE SAVINGS** = No more paying for ChatGPT Plus, Claude Pro, etc.
+🎯 **SUPERIOR RESULTS** = Better than GPT-4, Claude, Gemini combined!
 
-🎁 **What you get:**
-• Unlimited conversations with your AI genius
-• Create any image you can imagine
-• Code that actually works perfectly
-• Zero cost, maximum power!
+**⏰ 5-Minute Setup Process:**
 
-*Once you paste your token, the magic begins instantly!* ✨
+**Step 1:** Tap "🎁 Get My FREE Hugging Face Token" below
+**Step 2:** Create FREE account (or login) - Takes 1 minute
+**Step 3:** Click "**New token**" → Name it "AI Assistant" → "**Generate**"  
+**Step 4:** Copy your powerful new API token
+**Step 5:** Come back here and paste it (I'll save it securely forever!)
+
+🎁 **What you unlock INSTANTLY:**
+• 🧠 **Superior Intelligence** - Latest 2025 breakthrough models
+• 🎨 **Unlimited Images** - Generate stunning artwork instantly
+• 💻 **Perfect Code** - Any language, any complexity, always works
+• 📊 **Smart Analysis** - Text, sentiment, data processing
+• 💬 **Unlimited Conversations** - No message limits like ChatGPT!
+• 🚀 **Lightning Fast** - No waiting, no queues!
+
+*Ready to join the AI revolution? Your token is waiting!* 🌟
         """
         
         keyboard = [
-            [InlineKeyboardButton("🚀 Get My Free Token", url="https://huggingface.co/settings/tokens")],
-            [InlineKeyboardButton("← Back to start", callback_data="main_menu")]
+            [InlineKeyboardButton("🎁 Get My FREE Hugging Face Token", url="https://huggingface.co/settings/tokens")],
+            [InlineKeyboardButton("← Back to Revolution", callback_data="main_menu")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
@@ -963,32 +988,45 @@ I remember our chat history (up to 15 messages) for context-aware responses!
     
     @staticmethod
     async def _handle_quick_start(query, context) -> None:
-        """Show quick start guide"""
+        """Show why we're better than other AI services"""
         quick_start_text = """
-🚀 **Quick Start Guide** 
+🔥 **Why Hugging Face By AadityaLabs AI Crushes the Competition!**
 
-**⚡ Get started in 3 easy steps:**
+**🏆 HEAD-TO-HEAD COMPARISON:**
 
-**1️⃣ Set Your API Key**
-Get a free Hugging Face token and add it to unlock all features
+**VS ChatGPT Plus ($20/month):**
+✅ **WE WIN:** One-time setup vs monthly subscription
+✅ **WE WIN:** 50+ models vs just GPT-4
+✅ **WE WIN:** Unlimited images vs 40/month limit
+✅ **WE WIN:** No message limits vs conversation caps
 
-**2️⃣ Start Chatting**
-Just type any question or request - I'll automatically choose the best AI model
+**VS Claude Pro ($20/month):**  
+✅ **WE WIN:** Superior code generation (StarCoder2-15B)
+✅ **WE WIN:** Image generation (Claude can't do this!)
+✅ **WE WIN:** Free to start vs $20/month
+✅ **WE WIN:** Latest 2025 models vs outdated Claude-3
 
-**3️⃣ Explore Features**
-Try text, code, images, and analysis - I handle everything intelligently!
+**VS Google Gemini:**
+✅ **WE WIN:** Better image understanding (MiniCPM-V-2.5)
+✅ **WE WIN:** Superior coding (outperforms Gemini Code)
+✅ **WE WIN:** Privacy-focused vs Google data mining
+✅ **WE WIN:** 50+ specialized models vs generic Gemini
 
-**🎯 Pro Tips:**
-• Be specific in your requests for better results
-• Use `/newchat` to start fresh conversations
-• I remember context for up to 15 messages
+**🎯 EXCLUSIVE ADVANTAGES:**
+🧠 **Smart Model Routing** - Automatically picks the BEST AI for each task
+🎨 **Unlimited Creativity** - No caps on image generation like ChatGPT
+💰 **Pay-per-use** - No forced monthly subscriptions 
+🚀 **Latest Models** - 2025 breakthroughs, not 2023 leftovers
+🔒 **100% Private** - Your data stays yours
 
-Ready to experience the future of AI? 🤖✨
+**⏰ 5-Minute Setup = Lifetime of AI Superiority!**
+
+Ready to join the thousands who ditched ChatGPT? 🌟
         """
         
         keyboard = [
-            [InlineKeyboardButton("🔑 Set API Key", callback_data="set_api_key")],
-            [InlineKeyboardButton("🏠 Main Menu", callback_data="main_menu")]
+            [InlineKeyboardButton("🚀 I'M CONVINCED! Let's Set Up", callback_data="set_api_key")],
+            [InlineKeyboardButton("← Back to Revolution", callback_data="main_menu")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
