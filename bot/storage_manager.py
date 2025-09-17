@@ -166,6 +166,10 @@ async def get_storage() -> StorageProvider:
         RuntimeError: If storage is not initialized
     """
     await storage_manager.ensure_connected()
+    
+    if storage_manager.storage is None:
+        raise RuntimeError("Storage provider is not initialized despite ensure_connected() call")
+    
     return storage_manager.storage
 
 
