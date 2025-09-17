@@ -111,6 +111,15 @@ class HuggingFaceBot:
                 
             # Perform health checks after storage is ready
             await self._perform_startup_health_checks(app)
+            
+            # Initialize SmartCache async cleanup task
+            try:
+                from bot.core.smart_cache import smart_cache
+                smart_cache.start_cleanup_task()
+                logger.info("🧠 SmartCache async cleanup task initialized")
+            except Exception as cache_error:
+                logger.error(f"⚠️ SmartCache initialization warning: {cache_error}")
+            
             logger.info("🎯 Post-initialization completed successfully")
             
         except Exception as e:

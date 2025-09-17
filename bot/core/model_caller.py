@@ -1209,5 +1209,353 @@ Be helpful and provide value even without direct image access."""
             _safe_log_error(logger.error, f"Error in image analysis: {e}")
             return False, {'error': f'Image analysis error: {str(e)}'}
 
-# Global model caller instance
-model_caller = ModelCaller()
+# Performance monitoring system
+from dataclasses import dataclass
+from collections import defaultdict, deque
+from datetime import datetime, timedelta
+import statistics
+
+@dataclass 
+class ModelPerformanceMetrics:
+    """Track performance metrics for each model"""
+    model_name: str
+    success_rate: float
+    avg_response_time: float
+    avg_quality_score: float
+    total_calls: int
+    recent_failures: int
+    last_success: datetime
+    last_failure: Optional[datetime]
+    quality_trend: List[float]  # Recent quality scores
+    response_time_trend: List[float]  # Recent response times
+
+class PerformanceMonitor:
+    """Advanced performance monitoring system for superior AI routing"""
+    
+    def __init__(self):
+        self.model_metrics: Dict[str, ModelPerformanceMetrics] = {}
+        self.performance_history = defaultdict(lambda: deque(maxlen=100))
+        self.failure_patterns = defaultdict(list)
+        self.model_rankings = {}
+        self.last_ranking_update = datetime.now()
+        
+    def update_metrics(self, model: str, success: bool, response_time: float, 
+                      quality_score: float, intent_type: str):
+        """Update performance metrics for a model"""
+        if model not in self.model_metrics:
+            self.model_metrics[model] = ModelPerformanceMetrics(
+                model_name=model,
+                success_rate=1.0 if success else 0.0,
+                avg_response_time=response_time,
+                avg_quality_score=quality_score,
+                total_calls=1,
+                recent_failures=0 if success else 1,
+                last_success=datetime.now() if success else datetime.min,
+                last_failure=datetime.now() if not success else None,
+                quality_trend=[quality_score],
+                response_time_trend=[response_time]
+            )
+            logger.info(f"📊 Initialized metrics for {model}: quality={quality_score:.1f}, success={success}")
+        else:
+            metrics = self.model_metrics[model]
+            
+            # Update basic stats
+            metrics.total_calls += 1
+            old_avg_time = metrics.avg_response_time
+            old_avg_quality = metrics.avg_quality_score
+            
+            metrics.avg_response_time = (old_avg_time * (metrics.total_calls - 1) + response_time) / metrics.total_calls
+            metrics.avg_quality_score = (old_avg_quality * (metrics.total_calls - 1) + quality_score) / metrics.total_calls
+            
+            # Update success rate
+            success_count = metrics.success_rate * (metrics.total_calls - 1) + (1 if success else 0)
+            metrics.success_rate = success_count / metrics.total_calls
+            
+            # Update trends (keep last 10)
+            metrics.quality_trend.append(quality_score)
+            if len(metrics.quality_trend) > 10:
+                metrics.quality_trend.pop(0)
+            
+            metrics.response_time_trend.append(response_time)
+            if len(metrics.response_time_trend) > 10:
+                metrics.response_time_trend.pop(0)
+                
+            # Track failures
+            if success:
+                metrics.last_success = datetime.now()
+                metrics.recent_failures = 0
+            else:
+                metrics.last_failure = datetime.now()
+                metrics.recent_failures += 1
+                self.failure_patterns[model].append({
+                    'timestamp': datetime.now(),
+                    'intent_type': intent_type,
+                    'response_time': response_time
+                })
+            
+            logger.info(f"📈 Updated {model}: calls={metrics.total_calls}, success={metrics.success_rate:.2f}, "
+                       f"quality={metrics.avg_quality_score:.1f}, time={metrics.avg_response_time:.1f}s")
+        
+        # Update performance history
+        self.performance_history[model].append({
+            'timestamp': datetime.now(),
+            'success': success,
+            'response_time': response_time,
+            'quality_score': quality_score,
+            'intent_type': intent_type
+        })
+        
+        # Update rankings periodically
+        if (datetime.now() - self.last_ranking_update).total_seconds() > 300:  # Every 5 minutes
+            self.update_model_rankings()
+    
+    def update_model_rankings(self):
+        """Update model performance rankings for superior routing"""
+        rankings = {}
+        
+        for model, metrics in self.model_metrics.items():
+            # Calculate composite score (0-1 scale)
+            success_component = metrics.success_rate * 0.4  # 40% success rate
+            quality_component = min(metrics.avg_quality_score / 10.0, 1.0) * 0.3  # 30% quality
+            speed_component = max(0, 1.0 - metrics.avg_response_time / 30.0) * 0.2  # 20% speed (30s baseline)
+            reliability_component = (1.0 if metrics.recent_failures == 0 else 0.5) * 0.1  # 10% recent reliability
+            
+            score = success_component + quality_component + speed_component + reliability_component
+            
+            # Apply trend bonuses/penalties
+            if len(metrics.quality_trend) >= 3:
+                recent_quality = statistics.mean(metrics.quality_trend[-3:])
+                older_quality = statistics.mean(metrics.quality_trend[:-3] if len(metrics.quality_trend) > 3 else metrics.quality_trend[-3:])
+                trend = recent_quality - older_quality
+                score += trend * 0.05  # Trend adjustment (±0.5 max)
+            
+            rankings[model] = max(0.0, min(1.0, score))  # Clamp to [0,1]
+        
+        # Sort by score (highest first)
+        self.model_rankings = dict(sorted(rankings.items(), key=lambda x: x[1], reverse=True))
+        self.last_ranking_update = datetime.now()
+        
+        if rankings:
+            top_3 = list(self.model_rankings.keys())[:3]
+            logger.info(f"🏆 TOP MODELS: {', '.join(f'{m}({self.model_rankings[m]:.2f})' for m in top_3)}")
+    
+    def get_best_model_for_intent(self, intent_type: str, available_models: List[str]) -> Optional[str]:
+        """Get the best performing model for a specific intent type"""
+        if not self.model_metrics or not available_models:
+            return None
+        
+        # Find models with good performance for this intent
+        intent_performers = {}
+        
+        for model in available_models:
+            if model not in self.performance_history:
+                continue
+                
+            history = self.performance_history[model]
+            intent_records = [r for r in history if r['intent_type'] == intent_type]
+            
+            if len(intent_records) >= 2:  # Need at least 2 samples
+                recent_records = intent_records[-5:]  # Last 5 for quality
+                avg_quality = statistics.mean([r['quality_score'] for r in recent_records])
+                success_rate = sum(1 for r in intent_records[-10:] if r['success']) / min(len(intent_records), 10)
+                
+                # Combined score: quality (60%) + success rate (40%)
+                intent_score = avg_quality * 0.06 + success_rate * 4.0
+                intent_performers[model] = {
+                    'quality': avg_quality,
+                    'success_rate': success_rate,
+                    'score': intent_score,
+                    'samples': len(intent_records)
+                }
+        
+        if intent_performers:
+            best_model = max(intent_performers.keys(), key=lambda m: intent_performers[m]['score'])
+            perf = intent_performers[best_model]
+            logger.info(f"🎯 INTENT SPECIALIST: {best_model} for {intent_type} "
+                       f"(quality={perf['quality']:.1f}, success={perf['success_rate']:.2f}, samples={perf['samples']})")
+            return best_model
+        
+        # Fallback to overall rankings
+        for model in self.model_rankings:
+            if model in available_models:
+                return model
+        
+        return None
+    
+    def should_avoid_model(self, model: str) -> Tuple[bool, str]:
+        """Check if a model should be avoided due to poor performance"""
+        if model not in self.model_metrics:
+            return False, "No metrics available"
+        
+        metrics = self.model_metrics[model]
+        
+        # Avoid if too many recent consecutive failures
+        if metrics.recent_failures >= 3:
+            return True, f"Too many recent failures ({metrics.recent_failures})"
+        
+        # Avoid if last failure was recent and success rate is critically low
+        if (metrics.last_failure and 
+            (datetime.now() - metrics.last_failure).total_seconds() < 300 and
+            metrics.success_rate < 0.5):
+            return True, f"Recent failure with low success rate ({metrics.success_rate:.2f})"
+        
+        # Avoid if average quality is very poor (many samples needed)
+        if metrics.total_calls >= 10 and metrics.avg_quality_score < 3.0:
+            return True, f"Consistently poor quality ({metrics.avg_quality_score:.1f}/10)"
+        
+        return False, "Model is performing adequately"
+    
+    def get_performance_summary(self) -> Dict[str, Any]:
+        """Get comprehensive performance summary"""
+        if not self.model_metrics:
+            return {'status': 'No metrics available'}
+        
+        summary = {
+            'total_models': len(self.model_metrics),
+            'top_performers': list(self.model_rankings.keys())[:5],
+            'model_details': {},
+            'system_health': 'healthy'
+        }
+        
+        failing_models = 0
+        for model, metrics in self.model_metrics.items():
+            should_avoid, reason = self.should_avoid_model(model)
+            if should_avoid:
+                failing_models += 1
+            
+            summary['model_details'][model] = {
+                'success_rate': metrics.success_rate,
+                'avg_quality': metrics.avg_quality_score,
+                'avg_response_time': metrics.avg_response_time,
+                'total_calls': metrics.total_calls,
+                'status': 'failing' if should_avoid else 'healthy',
+                'ranking': list(self.model_rankings.keys()).index(model) + 1 if model in self.model_rankings else None
+            }
+        
+        if failing_models > len(self.model_metrics) * 0.3:  # More than 30% failing
+            summary['system_health'] = 'degraded'
+        elif failing_models > len(self.model_metrics) * 0.5:  # More than 50% failing
+            summary['system_health'] = 'critical'
+        
+        return summary
+
+# Enhanced ModelCaller with integrated performance monitoring
+class SuperiorModelCaller(ModelCaller):
+    """Enhanced ModelCaller with superior AI capabilities and performance monitoring"""
+    
+    def __init__(self):
+        super().__init__()
+        self.performance_monitor = PerformanceMonitor()
+        
+    async def call_with_monitoring(self, method_name: str, model: str, intent_type: str, 
+                                 *args, **kwargs) -> Tuple[bool, Any, Dict]:
+        """
+        Call model method with performance monitoring
+        Returns: (success, result, performance_metrics)
+        """
+        start_time = time.time()
+        
+        try:
+            # Call the original method
+            method = getattr(self, method_name)
+            success, result = await method(*args, **kwargs)
+            
+            response_time = time.time() - start_time
+            
+            # Assess quality if we have response processor available
+            quality_score = 7.0  # Default quality score
+            try:
+                from bot.core.response_processor import response_processor
+                if isinstance(result, str) and result:
+                    # For text responses, assess quality
+                    _, quality_metrics = response_processor.process_response(
+                        result, 
+                        kwargs.get('prompt', ''), 
+                        intent_type, 
+                        model
+                    )
+                    quality_score = quality_metrics.overall_score
+            except ImportError:
+                pass  # Response processor not available
+            
+            # Update performance metrics
+            self.performance_monitor.update_metrics(
+                model, success, response_time, quality_score, intent_type
+            )
+            
+            perf_metrics = {
+                'response_time': response_time,
+                'quality_score': quality_score,
+                'model_used': model,
+                'success': success
+            }
+            
+            return success, result, perf_metrics
+            
+        except Exception as e:
+            response_time = time.time() - start_time
+            self.performance_monitor.update_metrics(model, False, response_time, 0.0, intent_type)
+            
+            perf_metrics = {
+                'response_time': response_time,
+                'quality_score': 0.0,
+                'model_used': model,
+                'success': False,
+                'error': str(e)
+            }
+            
+            return False, str(e), perf_metrics
+    
+    def get_optimal_model_for_intent(self, intent_type: str, complexity_score: float = 5.0) -> str:
+        """Get the optimal model for an intent with fallback logic"""
+        # Get available models based on intent type
+        available_models = self._get_available_models_for_intent(intent_type, complexity_score)
+        
+        # Try to get the best performer for this intent
+        best_model = self.performance_monitor.get_best_model_for_intent(intent_type, available_models)
+        
+        if best_model:
+            should_avoid, reason = self.performance_monitor.should_avoid_model(best_model)
+            if not should_avoid:
+                return best_model
+            else:
+                logger.warning(f"⚠️ Avoiding {best_model}: {reason}")
+        
+        # Fallback to default model selection
+        return self._get_fallback_model_for_intent(intent_type, complexity_score)
+    
+    def _get_available_models_for_intent(self, intent_type: str, complexity_score: float) -> List[str]:
+        """Get available models for a specific intent type"""
+        models = []
+        
+        if intent_type == 'code_generation':
+            models = [Config.CODE_MODEL, Config.ADVANCED_TEXT_MODEL, Config.DEFAULT_TEXT_MODEL]
+        elif intent_type in ['mathematical_reasoning', 'advanced_reasoning']:
+            models = [Config.ADVANCED_TEXT_MODEL, Config.DEFAULT_TEXT_MODEL]
+        elif intent_type == 'creative_writing':
+            models = [Config.DEFAULT_TEXT_MODEL, Config.ADVANCED_TEXT_MODEL]
+        elif intent_type == 'image_generation':
+            models = [Config.IMAGE_MODEL]
+        else:
+            # General text generation
+            if complexity_score > 7:
+                models = [Config.ADVANCED_TEXT_MODEL, Config.DEFAULT_TEXT_MODEL]
+            else:
+                models = [Config.DEFAULT_TEXT_MODEL, Config.FAST_TEXT_MODEL]
+        
+        return [m for m in models if m]  # Remove None values
+    
+    def _get_fallback_model_for_intent(self, intent_type: str, complexity_score: float) -> str:
+        """Get fallback model when optimal selection fails"""
+        if intent_type == 'code_generation':
+            return Config.CODE_MODEL or Config.ADVANCED_TEXT_MODEL
+        elif intent_type == 'image_generation':
+            return Config.IMAGE_MODEL
+        elif complexity_score > 7:
+            return Config.ADVANCED_TEXT_MODEL
+        else:
+            return Config.DEFAULT_TEXT_MODEL or Config.FALLBACK_TEXT_MODEL
+
+# Global instances
+performance_monitor = PerformanceMonitor()
+model_caller = SuperiorModelCaller()

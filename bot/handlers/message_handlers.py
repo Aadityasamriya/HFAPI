@@ -13,10 +13,14 @@ from telegram.constants import ChatAction
 
 from bot.storage_manager import db
 from bot.core.router import router, IntentType
-from bot.core.model_caller import ModelCaller, _redact_sensitive_data, _safe_log_error
+from bot.core.model_caller import ModelCaller, model_caller, _redact_sensitive_data, _safe_log_error
+from bot.core.response_processor import response_processor, ResponseQuality
+from bot.core.smart_cache import smart_cache
 from bot.config import Config
 from bot.security_utils import escape_markdown, safe_markdown_format, check_rate_limit
 from datetime import datetime, timedelta
+import time
+from typing import Tuple, Dict, Any, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -225,11 +229,40 @@ class MessageHandlers:
             # Get or initialize chat history
             chat_history = context.user_data.get('chat_history', []) if context.user_data is not None else []
             
-            # Analyze prompt and route to appropriate model
-            intent, routing_info = router.route_prompt(message_text)
+            # SUPERIOR AI ROUTING: Advanced analysis with context and complexity
+            start_time = time.time()
             
-            logger.info(f"🚦 ROUTING: user_id:{user_id} prompt -> {intent.value} (confidence: {routing_info['confidence']})")
-            logger.info(f"🤖 Selected model: {routing_info['recommended_model']}")
+            # Build user context for intelligent routing
+            user_context = await MessageHandlers._build_user_context(user_id, chat_history, context)
+            
+            # First, check smart cache for cached response
+            cache_entry = await smart_cache.get(
+                message_text, 
+                "general",  # Will be updated with actual intent
+                user_context
+            )
+            
+            if cache_entry:
+                logger.info(f"🎯 SUPERIOR CACHE HIT: Serving cached response (quality: {cache_entry.quality_level.value})")
+                await update.message.reply_text(
+                    cache_entry.content,
+                    parse_mode='Markdown' if '**' in cache_entry.content or '_' in cache_entry.content else None
+                )
+                
+                # Update user satisfaction tracking
+                await smart_cache.update_user_satisfaction(cache_entry.key, 0.9)  # Assume high satisfaction for cache hit
+                return
+            
+            # Advanced routing with user context and complexity analysis
+            intent, routing_info = router.route_prompt(message_text, user_id, user_context)
+            
+            logger.info(f"🚀 SUPERIOR ROUTING: user_id:{user_id} -> {intent.value}")
+            logger.info(f"   📊 Confidence: {routing_info['confidence']:.2f}")
+            logger.info(f"   🤖 Model: {routing_info['selected_model']}")
+            logger.info(f"   ⚡ Quality Score: {routing_info.get('routing_quality_score', 'N/A')}")
+            
+            # Store routing info for processing
+            routing_time = time.time() - start_time
             
             # 2025: Enhanced processing with new intent types
             if intent == IntentType.IMAGE_GENERATION:
@@ -266,6 +299,42 @@ class MessageHandlers:
                 safe_error_msg,
                 parse_mode='Markdown'
             )
+    
+    @staticmethod
+    async def _build_user_context(user_id: int, chat_history: list, context) -> Dict[str, Any]:
+        """Build comprehensive user context for superior AI routing"""
+        user_context = {
+            'user_id': user_id,
+            'domain_context': 'general',
+            'technical_level': 'intermediate',
+            'language': 'en',
+            'complexity_level': 'medium'
+        }
+        
+        # Analyze chat history for context
+        if chat_history and len(chat_history) > 0:
+            recent_messages = [msg.get('content', '') for msg in chat_history[-5:] if msg.get('role') == 'user']
+            combined_text = ' '.join(recent_messages).lower()
+            
+            # Detect technical level
+            tech_indicators = ['python', 'javascript', 'api', 'database', 'algorithm', 'code', 'programming']
+            if sum(1 for word in tech_indicators if word in combined_text) >= 2:
+                user_context['technical_level'] = 'advanced'
+                user_context['domain_context'] = 'programming'
+            
+            # Detect creative context
+            creative_indicators = ['story', 'creative', 'write', 'design', 'art', 'image', 'generate']
+            if sum(1 for word in creative_indicators if word in combined_text) >= 2:
+                user_context['domain_context'] = 'creative'
+            
+            # Detect complexity level based on message length and technical terms
+            avg_length = sum(len(msg) for msg in recent_messages) / max(len(recent_messages), 1)
+            if avg_length > 200:
+                user_context['complexity_level'] = 'high'
+            elif avg_length < 50:
+                user_context['complexity_level'] = 'low'
+        
+        return user_context
     
     @staticmethod
     async def _handle_api_key_input(update, context: ContextTypes.DEFAULT_TYPE, api_key: str) -> None:
@@ -366,8 +435,9 @@ class MessageHandlers:
     
     @staticmethod
     async def _handle_text_generation(update, context: ContextTypes.DEFAULT_TYPE, prompt: str, api_key: str, chat_history: list, routing_info: dict) -> None:
-        """Handle intelligent text generation"""
+        """SUPERIOR text generation with advanced processing and quality assurance"""
         user_id = update.effective_user.id
+        start_time = time.time()
         
         # Update chat history with user message (include timestamp)
         chat_history.append({'role': 'user', 'content': prompt, 'timestamp': datetime.utcnow()})
@@ -377,31 +447,90 @@ class MessageHandlers:
             chat_history = chat_history[-Config.MAX_CHAT_HISTORY * 2:]
         
         try:
-            async with ModelCaller() as model_caller:
-                success, response = await model_caller.generate_text(
-                    prompt, 
-                    api_key, 
-                    chat_history[:-1],  # Exclude the current message
-                    routing_info.get('recommended_model') or Config.DEFAULT_TEXT_MODEL,
-                    routing_info.get('special_parameters', {})  # Use advanced parameters
-                )
+            # Use superior model caller with monitoring
+            selected_model = routing_info.get('selected_model') or routing_info.get('recommended_model') or Config.DEFAULT_TEXT_MODEL
+            intent_type = routing_info.get('primary_intent', 'text_generation').value if hasattr(routing_info.get('primary_intent'), 'value') else 'text_generation'
+            
+            logger.info(f"🤖 SUPERIOR GENERATION: Using {selected_model} for {intent_type}")
+            
+            # Call with performance monitoring
+            success, response, perf_metrics = await model_caller.call_with_monitoring(
+                'generate_text',
+                selected_model,
+                intent_type,
+                prompt, 
+                api_key, 
+                chat_history[:-1],  # Exclude the current message
+                selected_model,
+                routing_info.get('special_parameters', {})
+            )
             
             if success and response:
-                # Update chat history with assistant response
-                chat_history.append({'role': 'assistant', 'content': response, 'timestamp': datetime.utcnow()})
+                # SUPERIOR RESPONSE PROCESSING with quality assessment
+                complexity_data = routing_info.get('complexity_analysis')
+                
+                # Process response with quality validation and enhancement
+                enhanced_response, quality_metrics = response_processor.process_response(
+                    response,
+                    prompt,
+                    intent_type,
+                    selected_model,
+                    complexity_data.__dict__ if complexity_data else None
+                )
+                
+                logger.info(f"🔍 RESPONSE QUALITY:")
+                logger.info(f"   📊 Overall Score: {quality_metrics.overall_score:.1f}/10 ({quality_metrics.quality_level.value})")
+                logger.info(f"   🎯 Relevance: {quality_metrics.relevance_score:.1f}/10")
+                logger.info(f"   ✅ Completeness: {quality_metrics.completeness_score:.1f}/10")
+                logger.info(f"   🔧 Technical: {quality_metrics.technical_score:.1f}/10")
+                logger.info(f"   💎 Clarity: {quality_metrics.clarity_score:.1f}/10")
+                
+                # Update chat history with enhanced response
+                chat_history.append({'role': 'assistant', 'content': enhanced_response, 'timestamp': datetime.utcnow()})
                 if context.user_data is not None:
                     context.user_data['chat_history'] = chat_history
                 
-                # Simple, user-friendly response formatting
-                safe_response = safe_markdown_format(response, preserve_code=True)
-                formatted_response = safe_response  # Just show the response directly
+                # Format for user display
+                safe_response = safe_markdown_format(enhanced_response, preserve_code=True)
                 
+                # Add quality indicator for excellent responses
+                if quality_metrics.quality_level == ResponseQuality.EXCELLENT:
+                    quality_badge = "✨ **Premium AI Response**\n\n"
+                elif quality_metrics.quality_level == ResponseQuality.GOOD:
+                    quality_badge = "🎯 **High-Quality Response**\n\n"
+                else:
+                    quality_badge = ""
+                
+                formatted_response = quality_badge + safe_response
+                
+                # Send response to user
                 await update.message.reply_text(
                     formatted_response,
                     parse_mode='Markdown'
                 )
                 
-                # Save conversation to persistent storage after successful exchange
+                # SUPERIOR CACHING: Store high-quality responses
+                if quality_metrics.overall_score >= 6.0:  # Only cache decent responses
+                    user_context = await MessageHandlers._build_user_context(user_id, chat_history, context)
+                    
+                    await smart_cache.store(
+                        prompt=prompt,
+                        intent_type=intent_type,
+                        content=enhanced_response,
+                        user_context=user_context,
+                        model_used=selected_model,
+                        response_time=perf_metrics['response_time'],
+                        quality_score=quality_metrics.overall_score,
+                        complexity_score=complexity_data.complexity_score if complexity_data else 5.0
+                    )
+                    
+                    logger.info(f"💾 CACHED: Response stored (quality: {quality_metrics.overall_score:.1f})")
+                
+                # Performance monitoring update
+                total_time = time.time() - start_time
+                logger.info(f"⚡ PERFORMANCE: Total time: {total_time:.2f}s, Model time: {perf_metrics['response_time']:.2f}s")
+                
+                # Save conversation to persistent storage
                 try:
                     saved = await MessageHandlers._save_conversation_if_ready(user_id, chat_history, context)
                     if saved:
@@ -410,11 +539,42 @@ class MessageHandlers:
                         logger.debug(f"Conversation not yet ready for saving for user {user_id}")
                 except Exception as save_error:
                     logger.error(f"Failed to save conversation for user {user_id}: {save_error}")
-                    # Don't fail the response if saving fails
                 
-                logger.info(f"Successfully generated text for user {user_id}")
+                logger.info(f"🏆 SUPERIOR GENERATION COMPLETE: user_id={user_id}, quality={quality_metrics.overall_score:.1f}/10")
                 
             else:
+                # Handle generation failure with fallback
+                logger.warning(f"❌ Generation failed: {response}")
+                
+                # Try fallback model if available
+                fallback_model = Config.FALLBACK_TEXT_MODEL
+                if fallback_model and fallback_model != selected_model:
+                    logger.info(f"🔄 Trying fallback model: {fallback_model}")
+                    
+                    success_fallback, response_fallback, _ = await model_caller.call_with_monitoring(
+                        'generate_text',
+                        fallback_model,
+                        intent_type,
+                        prompt,
+                        api_key,
+                        chat_history[:-1],
+                        fallback_model,
+                        {}  # Basic parameters for fallback
+                    )
+                    
+                    if success_fallback and response_fallback:
+                        safe_response = safe_markdown_format(response_fallback, preserve_code=True)
+                        await update.message.reply_text(
+                            f"⚠️ **Using backup system**\n\n{safe_response}",
+                            parse_mode='Markdown'
+                        )
+                        
+                        # Update chat history with fallback response
+                        chat_history.append({'role': 'assistant', 'content': response_fallback, 'timestamp': datetime.utcnow()})
+                        if context.user_data is not None:
+                            context.user_data['chat_history'] = chat_history
+                        return
+                
                 safe_error_response = safe_markdown_format(str(response))
                 await update.message.reply_text(
                     f"❌ **Generation Failed**\n\n{safe_error_response}\n\nPlease try again or use `/newchat` to start fresh\.",

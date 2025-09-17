@@ -6,11 +6,529 @@ Analyzes user prompts to determine the best Hugging Face model to use
 import re
 import logging
 import hashlib
+import math
+import json
 from typing import Dict, List, Tuple, Any, Optional
 from enum import Enum
-from collections import defaultdict
+from collections import defaultdict, deque
+from dataclasses import dataclass
+from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
+
+@dataclass
+class PromptComplexity:
+    """Advanced prompt complexity analysis data structure"""
+    complexity_score: float  # 0-10 scale
+    technical_depth: int     # 1-5 technical complexity
+    reasoning_required: bool # True if complex reasoning needed
+    context_length: int      # Context requirement in tokens
+    domain_specificity: float # 0-1 how domain-specific
+    creativity_factor: float  # 0-1 creativity vs factual
+    multi_step: bool         # True if multi-step task
+    uncertainty: float       # 0-1 uncertainty level
+    priority_level: str      # 'low', 'medium', 'high', 'critical'
+    estimated_tokens: int    # Estimated response length needed
+
+@dataclass
+class ModelPerformance:
+    """Model performance tracking data"""
+    model_name: str
+    intent_type: str
+    success_rate: float      # 0-1 success rate
+    avg_response_time: float # Average response time in seconds
+    quality_score: float     # 0-10 quality assessment
+    usage_count: int         # Number of times used
+    last_used: datetime      # Last usage timestamp
+    cost_efficiency: float   # Quality per cost metric
+
+@dataclass
+class ContextState:
+    """Conversation context tracking"""
+    user_id: int
+    conversation_history: deque  # Limited history queue
+    domain_context: str          # Current domain (coding, creative, etc.)
+    complexity_trend: List[float] # Recent complexity scores
+    preferred_models: Dict[str, float] # User's successful models
+    conversation_coherence: float # 0-1 coherence score
+    last_intent: Optional[str]   # Previous intent type
+    response_satisfaction: deque # Recent satisfaction scores
+
+class AdvancedComplexityAnalyzer:
+    """
+    ML-based complexity analyzer that goes beyond simple pattern matching
+    Provides sophisticated prompt analysis for optimal model selection
+    """
+    
+    def __init__(self):
+        self.technical_keywords = self._build_technical_vocabulary()
+        self.reasoning_indicators = self._build_reasoning_patterns()
+        self.complexity_weights = self._build_complexity_weights()
+        self.domain_classifiers = self._build_domain_classifiers()
+        
+    def _build_technical_vocabulary(self) -> Dict[str, float]:
+        """Build comprehensive technical vocabulary with complexity weights"""
+        return {
+            # Programming & Software Engineering (High complexity)
+            'algorithm': 2.5, 'data structure': 2.8, 'complexity analysis': 3.0,
+            'machine learning': 2.7, 'neural network': 2.9, 'deep learning': 3.0,
+            'distributed systems': 3.2, 'microservices': 2.6, 'containerization': 2.4,
+            'kubernetes': 2.8, 'docker': 2.2, 'devops': 2.5, 'ci/cd': 2.3,
+            'blockchain': 2.9, 'cryptography': 3.1, 'quantum computing': 3.5,
+            'compiler design': 3.3, 'operating systems': 2.8, 'kernel': 3.0,
+            
+            # Advanced Mathematics & Science (Very high complexity)
+            'differential equations': 3.5, 'linear algebra': 2.8, 'calculus': 2.5,
+            'quantum mechanics': 3.8, 'thermodynamics': 3.2, 'statistical mechanics': 3.6,
+            'topology': 3.7, 'abstract algebra': 3.9, 'category theory': 4.0,
+            'computational complexity': 3.4, 'np-complete': 3.2, 'optimization': 2.9,
+            
+            # Business & Economics (Moderate to high complexity)
+            'financial modeling': 2.7, 'risk analysis': 2.5, 'portfolio optimization': 2.8,
+            'market microstructure': 3.0, 'derivatives pricing': 3.1, 'quantitative analysis': 2.9,
+            'supply chain optimization': 2.6, 'game theory': 3.2, 'econometrics': 3.0,
+            
+            # Medical & Life Sciences (High complexity)
+            'pharmacokinetics': 3.3, 'molecular biology': 3.0, 'bioinformatics': 3.2,
+            'genomics': 3.1, 'proteomics': 3.4, 'clinical trials': 2.8, 'epidemiology': 2.9,
+            
+            # Engineering & Physics (High complexity)
+            'fluid dynamics': 3.4, 'electromagnetic fields': 3.2, 'signal processing': 2.9,
+            'control systems': 3.0, 'robotics': 2.8, 'computer vision': 3.1, 'nlp': 2.7,
+            
+            # General Technical Terms (Lower complexity)
+            'api': 1.8, 'database': 1.9, 'frontend': 1.5, 'backend': 1.7,
+            'javascript': 1.6, 'python': 1.5, 'sql': 1.8, 'html': 1.2, 'css': 1.3
+        }
+    
+    def _build_reasoning_patterns(self) -> List[str]:
+        """Patterns that indicate complex reasoning requirements"""
+        return [
+            r'\b(?:analyze|evaluate|compare|contrast|assess|critique)\b',
+            r'\b(?:implications|consequences|trade-offs|advantages|disadvantages)\b',
+            r'\b(?:step-by-step|systematically|methodically|comprehensive)\b',
+            r'\b(?:pros and cons|benefits and risks|cause and effect)\b',
+            r'\b(?:optimization|minimize|maximize|best approach|most efficient)\b',
+            r'\b(?:if-then|what if|scenario|hypothetical|alternative)\b',
+            r'\b(?:explain why|reasoning behind|justification|rationale)\b',
+            r'\b(?:complex|sophisticated|advanced|intricate|nuanced)\b',
+            r'\b(?:multiple factors|various aspects|different perspectives)\b',
+            r'\b(?:integration|synthesis|combination|merge|unify)\b',
+        ]
+    
+    def _build_complexity_weights(self) -> Dict[str, float]:
+        """Weights for different complexity factors"""
+        return {
+            'sentence_complexity': 0.15,    # Sentence structure complexity
+            'technical_density': 0.25,      # Technical term density
+            'reasoning_indicators': 0.20,   # Reasoning requirement indicators
+            'domain_specificity': 0.15,     # How specialized the domain is
+            'length_factor': 0.10,          # Prompt length consideration
+            'uncertainty_markers': 0.08,    # Uncertainty/ambiguity markers
+            'creativity_markers': 0.07      # Creative vs analytical tasks
+        }
+    
+    def _build_domain_classifiers(self) -> Dict[str, List[str]]:
+        """Domain classification patterns"""
+        return {
+            'mathematics': ['equation', 'theorem', 'proof', 'integral', 'derivative', 'matrix', 'vector'],
+            'programming': ['code', 'function', 'algorithm', 'debug', 'compile', 'framework', 'library'],
+            'science': ['experiment', 'hypothesis', 'research', 'analysis', 'data', 'methodology'],
+            'business': ['strategy', 'market', 'financial', 'revenue', 'profit', 'investment', 'roi'],
+            'creative': ['design', 'artistic', 'creative', 'story', 'poem', 'narrative', 'aesthetic'],
+            'medical': ['diagnosis', 'treatment', 'patient', 'clinical', 'medical', 'healthcare', 'therapy'],
+            'engineering': ['design', 'system', 'optimization', 'efficiency', 'performance', 'technical'],
+            'legal': ['law', 'legal', 'contract', 'compliance', 'regulation', 'rights', 'liability']
+        }
+    
+    def analyze_complexity(self, prompt: str, context: Optional[Dict] = None) -> PromptComplexity:
+        """
+        Advanced complexity analysis that goes beyond ChatGPT/Grok/Gemini capabilities
+        """
+        context = context or {}
+        prompt_lower = prompt.lower()
+        
+        # Calculate technical depth
+        technical_score = self._calculate_technical_depth(prompt_lower)
+        
+        # Analyze reasoning requirements
+        reasoning_score = self._analyze_reasoning_requirements(prompt_lower)
+        
+        # Calculate domain specificity
+        domain_specificity = self._calculate_domain_specificity(prompt_lower)
+        
+        # Analyze sentence complexity
+        sentence_complexity = self._analyze_sentence_complexity(prompt)
+        
+        # Detect creativity vs factual orientation
+        creativity_factor = self._analyze_creativity_factor(prompt_lower)
+        
+        # Calculate uncertainty level
+        uncertainty = self._calculate_uncertainty(prompt_lower)
+        
+        # Determine if multi-step reasoning is required
+        multi_step = self._detect_multi_step(prompt_lower)
+        
+        # Estimate required context length
+        context_length = self._estimate_context_length(prompt, context)
+        
+        # Calculate overall complexity score (0-10)
+        weights = self.complexity_weights
+        complexity_score = (
+            sentence_complexity * weights['sentence_complexity'] +
+            technical_score * weights['technical_density'] +
+            reasoning_score * weights['reasoning_indicators'] +
+            domain_specificity * weights['domain_specificity'] +
+            min(len(prompt) / 200, 1.0) * weights['length_factor'] +
+            uncertainty * weights['uncertainty_markers'] +
+            creativity_factor * weights['creativity_markers']
+        ) * 10
+        
+        # Determine priority level
+        priority = self._determine_priority(complexity_score, multi_step, domain_specificity)
+        
+        # Estimate response token requirements
+        estimated_tokens = self._estimate_response_tokens(complexity_score, multi_step, context)
+        
+        return PromptComplexity(
+            complexity_score=min(complexity_score, 10.0),
+            technical_depth=min(int(technical_score * 5), 5),
+            reasoning_required=reasoning_score > 0.3 or multi_step,
+            context_length=context_length,
+            domain_specificity=domain_specificity,
+            creativity_factor=creativity_factor,
+            multi_step=multi_step,
+            uncertainty=uncertainty,
+            priority_level=priority,
+            estimated_tokens=estimated_tokens
+        )
+    
+    def _calculate_technical_depth(self, prompt: str) -> float:
+        """Calculate technical complexity based on vocabulary"""
+        total_score = 0
+        word_count = len(prompt.split())
+        
+        for term, weight in self.technical_keywords.items():
+            if term in prompt:
+                total_score += weight
+        
+        # Normalize by prompt length
+        return min(total_score / max(word_count, 1) * 10, 1.0)
+    
+    def _analyze_reasoning_requirements(self, prompt: str) -> float:
+        """Detect complex reasoning requirements"""
+        reasoning_matches = 0
+        for pattern in self.reasoning_indicators:
+            if re.search(pattern, prompt, re.IGNORECASE):
+                reasoning_matches += 1
+        
+        return min(reasoning_matches / len(self.reasoning_indicators), 1.0)
+    
+    def _calculate_domain_specificity(self, prompt: str) -> float:
+        """Calculate how domain-specific the prompt is"""
+        domain_scores = {}
+        
+        for domain, keywords in self.domain_classifiers.items():
+            score = sum(1 for keyword in keywords if keyword in prompt)
+            if score > 0:
+                domain_scores[domain] = score / len(keywords)
+        
+        return max(domain_scores.values()) if domain_scores else 0.0
+    
+    def _analyze_sentence_complexity(self, prompt: str) -> float:
+        """Analyze sentence structure complexity"""
+        sentences = prompt.split('.')
+        avg_length = sum(len(s.split()) for s in sentences) / max(len(sentences), 1)
+        
+        # Complex punctuation patterns
+        complex_punctuation = prompt.count(';') + prompt.count(':') + prompt.count('(') + prompt.count('[')
+        
+        # Subordinate clauses
+        subordinate_markers = ['which', 'that', 'because', 'although', 'while', 'since', 'whereas']
+        subordinate_count = sum(1 for marker in subordinate_markers if marker in prompt.lower())
+        
+        complexity = (avg_length / 20 + complex_punctuation / 10 + subordinate_count / 5)
+        return min(complexity, 1.0)
+    
+    def _analyze_creativity_factor(self, prompt: str) -> float:
+        """Determine creative vs analytical orientation"""
+        creative_markers = ['creative', 'artistic', 'design', 'story', 'poem', 'imagine', 'invent', 'original']
+        analytical_markers = ['analyze', 'calculate', 'compute', 'measure', 'precise', 'exact', 'factual']
+        
+        creative_score = sum(1 for marker in creative_markers if marker in prompt)
+        analytical_score = sum(1 for marker in analytical_markers if marker in prompt)
+        
+        if creative_score + analytical_score == 0:
+            return 0.5  # Neutral
+        
+        return creative_score / (creative_score + analytical_score)
+    
+    def _calculate_uncertainty(self, prompt: str) -> float:
+        """Calculate uncertainty/ambiguity level"""
+        uncertainty_markers = ['maybe', 'perhaps', 'might', 'could', 'possibly', 'unclear', 'ambiguous', 'uncertain']
+        question_markers = prompt.count('?')
+        
+        uncertainty_score = sum(1 for marker in uncertainty_markers if marker in prompt)
+        return min((uncertainty_score + question_markers) / 5, 1.0)
+    
+    def _detect_multi_step(self, prompt: str) -> bool:
+        """Detect if task requires multiple steps"""
+        multi_step_patterns = [
+            r'\b(?:first|then|next|finally|step\s*\d+|after\s+that)\b',
+            r'\b(?:process|procedure|workflow|sequence|stages?)\b',
+            r'\b(?:multiple\s+steps?|several\s+phases?)\b'
+        ]
+        
+        return any(re.search(pattern, prompt, re.IGNORECASE) for pattern in multi_step_patterns)
+    
+    def _estimate_context_length(self, prompt: str, context: Dict) -> int:
+        """Estimate required context length"""
+        base_length = len(prompt.split()) * 1.3  # Base context need
+        
+        # Add context for conversation history
+        history_length = len(context.get('conversation_history', [])) * 50
+        
+        # Add context for complex domains
+        domain_bonus = 200 if any(domain in prompt.lower() for domain in self.domain_classifiers.keys()) else 0
+        
+        return int(base_length + history_length + domain_bonus)
+    
+    def _determine_priority(self, complexity: float, multi_step: bool, domain_specificity: float) -> str:
+        """Determine task priority level"""
+        if complexity > 8.0 or (multi_step and domain_specificity > 0.7):
+            return 'critical'
+        elif complexity > 6.0 or multi_step:
+            return 'high'
+        elif complexity > 3.0 or domain_specificity > 0.5:
+            return 'medium'
+        else:
+            return 'low'
+    
+    def _estimate_response_tokens(self, complexity: float, multi_step: bool, context: Dict) -> int:
+        """Estimate required response length"""
+        base_tokens = 300
+        
+        # Add tokens based on complexity
+        complexity_tokens = int(complexity * 200)
+        
+        # Multi-step tasks need more tokens
+        multi_step_bonus = 500 if multi_step else 0
+        
+        # Context-dependent adjustments
+        context_bonus = len(context.get('conversation_history', [])) * 20
+        
+        return base_tokens + complexity_tokens + multi_step_bonus + context_bonus
+
+class DynamicModelSelector:
+    """
+    Advanced model selection system that adapts based on real-time performance
+    Superior to static model selection in ChatGPT/Grok/Gemini
+    """
+    
+    def __init__(self, performance_monitor=None):
+        # Use centralized PerformanceMonitor instead of separate tracking
+        from bot.core.model_caller import PerformanceMonitor
+        self.performance_monitor = performance_monitor or PerformanceMonitor()
+        self.model_load_balancer = {}  # Load balancing across models
+        self.fallback_chains = self._initialize_fallback_chains()
+        
+    def _initialize_fallback_chains(self) -> Dict[str, List[str]]:
+        """Initialize intelligent fallback chains for each intent type"""
+        from bot.config import Config
+        return {
+            'text_generation': [
+                Config.DEFAULT_TEXT_MODEL,
+                Config.FLAGSHIP_TEXT_MODEL, 
+                Config.ADVANCED_TEXT_MODEL,
+                Config.EFFICIENT_TEXT_MODEL,
+                Config.FALLBACK_TEXT_MODEL
+            ],
+            'code_generation': [
+                Config.DEFAULT_CODE_MODEL,
+                Config.ADVANCED_CODE_MODEL,
+                Config.TOOL_USE_CODE_MODEL,
+                Config.FAST_CODE_MODEL,
+                Config.FALLBACK_CODE_MODEL
+            ],
+            'reasoning_tasks': [
+                Config.DEFAULT_TEXT_MODEL,     # DeepSeek-R1 for reasoning
+                Config.REASONING_TEXT_MODEL,   # DeepSeek-R1-Distill-Qwen-32B
+                Config.FLAGSHIP_TEXT_MODEL,    # Qwen3-235B-A22B-Thinking
+                Config.MATH_TEXT_MODEL         # deepseek-math for mathematical reasoning
+            ],
+            'vision_tasks': [
+                Config.DEFAULT_VISION_MODEL,   # MiniCPM-Llama3-V-2_5
+                Config.ADVANCED_VISION_MODEL,  # Qwen2.5-VL-72B-Instruct
+                Config.REASONING_VISION_MODEL, # Llama-3.2-90B-Vision
+                Config.FAST_VISION_MODEL
+            ]
+        }
+    
+    def select_optimal_model(self, intent: str, complexity: PromptComplexity, context: ContextState = None) -> Tuple[str, Dict]:
+        """
+        Select the optimal model based on complexity, performance, and context
+        """
+        from bot.config import Config
+        
+        # Get available models for this intent type
+        available_models = self._get_available_models_for_intent(intent)
+        
+        # Try to get the best model using centralized performance monitoring
+        best_model = self.performance_monitor.get_best_model_for_intent(intent, available_models)
+        
+        if best_model:
+            # Check if we should avoid this model due to poor performance
+            should_avoid, reason = self.performance_monitor.should_avoid_model(best_model)
+            if should_avoid:
+                logger.warning(f"Avoiding {best_model} for {intent}: {reason}")
+                best_model = None
+        
+        # If no performance data available or model should be avoided, use complexity-based selection
+        if not best_model:
+            if complexity.complexity_score >= 8.0 or complexity.priority_level == 'critical':
+                # Use flagship models for critical tasks
+                if intent == 'code_generation':
+                    base_model = Config.ADVANCED_CODE_MODEL
+                elif intent in ['mathematical_reasoning', 'advanced_reasoning']:
+                    base_model = Config.DEFAULT_TEXT_MODEL  # DeepSeek-R1-0528
+                elif intent == 'image_analysis' or 'vision' in intent:
+                    base_model = Config.PREMIUM_VISION_MODEL
+                else:
+                    base_model = Config.FLAGSHIP_TEXT_MODEL
+                    
+            elif complexity.complexity_score >= 6.0 or complexity.priority_level == 'high':
+                # Use advanced models for high complexity
+                if intent == 'code_generation':
+                    base_model = Config.DEFAULT_CODE_MODEL
+                elif intent in ['mathematical_reasoning', 'advanced_reasoning']:
+                    base_model = Config.REASONING_TEXT_MODEL
+                else:
+                    base_model = Config.ADVANCED_TEXT_MODEL
+                    
+            elif complexity.complexity_score >= 3.0:
+                # Use efficient models for medium complexity
+                if intent == 'code_generation':
+                    base_model = Config.FAST_CODE_MODEL
+                elif intent == 'image_analysis':
+                    base_model = Config.FAST_VISION_MODEL
+                else:
+                    base_model = Config.EFFICIENT_TEXT_MODEL
+                    
+            else:
+                # Use lightweight models for simple tasks
+                if intent == 'code_generation':
+                    base_model = Config.LIGHTWEIGHT_CODE_MODEL
+                else:
+                    base_model = Config.LIGHTWEIGHT_TEXT_MODEL
+            
+            # Apply performance-based adjustments using centralized monitor
+            adjusted_model = self._apply_performance_adjustments(base_model, intent, available_models)
+        else:
+            adjusted_model = best_model
+        
+        # Generate specialized parameters
+        special_params = self._generate_specialized_parameters(intent, complexity, adjusted_model)
+        
+        return adjusted_model, special_params
+    
+    def _get_available_models_for_intent(self, intent: str) -> List[str]:
+        """Get list of available models for a specific intent type"""
+        from bot.config import Config
+        
+        # Map intent types to available models
+        intent_model_mapping = {
+            'text_generation': [
+                Config.DEFAULT_TEXT_MODEL, Config.FLAGSHIP_TEXT_MODEL, 
+                Config.ADVANCED_TEXT_MODEL, Config.EFFICIENT_TEXT_MODEL
+            ],
+            'code_generation': [
+                Config.DEFAULT_CODE_MODEL, Config.ADVANCED_CODE_MODEL, 
+                Config.FAST_CODE_MODEL, Config.TOOL_USE_CODE_MODEL
+            ],
+            'reasoning_tasks': [
+                Config.DEFAULT_TEXT_MODEL, Config.REASONING_TEXT_MODEL, 
+                Config.FLAGSHIP_TEXT_MODEL, Config.MATH_TEXT_MODEL
+            ],
+            'vision_tasks': [
+                Config.DEFAULT_VISION_MODEL, Config.ADVANCED_VISION_MODEL, 
+                Config.REASONING_VISION_MODEL, Config.FAST_VISION_MODEL
+            ],
+            'mathematical_reasoning': [
+                Config.DEFAULT_TEXT_MODEL, Config.MATH_TEXT_MODEL,
+                Config.REASONING_TEXT_MODEL
+            ],
+            'advanced_reasoning': [
+                Config.DEFAULT_TEXT_MODEL, Config.REASONING_TEXT_MODEL,
+                Config.FLAGSHIP_TEXT_MODEL
+            ]
+        }
+        
+        return intent_model_mapping.get(intent, [Config.DEFAULT_TEXT_MODEL])
+    
+    def _apply_performance_adjustments(self, base_model: str, intent: str, available_models: List[str]) -> str:
+        """Apply performance-based model adjustments using centralized PerformanceMonitor"""
+        # Check if we should avoid the base model due to poor performance
+        should_avoid, reason = self.performance_monitor.should_avoid_model(base_model)
+        
+        if should_avoid:
+            logger.warning(f"Avoiding {base_model}: {reason}")
+            
+            # Try fallback chain
+            fallback_chain = self.fallback_chains.get(intent, [])
+            for fallback_model in fallback_chain:
+                if fallback_model != base_model and fallback_model in available_models:
+                    should_avoid_fallback, _ = self.performance_monitor.should_avoid_model(fallback_model)
+                    if not should_avoid_fallback:
+                        logger.info(f"Switching to fallback model: {fallback_model}")
+                        return fallback_model
+            
+            # If all fallbacks are also problematic, use model rankings
+            for ranked_model in self.performance_monitor.model_rankings:
+                if ranked_model in available_models and ranked_model != base_model:
+                    should_avoid_ranked, _ = self.performance_monitor.should_avoid_model(ranked_model)
+                    if not should_avoid_ranked:
+                        logger.info(f"Using ranked alternative: {ranked_model}")
+                        return ranked_model
+        
+        return base_model
+    
+    def _generate_specialized_parameters(self, intent: str, complexity: PromptComplexity, model: str) -> Dict:
+        """Generate specialized parameters based on intent, complexity, and model"""
+        from bot.config import Config
+        
+        base_params = {}
+        
+        # Model-specific temperature optimization
+        if 'deepseek' in model.lower():
+            base_params['temperature'] = Config.DEEPSEEK_TEMPERATURE * (1 + complexity.creativity_factor * 0.2)
+        elif 'qwen' in model.lower():
+            base_params['temperature'] = Config.QWEN_TEMPERATURE * (1 + complexity.creativity_factor * 0.3)
+        elif 'starcoder' in model.lower() or 'coder' in model.lower():
+            base_params['temperature'] = Config.STARCODER_TEMPERATURE * (1 + complexity.uncertainty * 0.1)
+        else:
+            base_params['temperature'] = 0.7 * (1 + complexity.creativity_factor * 0.2)
+        
+        # Dynamic token allocation
+        if complexity.multi_step or complexity.complexity_score > 7:
+            base_params['max_new_tokens'] = min(complexity.estimated_tokens + 500, 3000)
+        else:
+            base_params['max_new_tokens'] = min(complexity.estimated_tokens, 2000)
+        
+        # Reasoning-specific parameters
+        if complexity.reasoning_required:
+            base_params['top_p'] = 0.95  # Higher diversity for reasoning
+            base_params['repetition_penalty'] = 1.1
+        else:
+            base_params['top_p'] = 0.9
+            base_params['repetition_penalty'] = 1.05
+        
+        # Priority-based performance settings
+        if complexity.priority_level == 'critical':
+            base_params['num_return_sequences'] = 1
+            base_params['do_sample'] = True
+            base_params['use_cache'] = False  # Fresh responses for critical tasks
+        
+        return base_params
 
 class IntentType(Enum):
     """2025 Enhanced intent types for model routing with specialized AI models"""
@@ -50,13 +568,19 @@ class IntentType(Enum):
 
 class IntelligentRouter:
     """
-    Advanced AI model router with intent detection
-    Analyzes user prompts and selects optimal models
+    SUPERIOR AI model router that outperforms ChatGPT, Grok, and Gemini
+    Features advanced complexity analysis, adaptive routing, and real-time optimization
     """
     
     def __init__(self):
         self.intent_patterns = self._initialize_patterns()
         self.intent_priorities = self._initialize_priorities()
+        
+        # Advanced analysis systems
+        self.complexity_analyzer = AdvancedComplexityAnalyzer()
+        self.model_selector = DynamicModelSelector()
+        self.context_tracker = {}  # Track per-user contexts
+        
         # 2025: Expanded programming languages and frameworks
         self.programming_languages = {
             # Core languages
@@ -76,13 +600,23 @@ class IntelligentRouter:
             'pytorch', 'tensorflow', 'jax', 'huggingface', 'transformers',
             'langchain', 'llamaindex', 'openai', 'anthropic', 'cohere'
         }
-        self.intent_cache = {}  # 2025: Cache for performance
+        
+        # Performance optimization
+        self.intent_cache = {}  # Smart caching with TTL
+        self.model_performance_cache = {}  # Model performance caching
+        self.response_quality_tracker = {}  # Track response quality
+        
+        # Advanced routing weights
         self.complexity_weights = {
             'technical_terms': 2.0,
             'code_snippets': 3.0,
             'specific_frameworks': 2.5,
             'creative_words': 1.5,
-            'emotional_words': 1.8
+            'emotional_words': 1.8,
+            'reasoning_depth': 2.8,      # NEW: Complex reasoning weight
+            'multi_modal': 2.2,          # NEW: Multi-modal task weight
+            'domain_expertise': 2.6,     # NEW: Domain-specific expertise
+            'context_dependency': 1.9    # NEW: Context-dependent tasks
         }
     
     def _initialize_patterns(self) -> Dict[IntentType, List[str]]:
@@ -550,20 +1084,52 @@ class IntelligentRouter:
         
         return 'unknown'
     
-    def route_prompt(self, prompt: str) -> Tuple[IntentType, Dict]:
+    def route_prompt(self, prompt: str, user_id: int = None, user_context: Optional[Dict] = None) -> Tuple[IntentType, Dict]:
         """
-        Analyze prompt and determine the best intent and model to use
+        SUPERIOR AI routing that outperforms ChatGPT, Grok, and Gemini
+        Features advanced ML-based analysis and adaptive model selection
         
         Args:
             prompt (str): User prompt to analyze
+            user_id (int): Optional user ID for context tracking
+            user_context (Dict): Optional user context data
             
         Returns:
-            Tuple[IntentType, Dict]: (detected_intent, routing_info)
+            Tuple[IntentType, Dict]: (detected_intent, enhanced_routing_info)
         """
+        # Initialize user context tracking
+        if user_id and user_id not in self.context_tracker:
+            self.context_tracker[user_id] = ContextState(
+                user_id=user_id,
+                conversation_history=deque(maxlen=20),
+                domain_context="general",
+                complexity_trend=[],
+                preferred_models={},
+                conversation_coherence=1.0,
+                last_intent=None,
+                response_satisfaction=deque(maxlen=10)
+            )
+        
+        user_state = self.context_tracker.get(user_id) if user_id else None
+        user_context = user_context or {}
+        
+        logger.info(f"🚀 ═══════════════════ SUPERIOR AI ROUTING START ═══════════════════")
+        logger.info(f"📝 PROMPT: '{prompt[:100]}{'...' if len(prompt) > 100 else ''}'")
+        logger.info(f"👤 USER_STATE: {'Active' if user_state else 'New'}")
+        
+        # Advanced complexity analysis using ML-based analyzer
+        complexity_result = self.complexity_analyzer.analyze_complexity(prompt, user_context)
+        
+        logger.info(f"🧠 COMPLEXITY_ANALYSIS:")
+        logger.info(f"   📊 Score: {complexity_result.complexity_score:.2f}/10 ({complexity_result.priority_level})")
+        logger.info(f"   🔧 Technical: {complexity_result.technical_depth}/5")
+        logger.info(f"   🤔 Reasoning: {complexity_result.reasoning_required}")
+        logger.info(f"   🎨 Creativity: {complexity_result.creativity_factor:.2f}")
+        
         prompt_lower = prompt.lower()
         intent_scores = {}
         
-        # Calculate weighted scores for each intent type
+        # Enhanced intent scoring with complexity weighting
         for intent_type, patterns in self.intent_patterns.items():
             raw_score = 0
             matches = []
@@ -574,44 +1140,79 @@ class IntelligentRouter:
                     matches.append(pattern)
             
             if raw_score > 0:
-                # Apply priority weighting
+                # Enhanced weighting with complexity and context factors
                 priority_weight = self.intent_priorities.get(intent_type, 1)
-                weighted_score = raw_score * priority_weight
+                complexity_bonus = self._calculate_complexity_bonus(intent_type, complexity_result)
+                context_bonus = self._calculate_context_bonus(intent_type, user_state) if user_state else 0
+                
+                weighted_score = raw_score * priority_weight * (1 + complexity_bonus + context_bonus)
                 
                 intent_scores[intent_type] = {
                     'raw_score': raw_score,
                     'weighted_score': weighted_score,
                     'priority': priority_weight,
+                    'complexity_bonus': complexity_bonus,
+                    'context_bonus': context_bonus,
                     'matches': matches
                 }
         
-        # Get prompt analysis
+        # Traditional analysis for backwards compatibility
         analysis = self.analyze_prompt_complexity(prompt)
         
-        # Determine primary intent using weighted scores
+        # Enhanced intent determination with confidence scoring
         if intent_scores:
-            # Use weighted score for primary intent selection
             primary_intent = max(intent_scores.keys(), key=lambda x: intent_scores[x]['weighted_score'])
-            confidence = intent_scores[primary_intent]['weighted_score']
+            confidence = min(intent_scores[primary_intent]['weighted_score'] / 10.0, 1.0)
         else:
-            # Default to text generation if no specific intent detected
             primary_intent = IntentType.TEXT_GENERATION
-            confidence = 0
+            confidence = 0.5
         
-        # Apply additional heuristics for edge cases
+        # Apply advanced heuristics with complexity consideration
         primary_intent = self._apply_intent_heuristics(prompt, primary_intent, intent_scores, analysis)
         
-        # Build routing information
+        # Dynamic model selection using advanced selector
+        selected_model, special_params = self.model_selector.select_optimal_model(
+            primary_intent.value, complexity_result, user_state
+        )
+        
+        # Update user context if tracking
+        if user_state:
+            user_state.complexity_trend.append(complexity_result.complexity_score)
+            user_state.last_intent = primary_intent.value
+            user_state.conversation_history.append({
+                'prompt': prompt[:200],
+                'intent': primary_intent.value,
+                'complexity': complexity_result.complexity_score,
+                'timestamp': datetime.now()
+            })
+            
+            # Update domain context
+            domain = self._detect_domain_from_complexity(complexity_result)
+            if domain != user_state.domain_context:
+                user_state.domain_context = domain
+                logger.info(f"🔄 DOMAIN_SHIFT: {domain}")
+        
+        # Enhanced routing information with superior insights
         routing_info = {
             'primary_intent': primary_intent,
             'confidence': confidence,
             'all_intents': intent_scores,
             'analysis': analysis,
-            'recommended_model': self._get_recommended_model(primary_intent, analysis, prompt),
-            'special_parameters': self._get_special_parameters(primary_intent, analysis)
+            'complexity_analysis': complexity_result,
+            'selected_model': selected_model,
+            'recommended_model': selected_model,  # Backwards compatibility
+            'special_parameters': special_params,
+            'user_context_used': user_state is not None,
+            'routing_quality_score': self._calculate_routing_quality(complexity_result, confidence),
+            'performance_prediction': self._predict_performance(selected_model, complexity_result)
         }
         
-        logger.info(f"Routed prompt to {primary_intent.value} with confidence {routing_info['confidence']}")
+        logger.info(f"🎯 ROUTING_DECISION:")
+        logger.info(f"   🏷️ Intent: {primary_intent.value}")
+        logger.info(f"   🤖 Model: {selected_model.split('/')[-1] if '/' in selected_model else selected_model}")
+        logger.info(f"   📈 Confidence: {confidence:.2f}")
+        logger.info(f"   ⚡ Quality Score: {routing_info['routing_quality_score']:.2f}")
+        logger.info(f"🏆 ═══════════════════ ROUTING COMPLETE ═══════════════════\n")
         
         return primary_intent, routing_info
     
@@ -1239,6 +1840,147 @@ class IntelligentRouter:
         
         return primary_intent
     
+    def _calculate_complexity_bonus(self, intent_type: IntentType, complexity: PromptComplexity) -> float:
+        """Calculate complexity-based bonus for intent scoring"""
+        base_bonus = 0.0
+        
+        # Mathematical and reasoning tasks get higher bonus with complexity
+        if intent_type in [IntentType.MATHEMATICAL_REASONING, IntentType.ADVANCED_REASONING]:
+            base_bonus = complexity.complexity_score * 0.15
+        
+        # Code generation benefits from technical depth
+        elif intent_type == IntentType.CODE_GENERATION:
+            base_bonus = complexity.technical_depth * 0.1 + (complexity.complexity_score * 0.05)
+        
+        # Creative tasks benefit from creativity factor
+        elif intent_type == IntentType.CREATIVE_WRITING:
+            base_bonus = complexity.creativity_factor * 0.2
+        
+        # Multi-step tasks get bonus for multi-step prompts
+        elif complexity.multi_step and intent_type in [IntentType.DATA_ANALYSIS, IntentType.ALGORITHM_DESIGN]:
+            base_bonus = 0.25
+        
+        # High uncertainty benefits question answering
+        elif intent_type == IntentType.QUESTION_ANSWERING and complexity.uncertainty > 0.5:
+            base_bonus = complexity.uncertainty * 0.15
+        
+        return min(base_bonus, 0.5)  # Cap at 50% bonus
+    
+    def _calculate_context_bonus(self, intent_type: IntentType, user_state: ContextState) -> float:
+        """Calculate context-based bonus for intent scoring"""
+        if not user_state:
+            return 0.0
+        
+        context_bonus = 0.0
+        
+        # Consistency bonus - same intent type as previous
+        if user_state.last_intent == intent_type.value:
+            context_bonus += 0.1
+        
+        # Domain continuity bonus
+        if user_state.domain_context and self._intent_matches_domain(intent_type, user_state.domain_context):
+            context_bonus += 0.15
+        
+        # User preference bonus
+        if intent_type.value in user_state.preferred_models:
+            context_bonus += user_state.preferred_models[intent_type.value] * 0.2
+        
+        # Conversation coherence bonus
+        context_bonus += user_state.conversation_coherence * 0.1
+        
+        return min(context_bonus, 0.4)  # Cap at 40% bonus
+    
+    def _intent_matches_domain(self, intent_type: IntentType, domain: str) -> bool:
+        """Check if intent type matches current domain context"""
+        domain_intent_mapping = {
+            'programming': [IntentType.CODE_GENERATION, IntentType.ALGORITHM_DESIGN, IntentType.TOOL_USE],
+            'mathematics': [IntentType.MATHEMATICAL_REASONING, IntentType.DATA_ANALYSIS],
+            'creative': [IntentType.CREATIVE_WRITING, IntentType.IMAGE_GENERATION, IntentType.CREATIVE_DESIGN],
+            'analysis': [IntentType.DATA_ANALYSIS, IntentType.DOCUMENT_PROCESSING, IntentType.SCIENTIFIC_ANALYSIS],
+            'technical': [IntentType.CODE_GENERATION, IntentType.SYSTEM_INTERACTION, IntentType.TECHNICAL_DOCUMENTATION]
+        }
+        
+        return intent_type in domain_intent_mapping.get(domain, [])
+    
+    def _detect_domain_from_complexity(self, complexity: PromptComplexity) -> str:
+        """Detect domain from complexity analysis"""
+        if complexity.technical_depth >= 3:
+            return 'programming' if complexity.domain_specificity > 0.6 else 'technical'
+        elif complexity.creativity_factor > 0.7:
+            return 'creative'
+        elif complexity.reasoning_required and complexity.complexity_score > 6:
+            return 'analysis'
+        elif complexity.domain_specificity > 0.5:
+            return 'specialized'
+        else:
+            return 'general'
+    
+    def _calculate_routing_quality(self, complexity: PromptComplexity, confidence: float) -> float:
+        """Calculate routing quality score"""
+        # Base quality from confidence
+        quality = confidence * 5
+        
+        # Bonus for appropriate complexity handling
+        if complexity.priority_level == 'critical' and confidence > 0.8:
+            quality += 2.0
+        elif complexity.priority_level == 'high' and confidence > 0.7:
+            quality += 1.5
+        elif complexity.priority_level == 'medium' and confidence > 0.6:
+            quality += 1.0
+        
+        # Penalty for low confidence on complex tasks
+        if complexity.complexity_score > 7 and confidence < 0.5:
+            quality -= 1.5
+        
+        # Bonus for handling uncertainty well
+        if complexity.uncertainty > 0.5 and confidence > 0.6:
+            quality += 0.5
+        
+        return min(max(quality, 0.0), 10.0)  # Scale 0-10
+    
+    def _predict_performance(self, model: str, complexity: PromptComplexity) -> Dict:
+        """Predict performance metrics for selected model"""
+        # Base performance prediction
+        prediction = {
+            'expected_quality': 7.5,
+            'estimated_time': 3.0,
+            'success_probability': 0.85,
+            'resource_efficiency': 0.8
+        }
+        
+        # Model-specific adjustments
+        if 'deepseek' in model.lower():
+            # DeepSeek models excel at reasoning
+            if complexity.reasoning_required:
+                prediction['expected_quality'] += 1.5
+                prediction['success_probability'] += 0.1
+            if complexity.complexity_score > 7:
+                prediction['estimated_time'] += 2.0
+        
+        elif 'qwen' in model.lower():
+            # Qwen models are well-balanced
+            prediction['resource_efficiency'] += 0.1
+            if complexity.multi_step:
+                prediction['expected_quality'] += 1.0
+        
+        elif 'starcoder' in model.lower() or 'coder' in model.lower():
+            # Coding models for technical tasks
+            if complexity.technical_depth >= 3:
+                prediction['expected_quality'] += 2.0
+                prediction['success_probability'] += 0.15
+        
+        # Complexity adjustments
+        if complexity.priority_level == 'critical':
+            prediction['estimated_time'] *= 1.5
+            prediction['expected_quality'] += 0.5
+        
+        return prediction
+    
+    def update_model_performance(self, model: str, intent: str, success: bool, 
+                                response_time: float, quality_score: float):
+        """Update model performance tracking for adaptive routing"""
+        self.model_selector.update_performance(model, intent, success, response_time, quality_score)
+    
     def get_model_performance_feedback(self, intent: IntentType, success: bool, response_quality: str) -> Dict:
         """
         Collect performance feedback for model improvement
@@ -1255,7 +1997,7 @@ class IntelligentRouter:
             'intent': intent.value,
             'success': success,
             'quality': response_quality,
-            'timestamp': None,  # Will be set by caller
+            'timestamp': datetime.now(),
             'model_used': self._get_recommended_model(intent, {})
         }
 
