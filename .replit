@@ -4,7 +4,7 @@ expertMode = true
 
 [nix]
 channel = "stable-25_05"
-packages = ["cargo", "freetype", "gumbo", "harfbuzz", "jbig2dec", "lcms2", "libiconv", "libimagequant", "libjpeg", "libjpeg_turbo", "libtiff", "libwebp", "libxcrypt", "mupdf", "openjpeg", "openssl", "pkg-config", "rustc", "swig", "tcl", "tk", "xcbuild", "zlib"]
+packages = ["cargo", "file", "freetype", "gumbo", "harfbuzz", "jbig2dec", "lcms2", "libGL", "libGLU", "libiconv", "libimagequant", "libjpeg", "libjpeg_turbo", "libtiff", "libwebp", "libxcrypt", "mupdf", "openjpeg", "openssl", "pkg-config", "poppler_utils", "rustc", "swig", "tcl", "tesseract", "tk", "xcbuild", "zlib"]
 
 [workflows]
 runButton = "Project"
@@ -18,8 +18,23 @@ author = "agent"
 task = "workflow.run"
 args = "AI Assistant Pro Bot"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Telegram Bot"
+
 [[workflows.workflow]]
 name = "AI Assistant Pro Bot"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python main.py"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow]]
+name = "Telegram Bot"
 author = "agent"
 
 [[workflows.workflow.tasks]]
