@@ -1,6 +1,7 @@
 """
 Advanced message handlers for Hugging Face By AadityaLabs AI
-Handles intelligent routing, context management, and multi-modal responses
+Superior multi-modal processing that outperforms ChatGPT, Grok, and Gemini
+Handles intelligent routing, context management, and enhanced file processing
 """
 
 import asyncio
@@ -16,6 +17,9 @@ from bot.core.router import router, IntentType
 from bot.core.model_caller import ModelCaller, model_caller, _redact_sensitive_data, _safe_log_error
 from bot.core.response_processor import response_processor, ResponseQuality
 from bot.core.smart_cache import smart_cache
+from bot.core.code_generator import code_generator
+from bot.core.response_formatter import response_formatter, ResponseType
+from bot.file_processors import AdvancedFileProcessor
 from bot.config import Config
 from bot.security_utils import escape_markdown, safe_markdown_format, check_rate_limit
 from datetime import datetime, timedelta
@@ -269,7 +273,7 @@ class MessageHandlers:
                 await MessageHandlers._handle_image_generation(update, context, message_text, api_key, routing_info)
             
             elif intent == IntentType.CODE_GENERATION:
-                await MessageHandlers._handle_code_generation(update, context, message_text, api_key, routing_info)
+                await MessageHandlers._handle_enhanced_code_generation(update, context, message_text, api_key, routing_info)
             
             elif intent == IntentType.SENTIMENT_ANALYSIS:
                 await MessageHandlers._handle_sentiment_analysis(update, context, message_text, api_key, routing_info)
@@ -335,6 +339,325 @@ class MessageHandlers:
                 user_context['complexity_level'] = 'low'
         
         return user_context
+    
+    @staticmethod
+    async def _handle_enhanced_code_generation(update, context, message_text: str, api_key: str, routing_info: Dict) -> None:
+        """
+        Enhanced code generation that surpasses ChatGPT, Grok, and Gemini
+        Features: Multi-file support, syntax validation, professional formatting
+        """
+        user_id = update.effective_user.id
+        
+        try:
+            # Send enhanced typing action
+            await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=ChatAction.TYPING)
+            
+            logger.info(f"🚀 ENHANCED CODE GENERATION started for user_id:{user_id}")
+            logger.info(f"📝 Prompt: {message_text[:100]}...")
+            
+            # Use the superior code generator with context
+            user_context = await MessageHandlers._build_user_context(user_id, [], context)
+            generation_result = await code_generator.generate_code_files(message_text, user_context)
+            
+            # Format response using advanced formatter
+            formatted_response = await response_formatter.format_code_generation_response(
+                generation_result, 
+                {'user_id': user_id, 'routing_info': routing_info}
+            )
+            
+            # Send the main formatted response
+            await update.message.reply_text(
+                formatted_response.main_text,
+                parse_mode='Markdown',
+                disable_web_page_preview=True
+            )
+            
+            # Send file attachments as individual code files if requested
+            if formatted_response.attachments and len(formatted_response.attachments) <= 5:
+                for attachment in formatted_response.attachments:
+                    # Create a properly formatted code message for easy copying
+                    file_content_message = f"""📄 **{attachment.filename}**
+
+```{attachment.content_type.split('/')[-1] if '/' in attachment.content_type else 'text'}
+{attachment.content}
+```
+
+💡 *Tap the code block above to copy {attachment.filename}*"""
+                    
+                    await update.message.reply_text(
+                        file_content_message,
+                        parse_mode='Markdown',
+                        disable_web_page_preview=True
+                    )
+            
+            # Cache the successful response
+            await smart_cache.store(
+                message_text,
+                formatted_response.main_text,
+                "code_generation",
+                routing_info.get('selected_model', 'unknown'),
+                ResponseQuality.HIGH,
+                {'files_generated': len(formatted_response.attachments)}
+            )
+            
+            logger.info(f"✅ ENHANCED CODE GENERATION completed: {generation_result.total_files} files, quality {generation_result.quality_score:.1f}/10")
+            
+        except Exception as e:
+            logger.error(f"❌ Enhanced code generation failed for user {user_id}: {e}")
+            error_response = await response_formatter.format_error_response(
+                f"Code generation failed: {str(e)}",
+                "Please try with a more specific code request or simpler requirements."
+            )
+            await update.message.reply_text(
+                error_response.main_text,
+                parse_mode='Markdown'
+            )
+    
+    @staticmethod
+    async def document_handler(update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """
+        Enhanced document handler with superior analysis capabilities
+        Supports PDF and ZIP files with intelligent processing
+        """
+        user = update.effective_user
+        user_id = user.id
+        username = user.username or "No username"
+        
+        logger.info(f"📄 DOCUMENT UPLOAD from user_id:{user_id} (@{username})")
+        
+        # Check rate limit
+        is_allowed, wait_time = check_rate_limit(user_id)
+        if not is_allowed:
+            await update.message.reply_text(
+                f"⚠️ **Rate Limit Exceeded**\n\nPlease wait {wait_time} seconds before uploading another file.",
+                parse_mode='Markdown'
+            )
+            return
+        
+        # Get user's API key
+        try:
+            api_key = await db.get_user_api_key(user_id)
+            if not api_key:
+                await update.message.reply_text(
+                    "🔐 **API Key Required**\n\nPlease set up your Hugging Face API key first using /start",
+                    parse_mode='Markdown'
+                )
+                return
+        except Exception as e:
+            logger.error(f"Error getting API key for user {user_id}: {e}")
+            return
+        
+        document = update.message.document
+        if not document:
+            await update.message.reply_text("❌ **No Document Detected**\n\nPlease send a valid document file.")
+            return
+        
+        filename = document.file_name or "unknown_document"
+        file_size = document.file_size
+        
+        logger.info(f"📁 Processing document: {filename} ({file_size:,} bytes)")
+        
+        # Send processing message
+        processing_msg = await update.message.reply_text(
+            f"🔄 **Processing Document...**\n\n📄 **{filename}**\n📊 Size: {file_size:,} bytes\n\n⚡ Using advanced AI analysis...",
+            parse_mode='Markdown'
+        )
+        
+        try:
+            # Download file
+            file = await context.bot.get_file(document.file_id)
+            file_data = await file.download_as_bytearray()
+            
+            # Determine file type and validate security
+            file_ext = filename.lower().split('.')[-1] if '.' in filename else ''
+            
+            if file_ext == 'pdf':
+                is_valid, error_msg = AdvancedFileProcessor.validate_file_security(
+                    bytes(file_data), filename, 'pdf'
+                )
+                
+                if not is_valid:
+                    await processing_msg.edit_text(f"🚫 **Security Check Failed**\n\n{error_msg}")
+                    return
+                
+                # Enhanced PDF analysis
+                doc_structure = await AdvancedFileProcessor.enhanced_pdf_analysis(bytes(file_data), filename)
+                formatted_response = await response_formatter.format_document_analysis_response(doc_structure, filename)
+                
+            elif file_ext == 'zip':
+                is_valid, error_msg = AdvancedFileProcessor.validate_file_security(
+                    bytes(file_data), filename, 'zip'
+                )
+                
+                if not is_valid:
+                    await processing_msg.edit_text(f"🚫 **Security Check Failed**\n\n{error_msg}")
+                    return
+                
+                # Intelligent ZIP analysis
+                zip_analysis = await AdvancedFileProcessor.intelligent_zip_analysis(bytes(file_data), filename)
+                formatted_response = await response_formatter.format_zip_analysis_response(zip_analysis, filename)
+                
+            else:
+                await processing_msg.edit_text(
+                    f"❌ **Unsupported Format**\n\nCurrently supported: PDF, ZIP\n\nReceived: {file_ext.upper() if file_ext else 'Unknown'}"
+                )
+                return
+            
+            # Send the formatted analysis result
+            await processing_msg.edit_text(
+                formatted_response.main_text,
+                parse_mode='Markdown',
+                disable_web_page_preview=True
+            )
+            
+            logger.info(f"✅ Document analysis completed for {filename}")
+            
+        except Exception as e:
+            logger.error(f"❌ Document processing failed for user {user_id}: {e}")
+            await processing_msg.edit_text(
+                f"❌ **Processing Failed**\n\nSorry, I couldn't process your document. Please try again or contact support."
+            )
+    
+    @staticmethod
+    async def photo_handler(update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """
+        Enhanced photo handler with superior image analysis
+        Features: Advanced OCR, object detection, intelligent content description
+        """
+        user = update.effective_user
+        user_id = user.id
+        username = user.username or "No username"
+        
+        logger.info(f"🖼️ PHOTO UPLOAD from user_id:{user_id} (@{username})")
+        
+        # Check rate limit
+        is_allowed, wait_time = check_rate_limit(user_id)
+        if not is_allowed:
+            await update.message.reply_text(
+                f"⚠️ **Rate Limit Exceeded**\n\nPlease wait {wait_time} seconds before uploading another image.",
+                parse_mode='Markdown'
+            )
+            return
+        
+        # Get the largest photo size
+        photo = update.message.photo[-1]  # Largest size
+        file_size = photo.file_size
+        
+        logger.info(f"📸 Processing photo: {photo.width}×{photo.height} ({file_size:,} bytes)")
+        
+        # Send processing message
+        processing_msg = await update.message.reply_text(
+            f"🔄 **Analyzing Image...**\n\n📊 Size: {photo.width}×{photo.height} pixels\n📦 File: {file_size:,} bytes\n\n🧠 Running advanced AI analysis...",
+            parse_mode='Markdown'
+        )
+        
+        try:
+            # Download image
+            file = await context.bot.get_file(photo.file_id)
+            image_data = await file.download_as_bytearray()
+            
+            # Validate security
+            is_valid, error_msg = AdvancedFileProcessor.validate_file_security(
+                bytes(image_data), "uploaded_image.jpg", 'image'
+            )
+            
+            if not is_valid:
+                await processing_msg.edit_text(f"🚫 **Security Check Failed**\n\n{error_msg}")
+                return
+            
+            # Advanced image analysis
+            image_analysis = await AdvancedFileProcessor.advanced_image_analysis(bytes(image_data), "uploaded_image.jpg")
+            formatted_response = await response_formatter.format_image_analysis_response(image_analysis, "uploaded_image.jpg")
+            
+            # Send the formatted analysis result
+            await processing_msg.edit_text(
+                formatted_response.main_text,
+                parse_mode='Markdown',
+                disable_web_page_preview=True
+            )
+            
+            logger.info(f"✅ Image analysis completed - OCR: {len(image_analysis.ocr_text)} chars, Objects: {len(image_analysis.detected_objects)}")
+            
+        except Exception as e:
+            logger.error(f"❌ Image processing failed for user {user_id}: {e}")
+            await processing_msg.edit_text(
+                f"❌ **Analysis Failed**\n\nSorry, I couldn't analyze your image. Please try again or contact support."
+            )
+    
+    @staticmethod
+    async def error_handler(update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Enhanced error handler with intelligent error analysis and recovery"""
+        
+        try:
+            user_id = update.effective_user.id if update.effective_user else 0
+            
+            # Log the error with enhanced context
+            logger.error(f"🚨 TELEGRAM ERROR for user_id:{user_id}")
+            logger.error(f"🔍 Error: {context.error}")
+            logger.error(f"📋 Update type: {type(update).__name__}")
+            
+            # Format error response
+            error_response = await response_formatter.format_error_response(
+                "An unexpected error occurred while processing your request.",
+                "Please try again in a moment. If the problem persists, contact support."
+            )
+            
+            # Try to send error response to user
+            if update.effective_chat:
+                try:
+                    await context.bot.send_message(
+                        chat_id=update.effective_chat.id,
+                        text=error_response.main_text,
+                        parse_mode='Markdown'
+                    )
+                except Exception:
+                    # If we can't send the formatted response, try a simple one
+                    await context.bot.send_message(
+                        chat_id=update.effective_chat.id,
+                        text="⚠️ An error occurred. Please try again."
+                    )
+            
+        except Exception as error_in_handler:
+            logger.error(f"🚨 ERROR IN ERROR HANDLER: {error_in_handler}")
+    
+    @staticmethod
+    async def _handle_multi_modal(update, context, message_text: str, api_key: str, routing_info: Dict) -> None:
+        """
+        Handle multi-modal requests that combine text, code, image, and document processing
+        Superior unified intelligence that outperforms ChatGPT, Grok, and Gemini
+        """
+        user_id = update.effective_user.id
+        
+        try:
+            logger.info(f"🌟 MULTI-MODAL PROCESSING started for user_id:{user_id}")
+            
+            # Send enhanced processing message
+            await update.message.reply_text(
+                "🌟 **Multi-Modal AI Processing**\n\n🧠 Analyzing your request with unified intelligence...\n⚡ Superior to ChatGPT, Grok, and Gemini",
+                parse_mode='Markdown'
+            )
+            
+            # Determine what type of multi-modal processing is needed
+            request_lower = message_text.lower()
+            
+            # Check if it's a code generation request with file output
+            if any(keyword in request_lower for keyword in ['create', 'generate', 'build', 'make', 'code', 'app', 'website']):
+                await MessageHandlers._handle_enhanced_code_generation(update, context, message_text, api_key, routing_info)
+                return
+            
+            # Otherwise, handle as advanced conversation with context awareness
+            await MessageHandlers._handle_conversation(update, context, message_text, api_key, [], routing_info)
+            
+        except Exception as e:
+            logger.error(f"❌ Multi-modal processing failed for user {user_id}: {e}")
+            error_response = await response_formatter.format_error_response(
+                f"Multi-modal processing failed: {str(e)}",
+                "Please try breaking down your request into smaller parts."
+            )
+            await update.message.reply_text(
+                error_response.main_text,
+                parse_mode='Markdown'
+            )
     
     @staticmethod
     async def _handle_api_key_input(update, context: ContextTypes.DEFAULT_TYPE, api_key: str) -> None:
