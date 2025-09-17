@@ -34,31 +34,38 @@ class Config:
     # Text Generation Models - Optimized for speed and reliability while maintaining quality
     DEFAULT_TEXT_MODEL = "Qwen/Qwen2.5-14B-Instruct"  # 14B params, excellent speed/quality balance as default
     ADVANCED_TEXT_MODEL = "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B"  # DeepSeek-R1 for complex reasoning tasks
+    REASONING_TEXT_MODEL = "Qwen/QwQ-32B-Preview"  # QwQ for advanced reasoning and problem solving
     FAST_TEXT_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # 7B params, fast and reliable
+    MATH_TEXT_MODEL = "deepseek-ai/deepseek-math-7b-instruct"  # Specialized for mathematical reasoning
     FALLBACK_TEXT_MODEL = "meta-llama/Llama-3.2-3B-Instruct"  # Lightweight but capable fallback
     LIGHTWEIGHT_TEXT_MODEL = "microsoft/Phi-3.5-mini-instruct"  # Ultra-fast 3.8B model
     
     # Code Generation Models - Optimized for fast, reliable coding assistance
-    DEFAULT_CODE_MODEL = "bigcode/starcoder2-7b"  # 7B params, excellent balance as default
-    ADVANCED_CODE_MODEL = "deepseek-ai/DeepSeek-Coder-V2-Instruct"  # Top coding model for complex tasks
-    FAST_CODE_MODEL = "bigcode/starcoder2-3b"  # 3B params, fast and capable
-    FALLBACK_CODE_MODEL = "Salesforce/codegen-350M-mono"  # Ultra-fast 350M fallback
+    DEFAULT_CODE_MODEL = "deepseek-ai/DeepSeek-Coder-V2-Instruct"  # Top coding model, now default for superiority
+    ADVANCED_CODE_MODEL = "Qwen/Qwen2.5-Coder-32B-Instruct"  # 32B coding specialist, beats GitHub Copilot
+    FAST_CODE_MODEL = "bigcode/starcoder2-7b"  # 7B params, moved from default for speed
+    SPECIALIZED_CODE_MODEL = "codellama/CodeLlama-34b-Instruct-hf"  # Meta's CodeLlama for complex algorithms
+    FALLBACK_CODE_MODEL = "bigcode/starcoder2-3b"  # Upgraded fallback, was too weak
     LIGHTWEIGHT_CODE_MODEL = "microsoft/CodeBERT-base"  # Lightweight code understanding
     
     # Vision/Multimodal Models - Optimized for fast visual understanding
     DEFAULT_VISION_MODEL = "Qwen/Qwen2.5-VL-7B-Instruct"  # 7B VL, efficient and capable as default
     ADVANCED_VISION_MODEL = "Qwen/Qwen2.5-VL-72B-Instruct"  # 72B VL for complex vision tasks
+    REASONING_VISION_MODEL = "meta-llama/Llama-3.2-90B-Vision-Instruct"  # Llama 3.2 Vision for advanced analysis
     FAST_VISION_MODEL = "Qwen/Qwen2.5-VL-3B-Instruct"  # 3B VL, fast inference
-    FALLBACK_VISION_MODEL = "microsoft/Phi-3.5-vision-instruct"  # Microsoft Phi-3.5 Vision
     DOCUMENT_VISION_MODEL = "microsoft/Florence-2-large"  # Florence-2 for OCR and documents
+    MEDICAL_VISION_MODEL = "microsoft/BiomedCLIP-PubMedBERT_256-vit_base_patch16_224"  # Medical image analysis
+    FALLBACK_VISION_MODEL = "microsoft/Phi-3.5-vision-instruct"  # Microsoft Phi-3.5 Vision
     LIGHTWEIGHT_VISION_MODEL = "microsoft/Florence-2-base"  # Ultra-fast vision tasks
     
     # Image Generation Models - Latest 2024-2025 FLUX.1 and SD3.5 series (FLUX is #1)
     DEFAULT_IMAGE_MODEL = "black-forest-labs/FLUX.1-dev"  # Best quality, research use, beats DALL-E 3
     COMMERCIAL_IMAGE_MODEL = "black-forest-labs/FLUX.1-schnell"  # Commercial license, superior text rendering
-    ADVANCED_IMAGE_MODEL = "stabilityai/stable-diffusion-3.5-large-turbo"  # SD3.5 Large Turbo, fast
-    FALLBACK_IMAGE_MODEL = "stabilityai/stable-diffusion-3.5-large"  # SD3.5 Large, reliable
-    ARTISTIC_IMAGE_MODEL = "playgroundai/playground-v2.5-1024px-aesthetic"  # Playground V2.5, artistic
+    ADVANCED_IMAGE_MODEL = "black-forest-labs/FLUX.1-redux"  # FLUX Redux for style transfer and variations
+    TURBO_IMAGE_MODEL = "stabilityai/stable-diffusion-3.5-large-turbo"  # SD3.5 Large Turbo, ultra-fast
+    ARTISTIC_IMAGE_MODEL = "stabilityai/stable-diffusion-3.5-medium"  # SD3.5 Medium for artistic styles
+    REALISTIC_IMAGE_MODEL = "stabilityai/stable-diffusion-xl-base-1.0"  # SDXL for photorealistic images
+    FALLBACK_IMAGE_MODEL = "runwayml/stable-diffusion-v1-5"  # Classic SD 1.5, ultra-reliable fallback
     
     # Sentiment Analysis & NLP Models - Latest 2024-2025 specialized models
     DEFAULT_SENTIMENT_MODEL = "cardiffnlp/twitter-roberta-base-sentiment-latest"  # Trained on 124M tweets, SOTA
@@ -91,19 +98,30 @@ class Config:
     
     # Advanced Model Parameters for 2024-2025 State-of-the-Art Models
     QWEN_MAX_TOKENS = 131072  # Qwen2.5 supports up to 131K context length
+    QWQ_MAX_TOKENS = 32768    # QwQ reasoning model context window
     DEEPSEEK_MAX_TOKENS = 32768  # DeepSeek-R1 context window
+    DEEPSEEK_CODER_MAX_TOKENS = 131072  # DeepSeek-Coder-V2 extended context
     STARCODER_MAX_TOKENS = 16384  # StarCoder2 context window
+    CODELLAMA_MAX_TOKENS = 100000  # CodeLlama extended context
+    LLAMA_VISION_MAX_TOKENS = 128000  # Llama 3.2 Vision context
     FLUX_MAX_RESOLUTION = 1024  # FLUX.1 native resolution
     QWEN_VL_MAX_TOKENS = 32768  # Qwen2.5-VL context window
     PALIGEMMA_MAX_RESOLUTION = 896  # PaliGemma2 max resolution (224, 448, 896)
     
     # Model-specific optimal parameters
     QWEN_TEMPERATURE = 0.7  # Optimal for Qwen2.5 creativity vs accuracy
+    QWQ_TEMPERATURE = 0.3   # Lower temp for QwQ reasoning precision
     DEEPSEEK_TEMPERATURE = 0.8  # DeepSeek-R1 optimal for reasoning
+    DEEPSEEK_CODER_TEMPERATURE = 0.2  # Lower temp for precise code generation
+    MATH_MODEL_TEMPERATURE = 0.1  # Ultra-low temp for mathematical accuracy
     STARCODER_TEMPERATURE = 0.2  # Lower temp for precise code generation
+    CODELLAMA_TEMPERATURE = 0.15  # Very low temp for algorithm precision
     VISION_TEMPERATURE = 0.5  # Vision models optimal temperature
+    LLAMA_VISION_TEMPERATURE = 0.4  # Slightly lower for Llama Vision precision
     FLUX_INFERENCE_STEPS = 4  # FLUX.1-schnell optimized for 1-4 steps
+    FLUX_DEV_INFERENCE_STEPS = 20  # FLUX.1-dev quality steps
     SD35_INFERENCE_STEPS = 28  # SD3.5 optimal inference steps
+    SDXL_INFERENCE_STEPS = 25  # SDXL optimal steps for quality
     
     # Vision model specific parameters
     QWEN_VL_IMAGE_SIZE = 448  # Qwen2.5-VL optimal image size
@@ -112,8 +130,19 @@ class Config:
     
     # Performance optimization for new models
     DEEPSEEK_USE_FLASH_ATTENTION = True  # DeepSeek-R1 flash attention support
-    QWEN_VL_DYNAMIC_RESOLUTION = True  # Qwen2.5-VL dynamic resolution
-    FLUX_SCHNELL_TURBO_MODE = True  # FLUX.1-schnell turbo optimization
+    QWQ_USE_FLASH_ATTENTION = True      # QwQ flash attention for speed
+    QWEN_VL_DYNAMIC_RESOLUTION = True   # Qwen2.5-VL dynamic resolution
+    LLAMA_VISION_OPTIMIZE_MEMORY = True # Llama Vision memory optimization
+    FLUX_SCHNELL_TURBO_MODE = True      # FLUX.1-schnell turbo optimization
+    CODELLAMA_OPTIMIZE_INFERENCE = True # CodeLlama inference optimization
+    DEEPSEEK_CODER_FAST_DECODE = True   # DeepSeek-Coder fast decoding
+    
+    # Advanced routing and performance features
+    ENABLE_MODEL_WARMUP = True          # Pre-warm frequently used models
+    USE_INTELLIGENT_BATCHING = True     # Batch similar requests
+    ENABLE_RESPONSE_STREAMING = True    # Stream responses for better UX
+    ADAPTIVE_CONTEXT_LENGTH = True      # Dynamically adjust context length
+    ENABLE_MODEL_LOAD_BALANCING = True  # Distribute load across model variants
     
     # Advanced Features for Superior Performance
     USE_CONTEXT_OPTIMIZATION = True  # Leverage long context capabilities

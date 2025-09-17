@@ -13,7 +13,7 @@ from collections import defaultdict
 logger = logging.getLogger(__name__)
 
 class IntentType(Enum):
-    """2025 Enhanced intent types for model routing"""
+    """2025 Enhanced intent types for model routing with specialized AI models"""
     TEXT_GENERATION = "text_generation"
     CODE_GENERATION = "code_generation"
     IMAGE_GENERATION = "image_generation"
@@ -29,6 +29,18 @@ class IntentType(Enum):
     ZIP_ANALYSIS = "zip_analysis"            # 2025: New P1 feature - ZIP file analysis  
     IMAGE_ANALYSIS = "image_analysis"        # 2025: New P1 feature - Image content analysis
     FILE_GENERATION = "file_generation"      # 2025: New P1 feature - File generation and delivery
+    
+    # 2025: NEW SPECIALIZED INTENTS for superior AI routing
+    MATHEMATICAL_REASONING = "mathematical_reasoning"   # Math problems, calculations, proofs
+    ADVANCED_REASONING = "advanced_reasoning"           # Complex logical reasoning, QwQ model
+    ALGORITHM_DESIGN = "algorithm_design"               # Complex coding algorithms, CodeLlama
+    SCIENTIFIC_ANALYSIS = "scientific_analysis"         # Scientific research, data analysis
+    MEDICAL_ANALYSIS = "medical_analysis"               # Medical image/text analysis
+    CREATIVE_DESIGN = "creative_design"                 # UI/UX, graphic design, artistic creation
+    EDUCATIONAL_CONTENT = "educational_content"         # Teaching, explanations, tutorials
+    BUSINESS_ANALYSIS = "business_analysis"             # Business intelligence, market analysis
+    TECHNICAL_DOCUMENTATION = "technical_documentation" # API docs, technical writing
+    MULTILINGUAL_PROCESSING = "multilingual_processing" # Advanced translation, cultural context
 
 class IntelligentRouter:
     """
@@ -226,27 +238,159 @@ class IntelligentRouter:
                 r'(?:markdown.?file|md.?file|\.md\s+file|documentation.?md)',
                 r'(?:csv.?file|\.csv\s+file|comma.?separated|spreadsheet.?data)',
                 r'(?:xml.?file|\.xml\s+file|xml.?document|xml.?config)',
+            ],
+            
+            # 2025: NEW SPECIALIZED INTENT PATTERNS for SUPERIOR AI routing
+            IntentType.MATHEMATICAL_REASONING: [
+                r'\b(?:solve|calculate|compute|find)\s+(?:the|this)?\s*(?:equation|integral|derivative|limit|sum|product)',
+                r'(?:math|mathematics|mathematical)\s+(?:problem|equation|proof|theorem|calculation)',
+                r'\b(?:algebra|calculus|geometry|trigonometry|statistics|probability|linear.?algebra)',
+                r'(?:differential|integral|partial.?derivative|matrix|vector|eigenvalue|polynomial)',
+                r'\b(?:prove|theorem|lemma|corollary|axiom|postulate)',
+                r'(?:\d+\s*[\+\-\*/\^]\s*\d+|\b(?:sin|cos|tan|log|ln|sqrt)\s*\()',
+                r'(?:optimization|minimize|maximize|constraint|linear.?programming)',
+                r'(?:graph.?theory|combinatorics|discrete.?math|number.?theory)',
+            ],
+            
+            IntentType.ADVANCED_REASONING: [
+                r'\b(?:analyze|reason|logic|logical|reasoning|think|thinking)\s+(?:about|through|step.?by.?step)',
+                r'(?:complex|advanced|sophisticated|deep)\s+(?:reasoning|analysis|thinking|logic)',
+                r'(?:step.?by.?step|systematically|methodically|logically)\s+(?:analyze|approach|solve)',
+                r'(?:philosophical|epistemological|ontological|metaphysical)\s+(?:question|analysis)',
+                r'(?:cause.?and.?effect|causal|inference|deduction|induction)',
+                r'\b(?:pros.?and.?cons|trade.?offs|advantages.?disadvantages|benefits.?risks)',
+                r'(?:critical.?thinking|problem.?solving|decision.?making|strategic.?analysis)',
+                r'(?:what.?if|scenario|hypothetical|counterfactual)\s+(?:analysis|reasoning)',
+            ],
+            
+            IntentType.ALGORITHM_DESIGN: [
+                r'\b(?:design|create|implement|develop)\s+(?:an?\s+)?(?:algorithm|data.?structure|efficient)',
+                r'(?:time.?complexity|space.?complexity|big.?o|algorithm.?analysis)',
+                r'\b(?:sort|search|graph|tree|dynamic.?programming|greedy|divide.?conquer)',
+                r'(?:optimization|optimize|efficient|performance)\s+(?:algorithm|solution|approach)',
+                r'\b(?:recursion|recursive|backtracking|memoization|dp|dijkstra|bfs|dfs)',
+                r'(?:leetcode|competitive.?programming|coding.?interview|algorithm.?problem)',
+                r'(?:hash.?table|binary.?tree|heap|queue|stack|linked.?list|trie)',
+                r'(?:shortest.?path|minimum.?spanning.?tree|topological.?sort)',
+            ],
+            
+            IntentType.SCIENTIFIC_ANALYSIS: [
+                r'(?:scientific|research|academic|scholarly)\s+(?:analysis|study|investigation)',
+                r'\b(?:hypothesis|experiment|methodology|peer.?review|publication)',
+                r'(?:data.?analysis|statistical.?analysis|correlation|regression|significance)',
+                r'\b(?:chemistry|physics|biology|medicine|engineering|astronomy|geology)',
+                r'(?:research.?paper|scientific.?method|literature.?review|meta.?analysis)',
+                r'(?:quantum|molecular|genetic|cellular|neural|biochemical)',
+                r'(?:journal|doi|citation|reference|bibliography|peer.?reviewed)',
+                r'(?:clinical.?trial|study|sample.?size|control.?group|placebo)',
+            ],
+            
+            IntentType.MEDICAL_ANALYSIS: [
+                r'\b(?:medical|health|clinical|diagnostic|therapeutic)\s+(?:analysis|diagnosis|treatment)',
+                r'(?:symptom|disease|condition|disorder|syndrome|pathology)',
+                r'\b(?:x.?ray|mri|ct.?scan|ultrasound|mammogram|ekg|ecg)',
+                r'(?:pharmaceutical|drug|medication|dosage|side.?effect|contraindication)',
+                r'(?:patient|diagnosis|prognosis|treatment|therapy|intervention)',
+                r'\b(?:anatomy|physiology|pathophysiology|epidemiology|pharmacology)',
+                r'(?:medical.?image|radiology|histology|biopsy|lab.?result)',
+                r'(?:icd|cpt|medical.?code|healthcare|hospital|clinic)',
+            ],
+            
+            IntentType.CREATIVE_DESIGN: [
+                r'\b(?:design|create|mockup|prototype|wireframe)\s+(?:ui|ux|interface|dashboard|app|website)',
+                r'(?:user.?experience|user.?interface|interaction.?design|visual.?design)',
+                r'(?:brand|branding|logo|identity|style.?guide|color.?palette)',
+                r'\b(?:typography|font|layout|composition|visual.?hierarchy)',
+                r'(?:responsive|mobile|desktop|tablet)\s+(?:design|layout|interface)',
+                r'(?:figma|sketch|adobe|photoshop|illustrator|design.?tool)',
+                r'(?:accessibility|usability|user.?research|persona|journey.?map)',
+                r'(?:material.?design|bootstrap|tailwind|design.?system|component.?library)',
+            ],
+            
+            IntentType.EDUCATIONAL_CONTENT: [
+                r'\b(?:explain|teach|tutorial|lesson|course|learning)\s+(?:about|how|what|why)',
+                r'(?:educational|pedagogical|instructional)\s+(?:content|material|resource)',
+                r'(?:step.?by.?step|beginner|intermediate|advanced)\s+(?:guide|tutorial|explanation)',
+                r'\b(?:curriculum|syllabus|lesson.?plan|learning.?objective|assessment)',
+                r'(?:understand|comprehend|grasp|learn|study)\s+(?:concept|principle|theory)',
+                r'(?:example|demonstration|illustration|case.?study|practice)',
+                r'(?:quiz|test|exercise|homework|assignment|project)',
+                r'(?:knowledge|skill|competency|proficiency|mastery)',
+            ],
+            
+            IntentType.BUSINESS_ANALYSIS: [
+                r'(?:business|market|commercial|financial)\s+(?:analysis|strategy|intelligence)',
+                r'\b(?:roi|kpi|metrics|performance|revenue|profit|loss)',
+                r'(?:market.?research|competitive.?analysis|swot|pest)',
+                r'(?:financial.?modeling|forecasting|budgeting|valuation)',
+                r'(?:customer.?analysis|segmentation|demographics|behavior)',
+                r'(?:sales|marketing|operations|supply.?chain)\s+(?:analysis|optimization)',
+                r'(?:dashboard|report|visualization|analytics|bi)',
+                r'(?:growth|expansion|scalability|efficiency|productivity)',
+            ],
+            
+            IntentType.TECHNICAL_DOCUMENTATION: [
+                r'(?:technical|api|software)\s+(?:documentation|docs|manual|guide)',
+                r'\b(?:api.?reference|developer.?guide|sdk|library.?docs)',
+                r'(?:installation|setup|configuration|deployment)\s+(?:guide|instructions)',
+                r'(?:troubleshooting|faq|error.?handling|debugging)\s+(?:guide|documentation)',
+                r'(?:changelog|release.?notes|version|update)\s+(?:documentation|history)',
+                r'(?:architecture|design|specification|requirements)\s+(?:document|spec)',
+                r'(?:readme|documentation|wiki|knowledge.?base)',
+                r'(?:comment|docstring|annotation|inline.?docs)',
+            ],
+            
+            IntentType.MULTILINGUAL_PROCESSING: [
+                r'(?:multilingual|cross.?lingual|multi.?language)\s+(?:processing|analysis|translation)',
+                r'(?:cultural|localization|internationalization|i18n|l10n)',
+                r'(?:language.?pair|source.?language|target.?language)',
+                r'(?:dialect|accent|regional|native.?speaker)',
+                r'(?:translation.?quality|fluency|accuracy|naturalness)',
+                r'(?:context.?aware|semantic|pragmatic)\s+(?:translation|understanding)',
+                r'(?:machine.?translation|neural.?translation|statistical.?translation)',
+                r'(?:bilingual|polyglot|language.?model|cross.?cultural)',
             ]
         }
     
     def _initialize_priorities(self) -> Dict[IntentType, int]:
-        """2025 Enhanced priority weights for intent types with better balance"""
+        """2025 Enhanced priority weights for intent types with specialized AI model routing"""
         return {
-            IntentType.FILE_GENERATION: 10,          # 2025: P1 High priority - file creation requests
-            IntentType.PDF_PROCESSING: 10,           # 2025: P1 High priority - PDF file uploads
-            IntentType.ZIP_ANALYSIS: 10,             # 2025: P1 High priority - ZIP file uploads
-            IntentType.IMAGE_GENERATION: 9,         # High priority - specific visual requests
-            IntentType.CODE_GENERATION: 8,          # High priority but not overpowering - very specific patterns
-            IntentType.IMAGE_ANALYSIS: 8,           # 2025: P1 High priority - Image analysis
-            IntentType.DATA_ANALYSIS: 8,            # 2025: High priority - data processing
-            IntentType.SENTIMENT_ANALYSIS: 8,       # High priority - specific analysis requests
-            IntentType.CREATIVE_WRITING: 7,         # Medium-high priority - creative requests
-            IntentType.DOCUMENT_PROCESSING: 7,      # 2025: Medium-high priority - document tasks
-            IntentType.MULTI_MODAL: 6,              # 2025: Medium priority - complex multimodal
-            IntentType.TRANSLATION: 6,              # Medium priority - language requests
-            IntentType.QUESTION_ANSWERING: 5,       # Medium priority - broad category
-            IntentType.CONVERSATION: 4,             # 2025: Lower priority - conversational AI
-            IntentType.TEXT_GENERATION: 3,          # General text generation fallback
+            # P1 High Priority - File and data processing
+            IntentType.FILE_GENERATION: 10,          # File creation requests
+            IntentType.PDF_PROCESSING: 10,           # PDF file uploads
+            IntentType.ZIP_ANALYSIS: 10,             # ZIP file uploads
+            
+            # Specialized High Priority - Advanced AI capabilities  
+            IntentType.MATHEMATICAL_REASONING: 9,    # Math problems require specialized models
+            IntentType.ADVANCED_REASONING: 9,        # Complex reasoning tasks (QwQ model)
+            IntentType.ALGORITHM_DESIGN: 9,          # Complex coding algorithms (CodeLlama)
+            IntentType.MEDICAL_ANALYSIS: 9,          # Medical analysis requires specialized models
+            
+            # High Priority - Core AI tasks
+            IntentType.IMAGE_GENERATION: 8,          # Visual generation requests
+            IntentType.CODE_GENERATION: 8,           # Programming tasks
+            IntentType.IMAGE_ANALYSIS: 8,            # Image analysis
+            IntentType.SCIENTIFIC_ANALYSIS: 8,       # Scientific research tasks
+            IntentType.DATA_ANALYSIS: 8,             # Data processing
+            
+            # Medium-High Priority - Specialized content
+            IntentType.CREATIVE_DESIGN: 7,           # UI/UX and design tasks
+            IntentType.TECHNICAL_DOCUMENTATION: 7,   # Technical writing
+            IntentType.MULTILINGUAL_PROCESSING: 7,   # Advanced translation
+            IntentType.SENTIMENT_ANALYSIS: 7,        # Analysis requests
+            IntentType.CREATIVE_WRITING: 7,          # Creative requests
+            IntentType.EDUCATIONAL_CONTENT: 7,       # Teaching and tutorials
+            
+            # Medium Priority - General processing
+            IntentType.DOCUMENT_PROCESSING: 6,       # Document tasks
+            IntentType.BUSINESS_ANALYSIS: 6,         # Business intelligence
+            IntentType.MULTI_MODAL: 6,               # Complex multimodal
+            IntentType.TRANSLATION: 6,               # Basic language requests
+            IntentType.QUESTION_ANSWERING: 5,        # Broad Q&A category
+            
+            # Lower Priority - General conversation
+            IntentType.CONVERSATION: 4,              # Conversational AI
+            IntentType.TEXT_GENERATION: 3,           # General text fallback
         }
     
     def analyze_prompt_complexity(self, prompt: str) -> Dict[str, Any]:
@@ -415,23 +559,35 @@ class IntelligentRouter:
         """Validate that the selected model exists in Config and return fallback if needed"""
         from bot.config import Config
         
-        # List of all valid model names from Config
+        # List of all valid model names from Config - 2025 Enhanced with specialized models
         valid_models = {
-            # Text models
+            # Text models - Enhanced with specialized reasoning models
             Config.DEFAULT_TEXT_MODEL, Config.ADVANCED_TEXT_MODEL, Config.FAST_TEXT_MODEL, 
             Config.FALLBACK_TEXT_MODEL, Config.LIGHTWEIGHT_TEXT_MODEL,
-            # Code models  
+            getattr(Config, 'REASONING_TEXT_MODEL', Config.ADVANCED_TEXT_MODEL),
+            getattr(Config, 'MATH_TEXT_MODEL', Config.ADVANCED_TEXT_MODEL),
+            
+            # Code models - Enhanced with specialized coding models
             Config.DEFAULT_CODE_MODEL, Config.ADVANCED_CODE_MODEL, Config.FAST_CODE_MODEL,
             Config.FALLBACK_CODE_MODEL, Config.LIGHTWEIGHT_CODE_MODEL,
-            # Vision models
+            getattr(Config, 'SPECIALIZED_CODE_MODEL', Config.ADVANCED_CODE_MODEL),
+            
+            # Vision models - Enhanced with medical and reasoning vision
             Config.DEFAULT_VISION_MODEL, Config.ADVANCED_VISION_MODEL, Config.FAST_VISION_MODEL,
             Config.FALLBACK_VISION_MODEL, Config.DOCUMENT_VISION_MODEL, Config.LIGHTWEIGHT_VISION_MODEL,
-            # Image generation models
+            getattr(Config, 'REASONING_VISION_MODEL', Config.ADVANCED_VISION_MODEL),
+            getattr(Config, 'MEDICAL_VISION_MODEL', Config.ADVANCED_VISION_MODEL),
+            
+            # Image generation models - Enhanced with new variants
             Config.DEFAULT_IMAGE_MODEL, Config.COMMERCIAL_IMAGE_MODEL, Config.ADVANCED_IMAGE_MODEL,
             Config.FALLBACK_IMAGE_MODEL, Config.ARTISTIC_IMAGE_MODEL,
+            getattr(Config, 'TURBO_IMAGE_MODEL', Config.ADVANCED_IMAGE_MODEL),
+            getattr(Config, 'REALISTIC_IMAGE_MODEL', Config.DEFAULT_IMAGE_MODEL),
+            
             # Sentiment & NLP models
             Config.DEFAULT_SENTIMENT_MODEL, Config.ADVANCED_SENTIMENT_MODEL, Config.EMOTION_MODEL,
             Config.MULTILINGUAL_SENTIMENT_MODEL, Config.FALLBACK_SENTIMENT_MODEL,
+            
             # Translation models
             Config.DEFAULT_TRANSLATION_MODEL, Config.ADVANCED_TRANSLATION_MODEL, Config.FALLBACK_TRANSLATION_MODEL
         }
@@ -605,6 +761,89 @@ class IntelligentRouter:
             logger.info(f"✍️ CREATIVE_WRITING: complexity={complexity}, model={selected_model}")
             return self._validate_model_selection(selected_model, intent)
         
+        # 2025: NEW SPECIALIZED INTENT ROUTING - Superior to ChatGPT/Grok/Gemini
+        elif intent == IntentType.MATHEMATICAL_REASONING:
+            # Use specialized math model for calculations, proofs, equations
+            selected_model = getattr(Config, 'MATH_TEXT_MODEL', Config.ADVANCED_TEXT_MODEL)
+            logger.info(f"📐 MATHEMATICAL_REASONING: model={selected_model} (Specialized math reasoning)")
+            logger.info(f"🎯 MODEL_SELECTED: {selected_model} (Superior to GPT-4 for mathematical problems)")
+            return self._validate_model_selection(selected_model, intent)
+        
+        elif intent == IntentType.ADVANCED_REASONING:
+            # Use QwQ model for complex logical reasoning tasks
+            selected_model = getattr(Config, 'REASONING_TEXT_MODEL', Config.ADVANCED_TEXT_MODEL)
+            logger.info(f"🧠 ADVANCED_REASONING: model={selected_model} (QwQ-32B reasoning specialist)")
+            logger.info(f"🎯 MODEL_SELECTED: {selected_model} (Beats o1-preview in reasoning benchmarks)")
+            return self._validate_model_selection(selected_model, intent)
+        
+        elif intent == IntentType.ALGORITHM_DESIGN:
+            # Use specialized coding model for complex algorithms
+            selected_model = getattr(Config, 'SPECIALIZED_CODE_MODEL', Config.ADVANCED_CODE_MODEL)
+            logger.info(f"⚡ ALGORITHM_DESIGN: model={selected_model} (CodeLlama-34B specialist)")
+            logger.info(f"🎯 MODEL_SELECTED: {selected_model} (Superior for competitive programming)")
+            return self._validate_model_selection(selected_model, intent)
+        
+        elif intent == IntentType.SCIENTIFIC_ANALYSIS:
+            # Use advanced reasoning model for scientific research tasks
+            complexity = analysis.get('complexity_score', 0)
+            selected_model = getattr(Config, 'REASONING_TEXT_MODEL', Config.ADVANCED_TEXT_MODEL) if complexity > 5 else Config.DEFAULT_TEXT_MODEL
+            logger.info(f"🔬 SCIENTIFIC_ANALYSIS: complexity={complexity}, model={selected_model}")
+            logger.info(f"🎯 MODEL_SELECTED: {selected_model} (Research-grade analysis)")
+            return self._validate_model_selection(selected_model, intent)
+        
+        elif intent == IntentType.MEDICAL_ANALYSIS:
+            # Use medical vision model for medical images, or advanced text for medical text
+            prompt_lower = original_prompt.lower()
+            if any(term in prompt_lower for term in ['image', 'x-ray', 'mri', 'ct scan', 'ultrasound']):
+                selected_model = getattr(Config, 'MEDICAL_VISION_MODEL', Config.ADVANCED_VISION_MODEL)
+                logger.info(f"🏥 MEDICAL_ANALYSIS: type=image, model={selected_model}")
+            else:
+                selected_model = Config.ADVANCED_TEXT_MODEL  # DeepSeek-R1 for medical text analysis
+                logger.info(f"🏥 MEDICAL_ANALYSIS: type=text, model={selected_model}")
+            logger.info(f"🎯 MODEL_SELECTED: {selected_model} (Medical specialist model)")
+            return self._validate_model_selection(selected_model, intent)
+        
+        elif intent == IntentType.CREATIVE_DESIGN:
+            # Use artistic image generation for visual design, text model for design concepts
+            prompt_lower = original_prompt.lower()
+            if any(term in prompt_lower for term in ['ui', 'ux', 'mockup', 'wireframe', 'logo', 'visual']):
+                selected_model = getattr(Config, 'ARTISTIC_IMAGE_MODEL', Config.DEFAULT_IMAGE_MODEL)
+                logger.info(f"🎨 CREATIVE_DESIGN: type=visual, model={selected_model}")
+            else:
+                selected_model = Config.DEFAULT_TEXT_MODEL  # Qwen2.5-14B for design concepts
+                logger.info(f"🎨 CREATIVE_DESIGN: type=conceptual, model={selected_model}")
+            logger.info(f"🎯 MODEL_SELECTED: {selected_model} (Design specialist)")
+            return self._validate_model_selection(selected_model, intent)
+        
+        elif intent == IntentType.EDUCATIONAL_CONTENT:
+            # Use balanced model for teaching and tutorials
+            complexity = analysis.get('complexity_score', 0)
+            selected_model = Config.ADVANCED_TEXT_MODEL if complexity > 6 else Config.DEFAULT_TEXT_MODEL
+            logger.info(f"📚 EDUCATIONAL_CONTENT: complexity={complexity}, model={selected_model}")
+            logger.info(f"🎯 MODEL_SELECTED: {selected_model} (Optimized for teaching)")
+            return self._validate_model_selection(selected_model, intent)
+        
+        elif intent == IntentType.BUSINESS_ANALYSIS:
+            # Use advanced reasoning for business intelligence and analysis
+            selected_model = getattr(Config, 'REASONING_TEXT_MODEL', Config.ADVANCED_TEXT_MODEL)
+            logger.info(f"📊 BUSINESS_ANALYSIS: model={selected_model}")
+            logger.info(f"🎯 MODEL_SELECTED: {selected_model} (Business intelligence specialist)")
+            return self._validate_model_selection(selected_model, intent)
+        
+        elif intent == IntentType.TECHNICAL_DOCUMENTATION:
+            # Use coding-specialized model for technical docs
+            selected_model = Config.ADVANCED_CODE_MODEL  # DeepSeek-Coder-V2 for technical writing
+            logger.info(f"📝 TECHNICAL_DOCUMENTATION: model={selected_model}")
+            logger.info(f"🎯 MODEL_SELECTED: {selected_model} (Technical writing specialist)")
+            return self._validate_model_selection(selected_model, intent)
+        
+        elif intent == IntentType.MULTILINGUAL_PROCESSING:
+            # Use advanced translation model with cultural context
+            selected_model = Config.DEFAULT_TRANSLATION_MODEL  # NLLB-200 for 200+ languages
+            logger.info(f"🌐 MULTILINGUAL_PROCESSING: model={selected_model}")
+            logger.info(f"🎯 MODEL_SELECTED: {selected_model} (200+ language specialist)")
+            return self._validate_model_selection(selected_model, intent)
+
         elif intent == IntentType.QUESTION_ANSWERING:
             # Use large models for complex Q&A requiring deep knowledge
             complexity = analysis.get('complexity_score', 0)
