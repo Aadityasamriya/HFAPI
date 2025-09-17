@@ -15,7 +15,7 @@ except ImportError as e:
     exit(1)
 
 from bot.config import Config
-from bot.storage_manager import storage_manager
+from bot.storage_manager import storage_manager, db
 from bot.handlers.command_handlers import command_handlers
 from bot.handlers.message_handlers import message_handlers, MessageHandlers
 

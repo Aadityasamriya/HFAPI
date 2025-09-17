@@ -95,7 +95,7 @@ class Config:
         return cls.STORAGE_PROVIDER
     
     @classmethod
-    def get_mongodb_uri(cls) -> str:
+    def get_mongodb_uri(cls) -> str | None:
         """Get MongoDB URI with fallback options"""
         return cls.MONGO_URI or cls.MONGODB_URI
     
@@ -174,10 +174,10 @@ class Config:
             )
         
         # Validate Supabase URL format
-        if not cls.SUPABASE_URL.startswith('https://'):
+        if cls.SUPABASE_URL and not cls.SUPABASE_URL.startswith('https://'):
             raise ValueError("SUPABASE_URL must be a valid HTTPS URL")
         
-        if len(cls.SUPABASE_ANON_KEY) < 100:  # Supabase keys are typically long JWT tokens
+        if cls.SUPABASE_ANON_KEY and len(cls.SUPABASE_ANON_KEY) < 100:  # Supabase keys are typically long JWT tokens
             logger.warning("⚠️ SUPABASE_ANON_KEY appears unusually short - please verify it's correct")
         
         logger.info("✅ Supabase configuration validated successfully")
