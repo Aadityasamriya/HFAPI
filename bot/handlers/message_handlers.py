@@ -1190,8 +1190,8 @@ Please provide detailed analysis including key insights, patterns, and actionabl
                 await update.message.reply_text("❌ **Conversation Error** - Let me try that again.", parse_mode='Markdown')
     
     @staticmethod
-    async def _process_pdf_document(update, context, file_data: bytes, filename: str, processing_msg) -> None:
-        """Process PDF document with AI analysis"""
+    async def _process_photo_handler(update, context, file_data: bytes, filename: str, processing_msg) -> None:
+        """Process photo/image with AI analysis"""
         user = update.effective_user
         user_id = user.id
         username = user.username or "No username"

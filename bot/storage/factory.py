@@ -48,25 +48,27 @@ class StorageProviderFactory:
     def _detect_provider(cls) -> str:
         """
         Auto-detect which storage provider to use based on environment variables
+        Priority: MongoDB (when MONGO_URI available) > Supabase
         
         Returns:
-            str: Provider name ('supabase' or 'mongodb')
+            str: Provider name ('mongodb' or 'supabase')
         """
-        # Check for Supabase configuration
-        if os.getenv('SUPABASE_MGMT_URL') or os.getenv('DATABASE_URL'):
+        # Check for MongoDB configuration FIRST (user requirement: prefer MongoDB when available)
+        if os.getenv('MONGODB_URI') or os.getenv('MONGO_URI'):
+            logger.info("🔍 Auto-detected MongoDB configuration - using MongoDBProvider (preferred)")
+            return 'mongodb'
+        
+        # Check for Supabase configuration as fallback
+        elif os.getenv('SUPABASE_MGMT_URL') or os.getenv('DATABASE_URL'):
             logger.info("🔍 Auto-detected Supabase configuration - using SupabaseUserProvider")
             return 'supabase'
         
-        # Check for MongoDB configuration  
-        elif os.getenv('MONGODB_URI') or os.getenv('MONGO_URI'):
-            logger.info("🔍 Auto-detected MongoDB configuration - using MongoDBProvider")
-            return 'mongodb'
-        
-        # Default to Supabase if no specific config found (requires manual setup)
+        # Default to MongoDB if no specific config found (user preference)
         else:
-            logger.warning("⚠️ No database configuration detected - defaulting to SupabaseUserProvider")
-            logger.warning("📝 Please configure SUPABASE_MGMT_URL or MONGODB_URI environment variables")
-            return 'supabase'
+            logger.warning("⚠️ No database configuration detected - defaulting to MongoDBProvider")
+            logger.warning("📝 Please configure MONGO_URI or MONGODB_URI environment variables for MongoDB")
+            logger.warning("📝 Or configure SUPABASE_MGMT_URL for Supabase as alternative")
+            return 'mongodb'
     
     @classmethod
     def _create_supabase_provider(cls) -> StorageProvider:
