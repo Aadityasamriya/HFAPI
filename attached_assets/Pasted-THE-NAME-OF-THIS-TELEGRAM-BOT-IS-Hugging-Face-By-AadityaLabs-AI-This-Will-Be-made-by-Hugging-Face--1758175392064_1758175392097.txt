@@ -1,0 +1,129 @@
+THE NAME OF THIS TELEGRAM BOT IS "Hugging Face By AadityaLabs AI"
+This Will Be made by Hugging Face API.
+This API is Also provided By User.
+User first receive attractive welcome message.
+Then briefly and short smartly describe how to set up this bot to be functional this time this explained to user how prepare the hugging face API step by step.
+There is a setting command, where user will paste his copied Hugging Face API.
+Then the complete system will run on user's hugging face API key.
+And User's API Credits Will Be Used For Everything.
+
+Explanation of the AI System with a "Model Manager"
+
+What you have described is an advanced and intelligent AI system, often referred to as an AI Agent or an AI Orchestrator. Instead of relying on a single, general-purpose model, this system acts as a "Model Manager" or a Router. Its primary job is to understand the user's true intention and then delegate the task to the most suitable specialized AI model.
+
+This approach is far more powerful and flexible than a standard chatbot.
+
+Here is a step-by-step breakdown of how it works:
+
+User Input (The Prompt)
+The process begins when the user sends a request. This prompt can be anything—a command to create something, a question, or a simple conversational message.
+Example 1: "Generate a photorealistic image of an astronaut riding a horse."
+
+Example 2: "What is the capital of Japan?"
+
+Example 3: "Hello, how are you doing today?"
+
+The First Step: Intent Classification (The "Brain")
+Instead of trying to answer the prompt directly, the system first sends the user's text to a special Classification Model. The sole purpose of this model is to figure out the user's intent. It categorizes the prompt into predefined categories.
+The prompt "Generate a photorealistic image of an astronaut..." would be classified with the intent: image_generation.
+
+The prompt "What is the capital of Japan?" would be classified as: question_answering.
+
+The prompt "Hello, how are you doing today?" would be classified as: conversation.
+
+The Second Step: The Model Manager (The "Router")
+Once the intent is identified, the Model Manager acts like a switchboard operator. It has a set of rules that map each intent to a specific, specialized AI model.
+If intent is image_generation -> Route to an Image Generation model (like Stable Diffusion).
+
+If intent is question_answering -> Route to a Factual Q&A model (like RoBERTa-SQuAD).
+If intent is question_answering -> Route to a Factual Q&A model (like RoBERTa-SQuAD).
+
+If intent is conversation -> Route to a Conversational model (like DialoGPT).
+
+The Third Step: Task Execution
+The Model Manager now sends the original user prompt to the selected specialized model. That model performs the single task it is best at.
+Stable Diffusion receives "Generate a photorealistic image of an astronaut riding a horse" and starts generating the image.
+
+The Q&A model receives "What is the capital of Japan?" and looks up the factual answer.
+
+The Final Step: The Output
+The output from the specialized model is sent back to the user. Because the right tool was used for the job, the quality of the response is significantly higher.
+The user receives a high-quality image of the astronaut.
+
+The user receives the correct answer: "Tokyo."
+
+In summary, the system you want to build is a multi-layered agent that:
+
+Listens to the user's request.
+
+Understands the underlying intent of the request.
+
+Decides on the best tool (or model) for the job.
+
+Delegates the task to that specialized tool.
+
+Delivers the final, high-quality result to the user.
+
+I want to make a purely telegram Functionality not any web interface.
+
+
+If anyone Ask for image generation then it will send image to user on telegram directly.
+if any user ask to ask generate any type code then it will generating the code in .py, .json, .txt etc. 
+It will write codes like user can copy the code only in one tap on telegram message.
+If user ask anything image then it will analyse the image. And answer user's questions.
+If anyone send pdf then it will read content inside pdf.
+It can see and analyse compressed zips below size
+10MB. If greater size send by user then it will rejected and feedback send to user using AI.
+
+This is me idea, you improve each and everything according to your smart thinking and make it best.
+Remove all types of errors.
+
+This Will need a database to store che histories.
+There should a command of /newchat.
+Where user can start new chat.
+
+Make It as it can do anything completely depend on user's prompt.
+It will need a database. Make a Type Of facility that user after connecting Hugging Face API key.
+It will ask For Login To Supabase service. If anyone login to supabase, supabase database automatically connected to this telegram bot and API and to be functional.
+Now API+Telegram bot+supabase database. Will Function Togather.
+
+Make this setup and instructions as easy as to user.
+In setting users can change the Hugging Face API and Database Both.
+
+As database complete Filled Up, then User Can Reset The Database, then database memory will be cleared like a new database.
+
+Make this best and ranking .
+
+This is my idea.
+
+There should no different different command for each setting. 
+Command should be less like
+/newchat
+/Settings
+/Resetdb Only.
+Other should be embedded in settings command.
+You should use inline button for user's easyness.
+Complete setup is very long and user can't do this. 
+First you send the attrective welcome message.
+Then you need to set up only 5 minute etc. 
+Then next first it gives personalized brief tutorial in some easy steps and ask for Hugging Face API key.
+
+For user's easyness there can be a auth system that will directly Login Through telegram user id. Automatically made each different supabase account for each different user automatically.
+If this system available and can be possible then this bot will not ask to connect supabase database to user.
+
+It will ask For Login To Supabase service. If anyone login to supabase, supabase database automatically connected to this telegram bot and API and to be functional.
+Now API+Telegram bot . Will Function Togather.
+
+Make this setup and instructions as easy as to user.
+In setting users can change the Hugging Face API.
+There should be an auth system which is authenticated by Telegram id's of users.
+
+And make different database for each user and integrate the data of each user in each different databases accounts.
+This is should not require developer's database URL or keys.
+Each user must have personal database to store attached files by user.
+The developer's database should not filled with the user files or chat histories.
+It will be only used in account management API and ID storage etc. of each and every user only.
+Don't make the any web interface, should be Only a telegram bot.
+Admin tools can be available to only owner of this bot.
+There should be an optional variable where bot's owner ID will be seted there.
+Only bot owner can control the bot and other bot management possible only in telegram. You can improve according to your smart thinking the complete bot, tool and codes and features to make it best and ranking.
