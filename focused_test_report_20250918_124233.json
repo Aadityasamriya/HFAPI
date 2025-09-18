@@ -1,0 +1,63 @@
+{
+  "test_summary": {
+    "total_tests": 5,
+    "successful_tests": 3,
+    "failed_tests": 2,
+    "success_rate": 0.6,
+    "total_execution_time": 2.370619773864746,
+    "timestamp": "2025-09-18T12:42:33.907601"
+  },
+  "test_results": [
+    {
+      "test_name": "Core Commands Test",
+      "success": true,
+      "message": "Command handlers: 4/4 functional",
+      "execution_time": 1.5071959495544434,
+      "timestamp": "2025-09-18T12:42:33.045563",
+      "details": {
+        "commands_tested": {
+          "start_command": {
+            "exists": true,
+            "callable": true,
+            "docstring": "\n        Professional welcome message with sophisticated UI and comprehensive logging\n        "
+          },
+          "settings_command": {
+            "exists": true,
+            "callable": true,
+            "docstring": "\n        Professional settings menu with comprehensive options and detailed logging\n        "
+          },
+          "newchat_command": {
+            "exists": true,
+            "callable": true,
+            "docstring": "\n        Clear chat history with professional confirmation and comprehensive logging\n        "
+          },
+          "history_command": {
+            "exists": true,
+            "callable": true,
+            "docstring": "\n        Display user's conversation history with professional UI and pagination\n        "
+          }
+        },
+        "total_commands": 4
+      }
+    },
+    {
+      "test_name": "AI Routing System Test",
+      "success": false,
+      "message": "Routing accuracy: 3/5 (60.0%) - Components functional",
+      "execution_time": 0.07929134368896484,
+      "timestamp": "2025-09-18T12:42:33.125239",
+      "details": {
+        "routing_results": [
+          {
+            "prompt": "Write a Python function to calculate fibonacci numbers",
+            "expected": "code",
+            "classification": {
+              "primary_intent": "code_generation",
+              "confidence": 10.35,
+              "reasoning": "high technical vocabulary (25.0%); mentions programming concepts",
+              "processing_time": 0.046892404556274414
+            },
+            "router": {
+              "intent": "code_generation",
+              "info": {
+                "primary_intent": 
