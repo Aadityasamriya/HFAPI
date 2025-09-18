@@ -1,0 +1,221 @@
+{
+  "test_timestamp": "2025-09-18 04:19:11",
+  "components_tested": [
+    "IntelligentRouter",
+    "AdvancedCodeGenerator",
+    "SmartCache"
+  ],
+  "router_results": {
+    "total_tests": 8,
+    "passed": 7,
+    "failed": 1,
+    "test_results": [
+      {
+        "prompt": "Write a Python function to sort a list...",
+        "expected_intent": "code_generation",
+        "actual_intent": "code_generation",
+        "success": true,
+        "confidence": 1.0,
+        "selected_model": "Qwen/Qwen2.5-Coder-14B-Instruct",
+        "processing_time": 0.04541325569152832,
+        "category": "code_generation"
+      },
+      {
+        "prompt": "Create a React component for user login...",
+        "expected_intent": "code_generation",
+        "actual_intent": "code_generation",
+        "success": true,
+        "confidence": 1.0,
+        "selected_model": "bigcode/starcoder2-3b",
+        "processing_time": 0.0021469593048095703,
+        "category": "code_generation"
+      },
+      {
+        "prompt": "Generate an image of a sunset over mountains...",
+        "expected_intent": "image_generation",
+        "actual_intent": "image_generation",
+        "success": true,
+        "confidence": 1.0,
+        "selected_model": "Qwen/Qwen3-4B",
+        "processing_time": 0.002042531967163086,
+        "category": "image_generation"
+      },
+      {
+        "prompt": "Create a logo for my tech startup...",
+        "expected_intent": "image_generation",
+        "actual_intent": "image_generation",
+        "success": true,
+        "confidence": 1.0,
+        "selected_model": "Qwen/Qwen3-4B",
+        "processing_time": 0.0019555091857910156,
+        "category": "image_generation"
+      },
+      {
+        "prompt": "Analyze the sentiment of this review: \"This produc...",
+        "expected_intent": "sentiment_analysis",
+        "actual_intent": "sentiment_analysis",
+        "success": true,
+        "confidence": 1.0,
+        "selected_model": "Qwen/Qwen3-4B",
+        "processing_time": 0.002051115036010742,
+        "category": "sentiment_analysis"
+      },
+      {
+        "prompt": "Explain quantum computing in simple terms...",
+        "expected_intent": "text_generation",
+        "actual_intent": "code_generation",
+        "success": false,
+        "confidence": 1.0,
+        "selected_model": "Qwen/Qwen2.5-Coder-14B-Instruct",
+        "processing_time": 0.0019838809967041016,
+        "category": "text_generation"
+      },
+      {
+        "prompt": "Hello, how are you today?...",
+        "expected_intent": "conversation",
+        "actual_intent": "conversation",
+        "success": true,
+        "confidence": 0.44000000000000006,
+        "selected_model": "Qwen/Qwen3-4B",
+        "processing_time": 0.0018286705017089844,
+        "category": "conversation"
+      },
+      {
+        "prompt": "Solve this equation: 2x + 5 = 15...",
+        "expected_intent": "mathematical_reasoning",
+        "actual_intent": "mathematical_reasoning",
+        "success": true,
+        "confidence": 1.0,
+        "selected_model": "Qwen/Qwen3-4B",
+        "processing_time": 0.0018036365509033203,
+        "category": "mathematical"
+      }
+    ],
+    "accuracy": 0.875,
+    "avg_confidence": 0.93,
+    "avg_processing_time": 0.007403194904327393
+  },
+  "code_generator_results": {
+    "total_tests": 5,
+    "language_detection_passed": 5,
+    "syntax_validation_passed": 5,
+    "complexity_analysis_passed": 5,
+    "test_results": [
+      {
+        "code_sample": "def hello_world():\n    print(\"Hello, World!\")\n    ...",
+        "expected_language": "python",
+        "detected_language": "python",
+        "language_correct": true,
+        "syntax_valid": true,
+        "syntax_errors": [],
+        "complexity_score": 0.215,
+        "complexity_reasonable": true
+      },
+      {
+        "code_sample": "function greetUser(name) {\n    console.log(\"Hello,...",
+        "expected_language": "javascript",
+        "detected_language": "javascript",
+        "language_correct": true,
+        "syntax_valid": true,
+        "syntax_errors": [],
+        "complexity_score": 0.22000000000000003,
+        "complexity_reasonable": true
+      },
+      {
+        "code_sample": "<html>\n<head><title>Test</title></head>\n<body><h1>...",
+        "expected_language": "html",
+        "detected_language": "html",
+        "language_correct": true,
+        "syntax_valid": true,
+        "syntax_errors": [],
+        "complexity_score": 0.08,
+        "complexity_reasonable": true
+      },
+      {
+        "code_sample": "body { color: red; font-size: 16px; }...",
+        "expected_language": "css",
+        "detected_language": "css",
+        "language_correct": true,
+        "syntax_valid": true,
+        "syntax_errors": [],
+        "complexity_score": 0.02,
+        "complexity_reasonable": true
+      },
+      {
+        "code_sample": "SELECT * FROM users WHERE age > 18;...",
+        "expected_language": "sql",
+        "detected_language": "sql",
+        "language_correct": true,
+        "syntax_valid": true,
+        "syntax_errors": [],
+        "complexity_score": 0.02,
+        "complexity_reasonable": true
+      }
+    ],
+    "language_detection_accuracy": 1.0,
+    "syntax_validation_accuracy": 1.0,
+    "complexity_analysis_accuracy": 1.0
+  },
+  "cache_results": {
+    "cache_tests_passed": 3,
+    "total_cache_tests": 3,
+    "operations": [
+      {
+        "operation": "store_and_retrieve",
+        "success": true
+      },
+      {
+        "operation": "get_statistics",
+        "success": true
+      },
+      {
+        "operation": "low_quality_storage",
+        "success": true,
+        "details": "Low quality content should be rejected"
+      }
+    ],
+    "cache_stats": {
+      "cache_size": 1,
+      "max_size": 100,
+      "hit_count": 1,
+      "miss_count": 0,
+      "hit_rate": 1.0,
+      "efficiency_score": 100.0,
+      "quality_distribution": {
+        "premium": {
+          "count": 1,
+          "percentage": 100.0
+        }
+      },
+      "performance_stats": {
+        "total_hits": 1,
+        "total_misses": 0,
+        "quality_distribution": {
+          "premium": 1,
+          "standard": 0,
+          "basic": 0,
+          "poor": 0
+        },
+        "avg_response_time_saved": 0.0,
+        "total_time_saved": 0.0,
+        "cache_efficiency": 0.0
+      },
+      "top_cached_intents": [
+        "text_generation"
+      ],
+      "avg_quality_score": 8.5,
+      "total_time_saved_hours": 0.0,
+      "system_health": "excellent"
+    },
+    "success_rate": 1.0
+  },
+  "overall_assessment": {
+    "total_systems_tested": 3,
+    "working_systems": 3,
+    "overall_performance": 1.0,
+    "performance_rating": "EXCELLENT"
+  },
+  "recommendations": [
+    "Improve intent classification accuracy in router"
+  ]
+}
