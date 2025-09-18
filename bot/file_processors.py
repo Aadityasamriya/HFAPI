@@ -25,13 +25,36 @@ except ImportError:
     PYMUPDF_AVAILABLE = False
     logging.warning("PyMuPDF not available - PDF processing will be limited")
 
-# Image processing
+# Core image processing (lightweight)
 try:
     from PIL import Image
-    import pytesseract
-    import cv2
+    PIL_AVAILABLE = True
+except ImportError:
+    Image = None  # type: ignore
+    PIL_AVAILABLE = False
+    logging.warning("PIL not available - basic image processing will be limited")
+
+# Heavy image processing dependencies (optional)
+try:
     import numpy as np
-    IMAGE_PROCESSING_AVAILABLE = True
+    NUMPY_AVAILABLE = True
+except ImportError:
+    np = None  # type: ignore
+    NUMPY_AVAILABLE = False
+    logging.info("NumPy not available - advanced image analysis features disabled")
+
+try:
+    import cv2
+    OPENCV_AVAILABLE = True
+except ImportError:
+    cv2 = None  # type: ignore
+    OPENCV_AVAILABLE = False
+    logging.info("OpenCV not available - computer vision features disabled")
+
+# OCR functionality (heavy dependency)
+try:
+    import pytesseract
+    PYTESSERACT_AVAILABLE = True
     
     # Check tesseract binary availability at runtime
     def _check_tesseract_available() -> bool:
@@ -49,13 +72,13 @@ try:
         logging.warning("tesseract binary not found - OCR functionality will be disabled")
         
 except ImportError:
-    Image = None  # type: ignore
     pytesseract = None  # type: ignore
-    cv2 = None  # type: ignore
-    np = None  # type: ignore
-    IMAGE_PROCESSING_AVAILABLE = False
+    PYTESSERACT_AVAILABLE = False
     TESSERACT_BINARY_AVAILABLE = False
-    logging.warning("Image processing libraries not available - some features will be limited")
+    logging.info("pytesseract not available - OCR functionality disabled")
+
+# Overall image processing availability (requires at least PIL)
+IMAGE_PROCESSING_AVAILABLE = PIL_AVAILABLE
 
 # File type detection
 try:
@@ -486,18 +509,22 @@ class AdvancedFileProcessor:
         Returns:
             Dict[str, Any]: Image processing results
         """
-        if not IMAGE_PROCESSING_AVAILABLE:
+        if not PIL_AVAILABLE:
             return {
                 'success': False,
-                'error': 'Image processing not available - required libraries not installed'
+                'error': 'Basic image processing not available - PIL (Pillow) not installed. Please install: pip install Pillow',
+                'missing_dependency': 'Pillow',
+                'install_command': 'pip install Pillow'
             }
         
         try:
             # Open image
-            if Image is None:
+            if not PIL_AVAILABLE or Image is None:
                 return {
                     'success': False,
-                    'error': 'Image processing not available - PIL not installed'
+                    'error': 'Basic image processing not available - PIL (Pillow) not installed. Please install: pip install Pillow',
+                    'missing_dependency': 'Pillow',
+                    'install_command': 'pip install Pillow'
                 }
             
             image = Image.open(io.BytesIO(image_data))
@@ -528,11 +555,20 @@ class AdvancedFileProcessor:
             
             # OCR text extraction if requested
             if analysis_type in ['ocr', 'comprehensive']:
-                if not TESSERACT_BINARY_AVAILABLE:
+                if not PYTESSERACT_AVAILABLE:
+                    results['ocr'] = {
+                        'error': 'OCR not available - pytesseract not installed. Please install: pip install pytesseract',
+                        'has_text': False,
+                        'missing_dependency': 'pytesseract',
+                        'install_command': 'pip install pytesseract',
+                        'additional_requirement': 'Also requires tesseract binary on system'
+                    }
+                elif not TESSERACT_BINARY_AVAILABLE:
                     results['ocr'] = {
                         'error': 'OCR not available - tesseract binary not found on system. Please install tesseract-ocr package.',
                         'has_text': False,
-                        'system_requirement': 'tesseract-ocr'
+                        'system_requirement': 'tesseract-ocr',
+                        'install_hint': 'On Ubuntu: sudo apt-get install tesseract-ocr'
                     }
                 else:
                     try:
@@ -555,26 +591,51 @@ class AdvancedFileProcessor:
                             'has_text': False
                         }
             
-            # Basic image statistics
+            # Basic image statistics and advanced analysis
             if analysis_type == 'comprehensive':
-                try:
-                    # Convert to numpy array for analysis
-                    if np is None:
-                        results['color_analysis'] = {
-                            'error': 'Color analysis not available - numpy not installed'
-                        }
-                    else:
+                # Basic image properties (always available with PIL)
+                results['basic_analysis'] = {
+                    'format': image_info['format'],
+                    'mode': image_info['mode'],
+                    'size': image_info['size'],
+                    'has_transparency': 'transparency' in image.info or image.mode in ['RGBA', 'LA'],
+                    'is_animated': getattr(image, 'is_animated', False)
+                }
+                
+                # Advanced color analysis (requires numpy)
+                if NUMPY_AVAILABLE and np is not None:
+                    try:
                         img_array = np.array(rgb_image)
                         
                         # Calculate color statistics
                         results['color_analysis'] = {
                             'mean_brightness': float(np.mean(img_array)),
-                            'dominant_colors': 'analysis_available',
-                            'is_grayscale': len(img_array.shape) == 2 or (len(img_array.shape) == 3 and img_array.shape[2] == 1)
+                            'std_brightness': float(np.std(img_array)),
+                            'is_grayscale': len(img_array.shape) == 2 or (len(img_array.shape) == 3 and img_array.shape[2] == 1),
+                            'numpy_analysis': True
                         }
-                    
-                except Exception as e:
-                    logger.warning(f"Color analysis failed: {e}")
+                        
+                        # Calculate histogram if possible
+                        if len(img_array.shape) == 3:
+                            results['color_analysis']['channel_means'] = {
+                                'red': float(np.mean(img_array[:, :, 0])),
+                                'green': float(np.mean(img_array[:, :, 1])),
+                                'blue': float(np.mean(img_array[:, :, 2]))
+                            }
+                        
+                    except Exception as e:
+                        logger.warning(f"Advanced color analysis failed: {e}")
+                        results['color_analysis'] = {
+                            'error': f'Advanced analysis failed: {str(e)}',
+                            'fallback': 'Basic analysis only'
+                        }
+                else:
+                    results['color_analysis'] = {
+                        'error': 'Advanced color analysis not available - NumPy not installed',
+                        'missing_dependency': 'numpy',
+                        'install_command': 'pip install numpy',
+                        'fallback': 'Basic image info available above'
+                    }
             
             return results
             
@@ -582,7 +643,8 @@ class AdvancedFileProcessor:
             logger.error(f"Image processing error: {e}")
             return {
                 'success': False,
-                'error': f'Image processing failed: {str(e)}'
+                'error': f'Image processing failed: {str(e)}',
+                'help': 'Ensure PIL (Pillow) is installed: pip install Pillow'
             }
 
     @staticmethod
@@ -800,7 +862,7 @@ class AdvancedFileProcessor:
             detected_objects = []
             faces_detected = 0
             
-            if cv2 is not None and np is not None:
+            if OPENCV_AVAILABLE and NUMPY_AVAILABLE and cv2 is not None and np is not None:
                 try:
                     # Convert PIL to OpenCV format
                     opencv_image = cv2.cvtColor(np.array(rgb_image), cv2.COLOR_RGB2BGR)
@@ -832,14 +894,18 @@ class AdvancedFileProcessor:
                     except Exception:
                         pass  # Face detection not available
                         
-                except Exception:
-                    pass  # OpenCV processing failed
+                except Exception as e:
+                    logger.info(f"OpenCV processing failed (this is expected if OpenCV is not installed): {e}")
+            elif not OPENCV_AVAILABLE:
+                logger.debug("OpenCV not available - object detection features disabled")
+            elif not NUMPY_AVAILABLE:
+                logger.debug("NumPy not available - advanced image analysis features disabled")
             
             # Color analysis
             dominant_colors = []
             quality_assessment = {}
             
-            if np is not None:
+            if NUMPY_AVAILABLE and np is not None:
                 try:
                     img_array = np.array(rgb_image)
                     
@@ -847,7 +913,8 @@ class AdvancedFileProcessor:
                     quality_assessment = {
                         'mean_brightness': float(np.mean(img_array)),
                         'contrast': float(np.std(img_array)),
-                        'sharpness': 'calculated' if len(img_array.shape) == 3 else 'grayscale'
+                        'sharpness': 'calculated' if len(img_array.shape) == 3 else 'grayscale',
+                        'numpy_analysis': True
                     }
                     
                     # Simple dominant color extraction
@@ -857,8 +924,36 @@ class AdvancedFileProcessor:
                         unique_colors = np.unique(reshaped, axis=0)
                         dominant_colors = [f"rgb({c[0]},{c[1]},{c[2]})" for c in unique_colors[:5]]
                     
-                except Exception:
-                    quality_assessment = {'analysis_failed': 0.0}  # Use float values
+                except Exception as e:
+                    logger.warning(f"NumPy color analysis failed: {e}")
+                    quality_assessment = {'analysis_failed': True, 'error': str(e)}
+            else:
+                # Fallback analysis using PIL only
+                try:
+                    # Basic analysis without numpy
+                    quality_assessment = {
+                        'basic_analysis': True,
+                        'width': image.width,
+                        'height': image.height,
+                        'mode': image.mode,
+                        'note': 'Advanced analysis unavailable - NumPy not installed'
+                    }
+                    
+                    # Basic color extraction using PIL
+                    if hasattr(image, 'getcolors'):
+                        try:
+                            colors = image.getcolors(maxcolors=256*256*256)
+                            if colors:
+                                # Get top 5 most frequent colors
+                                sorted_colors = sorted(colors, key=lambda x: x[0], reverse=True)[:5]
+                                dominant_colors = [f"rgb{color[1][:3]}" if isinstance(color[1], tuple) and len(color[1]) >= 3 
+                                                 else str(color[1]) for color in sorted_colors]
+                        except Exception:
+                            dominant_colors = ['analysis_failed']
+                    
+                except Exception as e:
+                    logger.warning(f"Basic color analysis failed: {e}")
+                    quality_assessment = {'basic_analysis_failed': True, 'error': str(e)}
             
             # Generate intelligent content description
             content_description = AdvancedFileProcessor._generate_image_description(
