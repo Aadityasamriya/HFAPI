@@ -340,44 +340,82 @@ class Config:
     
     @classmethod
     def validate_config(cls):
-        """Validate basic configuration requirements"""
+        """Validate critical security configuration requirements with fail-fast approach"""
         import logging
+        import re
         logger = logging.getLogger(__name__)
         
-        # Always require Telegram bot token
-        if not cls.TELEGRAM_BOT_TOKEN:
-            raise ValueError("CRITICAL: TELEGRAM_BOT_TOKEN environment variable is required")
+        validation_errors = []
         
-        # Validate Telegram bot token format
-        if cls.TELEGRAM_BOT_TOKEN and not cls.TELEGRAM_BOT_TOKEN.count(':') == 1:
-            from bot.core.model_caller import SecureLogger
-            SecureLogger(logger).warning("Telegram bot token format may be invalid")
+        # CRITICAL: Always require Telegram bot token
+        if not cls.TELEGRAM_BOT_TOKEN:
+            validation_errors.append("TELEGRAM_BOT_TOKEN environment variable is required")
+        elif not re.match(r'^\d+:[a-zA-Z0-9_-]{35}$', cls.TELEGRAM_BOT_TOKEN):
+            # Validate proper bot token format (bot_id:token_hash)
+            validation_errors.append("TELEGRAM_BOT_TOKEN format is invalid (expected: digits:hash format)")
+        
+        # SECURITY CRITICAL: ENCRYPTION_SEED now mandatory for production security
+        if not cls.ENCRYPTION_SEED:
+            validation_errors.append(
+                "ENCRYPTION_SEED environment variable is MANDATORY for production deployment. "
+                "Generate with: python -c 'import secrets, base64; print(base64.b64encode(secrets.token_bytes(32)).decode())'"
+            )
+        elif len(cls.ENCRYPTION_SEED) < 32:
+            validation_errors.append("ENCRYPTION_SEED must be at least 32 characters for security")
         
         # Database validation - require either MongoDB or Supabase configuration
         mongo_uri = cls.get_mongodb_uri()
         supabase_url = cls.get_supabase_mgmt_url()
         
         if not mongo_uri and not supabase_url:
-            raise ValueError(
-                "CRITICAL: Database configuration is required. "
+            validation_errors.append(
+                "Database configuration is required. "
                 "Set either MONGODB_URI or SUPABASE_MGMT_URL environment variable."
             )
         
-        # Validate MongoDB URI format if provided
+        # Enhanced MongoDB URI validation with TLS enforcement
         if mongo_uri:
             if not (mongo_uri.startswith('mongodb://') or mongo_uri.startswith('mongodb+srv://')):
-                raise ValueError("MONGODB_URI must be a valid MongoDB connection string (mongodb:// or mongodb+srv://)")
-            logger.info("✅ MongoDB configuration detected")
+                validation_errors.append("MONGODB_URI must be a valid MongoDB connection string (mongodb:// or mongodb+srv://)")
+            elif 'mongodb+srv://' in mongo_uri:
+                # Production TLS enforcement for MongoDB Atlas
+                if 'tls=true' not in mongo_uri.lower() and 'ssl=true' not in mongo_uri.lower():
+                    logger.warning("⚠️  SECURITY: Consider enabling TLS for MongoDB Atlas in production")
+            
+            # Validate URI contains authentication for production
+            if '@' not in mongo_uri:
+                logger.warning("⚠️  SECURITY: MongoDB URI should include authentication for production")
+            
+            logger.info("✅ MongoDB configuration detected and validated")
         
-        # Validate Supabase URL format if provided
+        # Enhanced Supabase URL validation  
         if supabase_url:
             if not (supabase_url.startswith('postgresql://') or supabase_url.startswith('postgres://')):
-                raise ValueError("SUPABASE_MGMT_URL must be a valid PostgreSQL connection string (postgresql:// or postgres://)")
-            logger.info("✅ Supabase configuration detected")
+                validation_errors.append("SUPABASE_MGMT_URL must be a valid PostgreSQL connection string (postgresql:// or postgres://)")
+            elif 'sslmode=' not in supabase_url.lower():
+                logger.warning("⚠️  SECURITY: Consider specifying sslmode=require for Supabase in production")
+            
+            logger.info("✅ Supabase configuration detected and validated")
         
-        # Log preferred provider
+        # Validate Hugging Face API environment (for AI model access)
+        hf_token = os.getenv('HF_TOKEN') or os.getenv('HUGGINGFACE_TOKEN') or os.getenv('HUGGING_FACE_TOKEN')
+        if not hf_token:
+            logger.warning("⚠️  Hugging Face API token not found - AI model access may be limited")
+            logger.warning("   Set HF_TOKEN, HUGGINGFACE_TOKEN, or HUGGING_FACE_TOKEN for full functionality")
+        elif len(hf_token) < 30:  # HF tokens are typically longer
+            logger.warning("⚠️  Hugging Face API token appears to be invalid (too short)")
+        else:
+            logger.info("✅ Hugging Face API token detected")
+        
+        # Fail fast if critical errors found
+        if validation_errors:
+            error_msg = "CRITICAL CONFIGURATION ERRORS:\n" + "\n".join(f"  - {error}" for error in validation_errors)
+            logger.error(error_msg)
+            raise ValueError(error_msg)
+        
+        # Log security status
         preferred_provider = cls.get_preferred_storage_provider()
         logger.info(f"🎯 Preferred storage provider: {preferred_provider}")
-        
-        logger.info("✅ Configuration validated successfully")
+        logger.info(f"🔐 Encryption seed: {'✅ PROVIDED' if cls.ENCRYPTION_SEED else '❌ MISSING'}")
+        logger.info("✅ All critical security configurations validated successfully")
         return True

@@ -141,10 +141,10 @@ class AdvancedFileProcessor:
     Features: Advanced PDF analysis, intelligent image processing, smart content extraction
     """
     
-    # Enhanced security limits and capabilities
-    MAX_ZIP_SIZE = 25 * 1024 * 1024  # 25MB for ZIP files (increased)
-    MAX_PDF_SIZE = 100 * 1024 * 1024  # 100MB for PDF files (increased)  
-    MAX_IMAGE_SIZE = 50 * 1024 * 1024  # 50MB for images (increased)
+    # SECURITY: Enforced file size limits per user requirements (10MB max)
+    MAX_ZIP_SIZE = 10 * 1024 * 1024   # 10MB for ZIP files (enforced limit)
+    MAX_PDF_SIZE = 10 * 1024 * 1024   # 10MB for PDF files (enforced limit)
+    MAX_IMAGE_SIZE = 10 * 1024 * 1024  # 10MB for images (enforced limit)
     MAX_EXTRACTED_FILES = 500  # Maximum files to extract from ZIP (increased)
     MAX_TEXT_CONTENT = 1000000  # Maximum characters to process (increased)
     
