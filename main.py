@@ -197,16 +197,16 @@ class HuggingFaceBot:
         # P1 FEATURES: File upload handlers for advanced document and image processing (2025)
         # Document handler for PDF and ZIP files  
         self.application.add_handler(
-            MessageHandler(filters.Document.ALL, MessageHandlers.document_handler)
+            MessageHandler(filters.Document.ALL, message_handlers.document_handler)
         )
         
         # Photo handler for image analysis
         self.application.add_handler(
-            MessageHandler(filters.PHOTO, MessageHandlers.photo_handler)
+            MessageHandler(filters.PHOTO, message_handlers.photo_handler)
         )
         
         # Error handler (enhanced for file processing)
-        self.application.add_error_handler(MessageHandlers.error_handler)
+        self.application.add_error_handler(message_handlers.error_handler)
         
         logger.info("All handlers registered successfully")
         logger.info(f"📊 Handler summary: {len(self.application.handlers)} handler groups configured")
