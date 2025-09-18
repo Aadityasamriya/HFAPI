@@ -25,7 +25,13 @@ class Config:
     # ===== REQUIRED CONFIGURATION =====
     # These MUST be set for the bot to function
     TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
+    
+    # Database Configuration - MongoDB (legacy) or Supabase (new)
     MONGODB_URI = os.getenv('MONGODB_URI') or os.getenv('MONGO_URI')  # Support both variable names
+    
+    # Supabase Configuration for Individual User Databases
+    SUPABASE_MGMT_URL = os.getenv('SUPABASE_MGMT_URL') or os.getenv('DATABASE_URL')  # Management database URL
+    SUPABASE_USER_BASE_URL = os.getenv('SUPABASE_USER_BASE_URL')  # Base URL for user databases (optional)
     
     # ===== CORE BOT CONFIGURATION =====
     BOT_NAME = os.getenv('BOT_NAME', 'Hugging Face By AadityaLabs AI')
@@ -227,6 +233,41 @@ class Config:
         return cls.MONGODB_URI
     
     @classmethod
+    def get_supabase_mgmt_url(cls) -> str | None:
+        """Get Supabase management database URL with validation"""
+        return cls.SUPABASE_MGMT_URL
+    
+    @classmethod
+    def get_supabase_user_base_url(cls) -> str | None:
+        """Get Supabase user base database URL, defaults to management URL"""
+        return cls.SUPABASE_USER_BASE_URL or cls.SUPABASE_MGMT_URL
+    
+    @classmethod
+    def has_supabase_config(cls) -> bool:
+        """Check if Supabase configuration is available"""
+        return bool(cls.SUPABASE_MGMT_URL)
+    
+    @classmethod
+    def has_mongodb_config(cls) -> bool:
+        """Check if MongoDB configuration is available"""
+        return bool(cls.MONGODB_URI)
+    
+    @classmethod
+    def get_preferred_storage_provider(cls) -> str:
+        """
+        Get preferred storage provider based on available configuration
+        
+        Returns:
+            str: 'supabase' or 'mongodb' based on available config
+        """
+        if cls.has_supabase_config():
+            return 'supabase'
+        elif cls.has_mongodb_config():
+            return 'mongodb'
+        else:
+            return 'supabase'  # Default to supabase for new deployments
+    
+    @classmethod
     def get_model_fallback_chain(cls, model_type: str) -> list:
         """Enhanced fallback chains with latest 2025 models for optimal performance"""
         fallback_chains = {
@@ -312,17 +353,31 @@ class Config:
             from bot.core.model_caller import SecureLogger
             SecureLogger(logger).warning("Telegram bot token format may be invalid")
         
-        # MongoDB validation
+        # Database validation - require either MongoDB or Supabase configuration
         mongo_uri = cls.get_mongodb_uri()
-        if not mongo_uri:
+        supabase_url = cls.get_supabase_mgmt_url()
+        
+        if not mongo_uri and not supabase_url:
             raise ValueError(
-                "CRITICAL: MONGODB_URI environment variable is required. "
-                "Set MONGODB_URI with your MongoDB connection string."
+                "CRITICAL: Database configuration is required. "
+                "Set either MONGODB_URI or SUPABASE_MGMT_URL environment variable."
             )
         
-        # Validate MongoDB URI format
-        if not (mongo_uri.startswith('mongodb://') or mongo_uri.startswith('mongodb+srv://')):
-            raise ValueError("MONGODB_URI must be a valid MongoDB connection string (mongodb:// or mongodb+srv://)")
+        # Validate MongoDB URI format if provided
+        if mongo_uri:
+            if not (mongo_uri.startswith('mongodb://') or mongo_uri.startswith('mongodb+srv://')):
+                raise ValueError("MONGODB_URI must be a valid MongoDB connection string (mongodb:// or mongodb+srv://)")
+            logger.info("✅ MongoDB configuration detected")
+        
+        # Validate Supabase URL format if provided
+        if supabase_url:
+            if not (supabase_url.startswith('postgresql://') or supabase_url.startswith('postgres://')):
+                raise ValueError("SUPABASE_MGMT_URL must be a valid PostgreSQL connection string (postgresql:// or postgres://)")
+            logger.info("✅ Supabase configuration detected")
+        
+        # Log preferred provider
+        preferred_provider = cls.get_preferred_storage_provider()
+        logger.info(f"🎯 Preferred storage provider: {preferred_provider}")
         
         logger.info("✅ Configuration validated successfully")
         return True

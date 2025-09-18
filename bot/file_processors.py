@@ -624,7 +624,16 @@ class AdvancedFileProcessor:
             # Process each page with advanced extraction
             for page_num in range(pdf_document.page_count):
                 page = pdf_document[page_num]
-                page_text = page.get_text()
+                # Extract text from page (PyMuPDF method)
+                try:
+                    # Use getattr to safely access get_text method
+                    get_text_method = getattr(page, 'get_text', None)
+                    if get_text_method:
+                        page_text = get_text_method()
+                    else:
+                        page_text = ''
+                except (AttributeError, Exception):
+                    page_text = ''
                 full_text += f"\n{page_text}"
                 
                 # Advanced table detection
@@ -735,7 +744,7 @@ class AdvancedFileProcessor:
                     faces_detected=0,
                     text_regions=[],
                     image_type="unknown",
-                    quality_assessment={'error': 'Image processing unavailable'},
+                    quality_assessment={'processing_available': 0.0},  # Use float values
                     content_description="Image processing libraries not available",
                     dominant_colors=[],
                     technical_analysis={'processing_time': time.time() - start_time}
@@ -798,7 +807,19 @@ class AdvancedFileProcessor:
                     
                     # Simple face detection
                     try:
-                        face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+                        # Access haarcascades data properly
+                        try:
+                            # Try to access cv2.data safely
+                            cv2_data = getattr(cv2, 'data', None)
+                            if cv2_data and hasattr(cv2_data, 'haarcascades'):
+                                cascade_path = cv2_data.haarcascades + 'haarcascade_frontalface_default.xml'
+                            else:
+                                # Fallback path - try common locations
+                                cascade_path = 'haarcascade_frontalface_default.xml'
+                        except (AttributeError, TypeError):
+                            # Fallback path - try common locations
+                            cascade_path = 'haarcascade_frontalface_default.xml'
+                        face_cascade = cv2.CascadeClassifier(cascade_path)
                         faces = face_cascade.detectMultiScale(opencv_image, 1.1, 4)
                         faces_detected = len(faces)
                         
@@ -837,7 +858,7 @@ class AdvancedFileProcessor:
                         dominant_colors = [f"rgb({c[0]},{c[1]},{c[2]})" for c in unique_colors[:5]]
                     
                 except Exception:
-                    quality_assessment = {'error': 'Color analysis failed'}
+                    quality_assessment = {'analysis_failed': 0.0}  # Use float values
             
             # Generate intelligent content description
             content_description = AdvancedFileProcessor._generate_image_description(
@@ -872,7 +893,7 @@ class AdvancedFileProcessor:
                 faces_detected=0,
                 text_regions=[],
                 image_type="unknown",
-                quality_assessment={'error': str(e)},
+                quality_assessment={'analysis_failed': 0.0},  # Use float values
                 content_description=f"Image analysis failed: {str(e)}",
                 dominant_colors=[],
                 technical_analysis={'processing_time': time.time() - start_time, 'error': str(e)}

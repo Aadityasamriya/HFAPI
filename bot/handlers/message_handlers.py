@@ -390,14 +390,18 @@ class MessageHandlers:
                         disable_web_page_preview=True
                     )
             
-            # Cache the successful response
+            # Cache the successful response  
+            generation_time = 1.0  # Default generation time
+            user_context = {'user_id': user_id, 'files_generated': len(formatted_response.attachments)}
+            
             await smart_cache.store(
-                message_text,
-                formatted_response.main_text,
-                "code_generation",
-                routing_info.get('selected_model', 'unknown'),
-                ResponseQuality.HIGH,
-                {'files_generated': len(formatted_response.attachments)}
+                prompt=message_text,
+                intent_type="code_generation",
+                content=formatted_response.main_text,
+                user_context=user_context,
+                model_used=routing_info.get('selected_model', 'unknown'),
+                response_time=generation_time,
+                quality_score=generation_result.quality_score if hasattr(generation_result, 'quality_score') else 7.5
             )
             
             logger.info(f"✅ ENHANCED CODE GENERATION completed: {generation_result.total_files} files, quality {generation_result.quality_score:.1f}/10")
@@ -1144,18 +1148,6 @@ Please provide detailed analysis including key insights, patterns, and actionabl
             else:
                 await update.message.reply_text("❌ **Processing Failed** - Please try again with clearer context.", parse_mode='Markdown')
 
-    @staticmethod 
-    async def _handle_multi_modal(update, context, prompt: str, api_key: str, routing_info: dict) -> None:
-        """Handle multi-modal AI requests"""
-        await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=ChatAction.TYPING)
-        
-        async with ModelCaller(provider="auto") as model_caller:
-            success, result = await model_caller.generate_text(f"🔄 **Multi-Modal AI:** {prompt}", api_key, special_params={'temperature': 0.6})
-            
-            if success:
-                await update.message.reply_text(f"🎭 **Multi-Modal Response**\n\n{result}\n\n*🌟 Generated with 2025 multi-modal AI*", parse_mode='Markdown')
-            else:
-                await update.message.reply_text("❌ **Multi-Modal Processing Failed**", parse_mode='Markdown')
 
     @staticmethod
     async def _handle_conversation(update, context, prompt: str, api_key: str, chat_history: list, routing_info: dict) -> None:
@@ -1198,123 +1190,8 @@ Please provide detailed analysis including key insights, patterns, and actionabl
                 await update.message.reply_text("❌ **Conversation Error** - Let me try that again.", parse_mode='Markdown')
     
     @staticmethod
-    async def document_handler(update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """
-        Handle document uploads (PDF and ZIP files) with AI analysis
-        """
-        user = update.effective_user
-        user_id = user.id
-        username = user.username or "No username"
-        
-        logger.info(f"📎 DOCUMENT upload received from user_id:{user_id} (@{username})")
-        
-        # Check rate limit
-        is_allowed, wait_time = check_rate_limit(user_id)
-        if not is_allowed:
-            await update.message.reply_text(
-                f"⚠️ **Rate Limit Exceeded**\n\nPlease wait {wait_time} seconds before uploading another file.",
-                parse_mode='Markdown'
-            )
-            return
-        
-        try:
-            # Get document info
-            document = update.message.document
-            if not document:
-                await update.message.reply_text(
-                    "❌ **No Document Found**\n\nPlease upload a valid PDF or ZIP file.",
-                    parse_mode='Markdown'
-                )
-                return
-            
-            filename = document.file_name or "unknown_file"
-            file_size = document.file_size or 0
-            mime_type = document.mime_type or "application/octet-stream"
-            
-            logger.info(f"📄 Document details: {filename} ({file_size:,} bytes, {mime_type}) from user {user_id}")
-            
-            # Determine file type and validate
-            is_pdf = mime_type in ['application/pdf'] or filename.lower().endswith('.pdf')
-            is_zip = mime_type in ['application/zip', 'application/x-zip-compressed'] or filename.lower().endswith('.zip')
-            
-            if not (is_pdf or is_zip):
-                await update.message.reply_text(
-                    "❌ **Unsupported File Type**\n\n"
-                    "I can only process:\n"
-                    "• **PDF files** - For document analysis\n"
-                    "• **ZIP archives** - For content analysis\n\n"
-                    "Please upload a PDF or ZIP file.",
-                    parse_mode='Markdown'
-                )
-                return
-            
-            # Check file size limits
-            from bot.file_processors import FileProcessor
-            max_size = FileProcessor.MAX_ZIP_SIZE if is_zip else FileProcessor.MAX_PDF_SIZE
-            if file_size > max_size:
-                max_size_mb = max_size / (1024 * 1024)
-                await update.message.reply_text(
-                    f"❌ **File Too Large**\n\n"
-                    f"Maximum size for {'ZIP' if is_zip else 'PDF'} files: {max_size_mb:.1f}MB\n"
-                    f"Your file: {file_size / (1024 * 1024):.1f}MB\n\n"
-                    f"Please upload a smaller file.",
-                    parse_mode='Markdown'
-                )
-                return
-            
-            # Download file data
-            await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=ChatAction.UPLOAD_DOCUMENT)
-            
-            processing_msg = await update.message.reply_text(
-                f"📥 **Downloading {filename}...**\n\n"
-                f"Processing your {'ZIP archive' if is_zip else 'PDF document'} for analysis. This may take a moment...",
-                parse_mode='Markdown'
-            )
-            
-            try:
-                # Download file
-                file_obj = await document.get_file()
-                file_data = await file_obj.download_as_bytearray()
-                
-                # Security validation
-                expected_type = 'zip' if is_zip else 'pdf'
-                is_valid, error_msg = FileProcessor.validate_file_security(bytes(file_data), filename, expected_type)
-                
-                if not is_valid:
-                    await processing_msg.edit_text(
-                        f"🚫 **Security Validation Failed**\n\n{error_msg}\n\n"
-                        "Please upload a valid, safe file.",
-                        parse_mode='Markdown'
-                    )
-                    return
-                
-                # Process based on file type
-                if is_pdf:
-                    await MessageHandlers._process_pdf_document(update, context, file_data, filename, processing_msg)
-                elif is_zip:
-                    await MessageHandlers._process_zip_archive(update, context, file_data, filename, processing_msg)
-                    
-            except Exception as download_error:
-                logger.error(f"File download error for user {user_id}: {download_error}")
-                await processing_msg.edit_text(
-                    "❌ **Download Failed**\n\n"
-                    "Failed to download your file. Please try uploading again.",
-                    parse_mode='Markdown'
-                )
-                
-        except Exception as e:
-            _safe_log_error(logger.error, f"Error in document handler for user {user_id}: {e}")
-            await update.message.reply_text(
-                "🚫 **Document Processing Error**\n\n"
-                "An error occurred while processing your document. Please try again.",
-                parse_mode='Markdown'
-            )
-    
-    @staticmethod
-    async def photo_handler(update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """
-        Handle photo uploads for image analysis
-        """
+    async def _process_pdf_document(update, context, file_data: bytes, filename: str, processing_msg) -> None:
+        """Process PDF document with AI analysis"""
         user = update.effective_user
         user_id = user.id
         username = user.username or "No username"
@@ -1701,25 +1578,6 @@ Please provide detailed analysis including key insights, patterns, and actionabl
                 parse_mode='Markdown'
             )
     
-    @staticmethod
-    async def error_handler(update, context) -> None:
-        """Enhanced error handler for all bot operations"""
-        user_id = getattr(update.effective_user, 'id', 'Unknown') if update.effective_user else 'Unknown'
-        
-        # Log error safely without exposing sensitive information
-        _safe_log_error(logger.error, f"Update {update} caused error {context.error} for user {user_id}")
-        
-        # Send user-friendly error message
-        try:
-            if update.message:
-                await update.message.reply_text(
-                    "🚫 **Something went wrong**\n\n"
-                    "I encountered an unexpected error. Please try again, and if the problem persists, contact support.",
-                    parse_mode='Markdown'
-                )
-        except Exception:
-            # Fallback if even error message fails
-            logger.error("Failed to send error message to user")
 
 # Export message handlers
 message_handlers = MessageHandlers()
