@@ -364,7 +364,7 @@ class DynamicModelSelector:
             ]
         }
     
-    def select_optimal_model(self, intent: str, complexity: PromptComplexity, context: ContextState = None) -> Tuple[str, Dict]:
+    def select_optimal_model(self, intent: str, complexity: PromptComplexity, context: Optional[ContextState] = None) -> Tuple[str, Dict]:
         """
         Select the optimal model based on complexity, performance, and context
         """
@@ -1084,7 +1084,7 @@ class IntelligentRouter:
         
         return 'unknown'
     
-    def route_prompt(self, prompt: str, user_id: int = None, user_context: Optional[Dict] = None) -> Tuple[IntentType, Dict]:
+    def route_prompt(self, prompt: str, user_id: Optional[int] = None, user_context: Optional[Dict] = None) -> Tuple[IntentType, Dict]:
         """
         SUPERIOR AI routing that outperforms ChatGPT, Grok, and Gemini
         Features advanced ML-based analysis and adaptive model selection
@@ -1979,7 +1979,7 @@ class IntelligentRouter:
     def update_model_performance(self, model: str, intent: str, success: bool, 
                                 response_time: float, quality_score: float):
         """Update model performance tracking for adaptive routing"""
-        self.model_selector.update_performance(model, intent, success, response_time, quality_score)
+        self.model_selector.performance_monitor.update_metrics(model, success, response_time, quality_score, intent)
     
     def get_model_performance_feedback(self, intent: IntentType, success: bool, response_quality: str) -> Dict:
         """

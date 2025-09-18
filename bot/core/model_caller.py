@@ -1529,13 +1529,13 @@ class SuperiorModelCaller(ModelCaller):
         models = []
         
         if intent_type == 'code_generation':
-            models = [Config.CODE_MODEL, Config.ADVANCED_TEXT_MODEL, Config.DEFAULT_TEXT_MODEL]
+            models = [Config.DEFAULT_CODE_MODEL, Config.ADVANCED_TEXT_MODEL, Config.DEFAULT_TEXT_MODEL]
         elif intent_type in ['mathematical_reasoning', 'advanced_reasoning']:
             models = [Config.ADVANCED_TEXT_MODEL, Config.DEFAULT_TEXT_MODEL]
         elif intent_type == 'creative_writing':
             models = [Config.DEFAULT_TEXT_MODEL, Config.ADVANCED_TEXT_MODEL]
         elif intent_type == 'image_generation':
-            models = [Config.IMAGE_MODEL]
+            models = [Config.DEFAULT_IMAGE_MODEL]
         else:
             # General text generation
             if complexity_score > 7:
@@ -1548,9 +1548,9 @@ class SuperiorModelCaller(ModelCaller):
     def _get_fallback_model_for_intent(self, intent_type: str, complexity_score: float) -> str:
         """Get fallback model when optimal selection fails"""
         if intent_type == 'code_generation':
-            return Config.CODE_MODEL or Config.ADVANCED_TEXT_MODEL
+            return Config.DEFAULT_CODE_MODEL or Config.ADVANCED_TEXT_MODEL
         elif intent_type == 'image_generation':
-            return Config.IMAGE_MODEL
+            return Config.DEFAULT_IMAGE_MODEL
         elif complexity_score > 7:
             return Config.ADVANCED_TEXT_MODEL
         else:
