@@ -160,9 +160,9 @@ class HuggingFaceBot:
                 logger.error("❌ TELEGRAM_BOT_TOKEN environment variable is missing")
                 raise ValueError("TELEGRAM_BOT_TOKEN is required")
                 
-            logger.info("🏗️ Building Telegram application...")
-            self.application = Application.builder().token(Config.TELEGRAM_BOT_TOKEN).build()
-            logger.info("✅ Telegram application built successfully")
+            logger.info("🏗️ Building Telegram application with lifecycle hooks...")
+            self.application = Application.builder().token(Config.TELEGRAM_BOT_TOKEN).post_init(self.post_init).post_shutdown(self.post_shutdown).build()
+            logger.info("✅ Telegram application built successfully with post_init and post_shutdown hooks")
             
             # Register handlers
             self._register_handlers()
@@ -248,7 +248,7 @@ class HuggingFaceBot:
             logger.error(f"Error during cleanup: {e}")
 
 def main():
-    """Main entry point - synchronous version for Replit compatibility"""
+    """Main entry point - synchronous for Railway.com compatibility"""
     # Welcome message
     print(f"🤖 {Config.BOT_NAME} v{Config.BOT_VERSION} - Starting Up...")
     print("🚀 Advanced Telegram Bot with Intelligent AI Routing")
@@ -266,7 +266,10 @@ def main():
         # Build application with lifecycle hooks for proper database connection
         if not Config.TELEGRAM_BOT_TOKEN:
             raise ValueError("TELEGRAM_BOT_TOKEN is required")
+        
+        logger.info("🏗️ Building Telegram application with lifecycle hooks...")
         bot.application = Application.builder().token(Config.TELEGRAM_BOT_TOKEN).post_init(bot.post_init).post_shutdown(bot.post_shutdown).build()
+        logger.info("✅ Telegram application built successfully with post_init and post_shutdown hooks")
         
         # Register handlers
         bot._register_handlers()

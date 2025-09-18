@@ -1,8 +1,11 @@
 [phases.setup]
-nixPkgs = ['python311']
+nixPkgs = ['python311', 'cacert']
 
 [phases.install]
-cmds = ['pip install --no-cache-dir -r requirements.txt']
+cmds = [
+    'pip install --upgrade pip setuptools wheel',
+    'pip install --no-cache-dir -r requirements.txt'
+]
 
 [start]
 cmd = 'python main.py'
@@ -10,3 +13,4 @@ cmd = 'python main.py'
 [variables]
 PYTHONPATH = '.'
 PYTHONUNBUFFERED = '1'
+PYTHONDONTWRITEBYTECODE = '1'
