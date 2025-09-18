@@ -1,6 +1,6 @@
 """
-{Config.BOT_NAME} - Advanced Telegram Bot
-{Config.BOT_DESCRIPTION}
+Hugging Face By AadityaLabs AI - Advanced Telegram Bot
+Sophisticated Telegram Bot with Intelligent AI Routing
 """
 
 import asyncio
