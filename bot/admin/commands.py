@@ -70,7 +70,7 @@ Welcome, **Bot Owner**! You have been successfully configured as the first admin
 **Next Steps:**
 • Use `/admin` to access the admin panel
 • Use `/stats` to view bot statistics
-• Use `/help` for list of available admin commands
+• Use `/settings` for user management controls
 
 **Security Note:** Your admin status is now permanently stored in the encrypted database.
 

@@ -5,7 +5,7 @@ This module contains all the handlers for processing Telegram bot interactions
 including commands, callback queries, and message processing with intelligent routing.
 
 Components:
-- CommandHandlers: Handles /start, /settings, /help, and inline keyboard interactions
+- CommandHandlers: Handles /start, /settings, /newchat, /history, /resetdb and inline keyboard interactions
 - MessageHandlers: Processes text messages with intelligent AI routing
 """
 

@@ -183,7 +183,8 @@ git push heroku main
 - `/start` - Welcome and setup
 - `/newchat` - Clear conversation history
 - `/settings` - Manage API key and account
-- `/help` - Full feature guide
+- `/history` - View conversation history
+- `/resetdb` - Reset user data (admin)
 
 ### **🛡️ Security Features**
 - API keys encrypted with production-grade security

@@ -306,7 +306,6 @@ Your conversation history has been reset. You're starting fresh with a clean sla
 • `/start` - Get started & setup
 • `/newchat` - Start fresh  
 • `/settings` - Your preferences
-• `/help` - This guide
 
 **🎯 What magic can I create for you:**
 
@@ -1272,7 +1271,7 @@ Ready to stop overpaying for inferior AI? 🚀
 • `/start` - Welcome & setup
 • `/newchat` - Clear conversation history  
 • `/settings` - Manage your preferences
-• `/help` - This help guide
+• `/history` - View conversation history
 
 **🤖 AI Capabilities:**
 
