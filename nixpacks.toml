@@ -1,5 +1,5 @@
 [phases.setup]
-nixPkgs = ['python311']
+nixPkgs = ['python311', 'file', 'libmagic', 'pkg-config', 'gcc']
 
 [phases.install]
 cmds = [
