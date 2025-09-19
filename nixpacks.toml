@@ -1,5 +1,5 @@
 [phases.setup]
-nixPkgs = ['python311', 'cacert']
+nixPkgs = ['python311']
 
 [phases.install]
 cmds = [
