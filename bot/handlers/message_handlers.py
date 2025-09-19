@@ -671,7 +671,8 @@ class MessageHandlers:
         # Send processing message
         await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=ChatAction.TYPING)
         
-        # Validate API key format
+        # Simple and reliable API key validation
+        # HuggingFace tokens start with 'hf_' and are typically 37-40 characters long
         if not api_key.startswith('hf_') or len(api_key) < 30:
             await update.message.reply_text(
                 "🤔 **Oops! That doesn't look quite right...**\n\n✨ **Your magic token should:**\n• Start with `hf_`\n• Be about 37 characters long\n• Look something like: `hf_AbCdEfGhIjKlMnOpQrStUvWxYz`\n\n🚀 **No worries! Just double-check you copied the whole token and try again!**",
@@ -679,19 +680,15 @@ class MessageHandlers:
             )
             return
         
-        # Test API key with a lightweight validation call
+        # Token format is valid, save it directly
         try:
-            # Simple format validation - if it looks like a valid HF token, accept it
-            # Most validation failures are due to network/API issues, not invalid keys
-            if len(api_key) >= 30 and api_key.startswith('hf_') and '_' in api_key[3:]:
-                # Key format looks valid, proceed with saving
-                # Store API key persistently in database as specified
-                success_stored = await db.save_user_api_key(user_id, api_key)
-                if success_stored:
-                    if context.user_data is not None:
-                        context.user_data['waiting_for_api_key'] = False
-                    
-                    success_text = """
+            # Store API key persistently in database as specified
+            success_stored = await db.save_user_api_key(user_id, api_key)
+            if success_stored:
+                if context.user_data is not None:
+                    context.user_data['waiting_for_api_key'] = False
+                
+                success_text = """
 🎉 **BOOM! You're now connected to AI superpowers!** 
 
 🌟 **Your personal AI genius is live and ready!**
@@ -706,21 +703,15 @@ class MessageHandlers:
 **✨ Pro tip:** I automatically pick the perfect AI brain for whatever you ask!
 
 *Pick any example above, or ask me anything your heart desires! The magic starts NOW!* 🚀
-                    """
-                    
-                    await update.message.reply_text(
-                        success_text,
-                        parse_mode='Markdown'
-                    )
-                else:
-                    await update.message.reply_text(
-                        "❌ **Saving Issue**\n\n💾 **Couldn't save your API key** - this is unusual!\n\n🔄 **Please try sending your key again** - it should work the second time.\n\n*If it keeps failing, try /start and set it up again.*",
-                        parse_mode='Markdown'
-                    )
-            else:
-                # Invalid format - should not reach here due to earlier validation
+                """
+                
                 await update.message.reply_text(
-                    "🤔 **Hmm, that token format doesn't look right...**\n\n✨ **Your magic token should:**\n• Start with `hf_`\n• Be about 37 characters long\n• Look like: `hf_AbCdEfGhIjKlMnOpQrStUvWxYz`\n\n🚀 **Just double-check and try again!**",
+                    success_text,
+                    parse_mode='Markdown'
+                )
+            else:
+                await update.message.reply_text(
+                    "❌ **Saving Issue**\n\n💾 **Couldn't save your API key** - this is unusual!\n\n🔄 **Please try sending your key again** - it should work the second time.\n\n*If it keeps failing, try /start and set it up again.*",
                     parse_mode='Markdown'
                 )
                 
