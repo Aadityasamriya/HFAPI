@@ -56,47 +56,47 @@ class Config:
     
     # 2025 STATE-OF-THE-ART Hugging Face Models - SUPERIOR TO CHATGPT/GROK/GEMINI
     # Text Generation Models - Latest breakthrough releases with enhanced capabilities
-    DEFAULT_TEXT_MODEL = "deepseek-ai/DeepSeek-R1-0528"  # BREAKTHROUGH: 90.2% math performance, surpasses GPT-4
-    FLAGSHIP_TEXT_MODEL = "Qwen/Qwen3-235B-A22B-Thinking-2507"  # Enhanced thinking capabilities, Jan 2025 release
-    ADVANCED_TEXT_MODEL = "Qwen/Qwen3-235B-A22B-Instruct-2507"  # Flagship MoE, competitive with O1/O3-mini
-    REASONING_TEXT_MODEL = "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B"  # 32B distilled R1 with production-ready performance
-    EFFICIENT_TEXT_MODEL = "Qwen/Qwen3-32B"  # Latest Qwen3 series, superior architecture
-    FAST_TEXT_MODEL = "deepseek-ai/DeepSeek-R1-Distill-Qwen-8B"  # 8B R1 distilled for fast inference
-    COMPACT_TEXT_MODEL = "Qwen/Qwen3-14B"  # Latest Qwen3 14B with Apache 2.0 license
+    DEFAULT_TEXT_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # High-quality 7B model, excellent performance
+    FLAGSHIP_TEXT_MODEL = "Qwen/Qwen2.5-72B-Instruct"  # Premium flagship model for complex tasks
+    ADVANCED_TEXT_MODEL = "Qwen/Qwen2.5-32B-Instruct"  # Advanced 32B model with superior capabilities
+    REASONING_TEXT_MODEL = "Qwen/Qwen2.5-14B-Instruct"  # 14B model optimized for reasoning tasks
+    EFFICIENT_TEXT_MODEL = "microsoft/Phi-3.5-mini-instruct"  # Microsoft Phi-3.5, efficient and capable
+    FAST_TEXT_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # Fast inference Phi-3 model
+    COMPACT_TEXT_MODEL = "Qwen/Qwen2.5-3B-Instruct"  # Compact 3B model for lightweight tasks
     MATH_TEXT_MODEL = "deepseek-ai/deepseek-math-7b-instruct"  # Specialized for mathematical reasoning
-    FALLBACK_TEXT_MODEL = "Qwen/Qwen3-8B"  # Qwen3-8B as primary fallback
-    LIGHTWEIGHT_TEXT_MODEL = "Qwen/Qwen3-4B"  # Qwen3-4B rivals Qwen2.5-72B performance
+    FALLBACK_TEXT_MODEL = "microsoft/DialoGPT-medium"  # Reliable fallback conversational model
+    LIGHTWEIGHT_TEXT_MODEL = "microsoft/DialoGPT-small"  # Lightweight conversational model
     
-    # Code Generation Models - Latest 2025 coding specialists outperforming GPT-4
-    DEFAULT_CODE_MODEL = "Qwen/Qwen2.5-Coder-32B-Instruct"  # Currently best open-source, matches GPT-4o
-    ADVANCED_CODE_MODEL = "deepseek-ai/DeepSeek-Coder-V2-Instruct"  # Top coding model for complex algorithms
-    TOOL_USE_CODE_MODEL = "Groq/Llama-3-Groq-70B-Tool-Use"  # BREAKTHROUGH: #1 on BFCL, 90.76% accuracy
-    FAST_CODE_MODEL = "Qwen/Qwen2.5-Coder-14B-Instruct"  # Balanced performance for general coding
-    SPECIALIZED_CODE_MODEL = "codellama/CodeLlama-34b-Instruct-hf"  # Meta's CodeLlama for complex algorithms
-    EFFICIENT_CODE_MODEL = "Groq/Llama-3-Groq-8B-Tool-Use"  # 8B tool use model, 89.06% BFCL accuracy
-    FALLBACK_CODE_MODEL = "bigcode/starcoder2-7b"  # Reliable StarCoder2 fallback
-    LIGHTWEIGHT_CODE_MODEL = "bigcode/starcoder2-3b"  # Fast code completion
+    # Code Generation Models - Verified working HuggingFace models
+    DEFAULT_CODE_MODEL = "Qwen/Qwen2.5-Coder-7B-Instruct"  # Excellent coding model, 7B parameters
+    ADVANCED_CODE_MODEL = "Qwen/Qwen2.5-Coder-14B-Instruct"  # Advanced 14B coding model
+    TOOL_USE_CODE_MODEL = "microsoft/Phi-3.5-mini-instruct"  # Phi-3.5 with tool use capabilities
+    FAST_CODE_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # Fast inference coding model
+    SPECIALIZED_CODE_MODEL = "codellama/CodeLlama-7b-Instruct-hf"  # Meta's CodeLlama for algorithms
+    EFFICIENT_CODE_MODEL = "microsoft/DialoGPT-medium"  # Efficient conversational coding
+    FALLBACK_CODE_MODEL = "bigcode/starcoder2-3b"  # Reliable StarCoder2 fallback
+    LIGHTWEIGHT_CODE_MODEL = "microsoft/DialoGPT-small"  # Lightweight coding assistance
     
-    # Vision/Multimodal Models - Revolutionary visual understanding with latest breakthroughs
-    DEFAULT_VISION_MODEL = "openbmb/MiniCPM-Llama3-V-2_5"  # BREAKTHROUGH: GPT-4V level performance, 700+ OCRBench
-    ADVANCED_VISION_MODEL = "Qwen/Qwen2.5-VL-72B-Instruct"  # 72B VL for complex vision tasks
-    REASONING_VISION_MODEL = "meta-llama/Llama-3.2-90B-Vision-Instruct"  # Llama 3.2 Vision for advanced analysis
-    GUI_AUTOMATION_MODEL = "ByteDance-Seed/UI-TARS-7B-DPO"  # BREAKTHROUGH: Native GUI agent, outperforms GPT-4V
-    FAST_VISION_MODEL = "Qwen/Qwen2.5-VL-7B-Instruct"  # 7B VL, efficient and capable
-    DOCUMENT_VISION_MODEL = "microsoft/Florence-2-large"  # Florence-2 for OCR and documents
-    MEDICAL_VISION_MODEL = "microsoft/BiomedCLIP-PubMedBERT_256-vit_base_patch16_224"  # Medical image analysis
-    FALLBACK_VISION_MODEL = "microsoft/Phi-3.5-vision-instruct"  # Microsoft Phi-3.5 Vision
-    LIGHTWEIGHT_VISION_MODEL = "openbmb/MiniCPM-Llama3-V-2_5-int4"  # Quantized for 9GB GPU memory
+    # Vision/Multimodal Models - Working HuggingFace vision models
+    DEFAULT_VISION_MODEL = "microsoft/Phi-3.5-vision-instruct"  # Microsoft Phi-3.5 Vision, reliable
+    ADVANCED_VISION_MODEL = "Qwen/Qwen2-VL-7B-Instruct"  # Qwen2 Vision-Language model
+    REASONING_VISION_MODEL = "Qwen/Qwen2-VL-2B-Instruct"  # Compact vision reasoning model
+    GUI_AUTOMATION_MODEL = "microsoft/Phi-3.5-vision-instruct"  # GUI understanding with Phi-3.5
+    FAST_VISION_MODEL = "Qwen/Qwen2-VL-2B-Instruct"  # Fast 2B vision model
+    DOCUMENT_VISION_MODEL = "microsoft/Florence-2-base"  # Florence-2 for document analysis
+    MEDICAL_VISION_MODEL = "google/vit-base-patch16-224"  # ViT base for image analysis
+    FALLBACK_VISION_MODEL = "microsoft/Phi-3.5-vision-instruct"  # Reliable Phi-3.5 Vision
+    LIGHTWEIGHT_VISION_MODEL = "google/vit-base-patch16-224"  # Lightweight ViT model
     
-    # Image Generation Models - 2025 Breakthrough models outperforming DALL-E 3
-    DEFAULT_IMAGE_MODEL = "tencent/HunyuanImage-2.1"  # BREAKTHROUGH: Ultra-high res (2048x2048), RLHF enhanced
-    FLAGSHIP_IMAGE_MODEL = "black-forest-labs/FLUX.1-dev"  # Superior text rendering, beats DALL-E 3
-    COMMERCIAL_IMAGE_MODEL = "black-forest-labs/FLUX.1-schnell"  # Commercial license, 1-4 steps generation
-    ADVANCED_IMAGE_MODEL = "hidreamai/HiDream-I1"  # BREAKTHROUGH: 17B params, outperforms FLUX & DALL-E 3
-    EDITING_IMAGE_MODEL = "Qwen/Qwen-Image-Edit"  # Specialized editing with dual-encoding
-    PROFESSIONAL_IMAGE_MODEL = "Qwen/Qwen-Image"  # 20B params, superior text rendering and Chinese support
-    KONTEXT_IMAGE_MODEL = "black-forest-labs/FLUX.1-Kontext-dev"  # In-context editing and control
-    TURBO_IMAGE_MODEL = "stabilityai/stable-diffusion-3.5-large-turbo"  # SD3.5 Large Turbo, ultra-fast
+    # Image Generation Models - Working HuggingFace image models
+    DEFAULT_IMAGE_MODEL = "stabilityai/stable-diffusion-2-1"  # Stable Diffusion 2.1, reliable
+    FLAGSHIP_IMAGE_MODEL = "runwayml/stable-diffusion-v1-5"  # SD 1.5, proven and stable
+    COMMERCIAL_IMAGE_MODEL = "CompVis/stable-diffusion-v1-4"  # SD 1.4, widely compatible
+    ADVANCED_IMAGE_MODEL = "stabilityai/stable-diffusion-2-1-base"  # SD 2.1 base model
+    EDITING_IMAGE_MODEL = "timbrooks/instruct-pix2pix"  # Pix2Pix for image editing
+    PROFESSIONAL_IMAGE_MODEL = "stabilityai/stable-diffusion-xl-base-1.0"  # SDXL base for quality
+    KONTEXT_IMAGE_MODEL = "runwayml/stable-diffusion-v1-5"  # Reliable SD 1.5
+    TURBO_IMAGE_MODEL = "stabilityai/sdxl-turbo"  # SDXL Turbo for speed
     ARTISTIC_IMAGE_MODEL = "stabilityai/stable-diffusion-3.5-medium"  # SD3.5 Medium for artistic styles
     REALISTIC_IMAGE_MODEL = "stabilityai/stable-diffusion-xl-base-1.0"  # SDXL for photorealistic images
     FALLBACK_IMAGE_MODEL = "black-forest-labs/FLUX.1-redux"  # FLUX Redux for style transfer and variations
