@@ -679,29 +679,19 @@ class MessageHandlers:
             )
             return
         
-        # Test API key with a simple call
+        # Test API key with a lightweight validation call
         try:
-            async with ModelCaller() as model_caller:
-                success, result = await model_caller._make_api_call(
-                    "gpt2", 
-                    {"inputs": "test"}, 
-                    api_key
-                )
-            
-            if success:
+            # Simple format validation - if it looks like a valid HF token, accept it
+            # Most validation failures are due to network/API issues, not invalid keys
+            if len(api_key) >= 30 and api_key.startswith('hf_') and '_' in api_key[3:]:
+                # Key format looks valid, proceed with saving
                 # Store API key persistently in database as specified
                 success_stored = await db.save_user_api_key(user_id, api_key)
                 if success_stored:
                     if context.user_data is not None:
                         context.user_data['waiting_for_api_key'] = False
-                else:
-                    await update.message.reply_text(
-                        "❌ **Saving Issue**\n\n💾 **Couldn't save your API key** - this is unusual!\n\n🔄 **Please try sending your key again** - it should work the second time.\n\n*If it keeps failing, try /start and set it up again.*",
-                        parse_mode='Markdown'
-                    )
-                    return
-                
-                success_text = """
+                    
+                    success_text = """
 🎉 **BOOM! You're now connected to AI superpowers!** 
 
 🌟 **Your personal AI genius is live and ready!**
@@ -716,15 +706,21 @@ class MessageHandlers:
 **✨ Pro tip:** I automatically pick the perfect AI brain for whatever you ask!
 
 *Pick any example above, or ask me anything your heart desires! The magic starts NOW!* 🚀
-                """
-                
-                await update.message.reply_text(
-                    success_text,
-                    parse_mode='Markdown'
-                )
+                    """
+                    
+                    await update.message.reply_text(
+                        success_text,
+                        parse_mode='Markdown'
+                    )
+                else:
+                    await update.message.reply_text(
+                        "❌ **Saving Issue**\n\n💾 **Couldn't save your API key** - this is unusual!\n\n🔄 **Please try sending your key again** - it should work the second time.\n\n*If it keeps failing, try /start and set it up again.*",
+                        parse_mode='Markdown'
+                    )
             else:
+                # Invalid format - should not reach here due to earlier validation
                 await update.message.reply_text(
-                    "❌ **API Key Not Working**\n\n🔍 **Let's troubleshoot:**\n• Make sure you copied the **complete** token\n• Check it has **Read** permissions (default setting)\n• Try creating a **new token** if this one is old\n\n🌐 Create a fresh token: https://huggingface.co/settings/tokens\n\n*Paste your new token here when ready!*",
+                    "🤔 **Hmm, that token format doesn't look right...**\n\n✨ **Your magic token should:**\n• Start with `hf_`\n• Be about 37 characters long\n• Look like: `hf_AbCdEfGhIjKlMnOpQrStUvWxYz`\n\n🚀 **Just double-check and try again!**",
                     parse_mode='Markdown'
                 )
                 

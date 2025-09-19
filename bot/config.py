@@ -402,15 +402,9 @@ class Config:
             
             logger.info("✅ Supabase configuration detected and validated")
         
-        # Validate Hugging Face API environment (for AI model access)
-        hf_token = os.getenv('HF_TOKEN') or os.getenv('HUGGINGFACE_TOKEN') or os.getenv('HUGGING_FACE_TOKEN')
-        if not hf_token:
-            logger.warning("⚠️  Hugging Face API token not found - AI model access may be limited")
-            logger.warning("   Set HF_TOKEN, HUGGINGFACE_TOKEN, or HUGGING_FACE_TOKEN for full functionality")
-        elif len(hf_token) < 30:  # HF tokens are typically longer
-            logger.warning("⚠️  Hugging Face API token appears to be invalid (too short)")
-        else:
-            logger.info("✅ Hugging Face API token detected")
+        # Note: Hugging Face API keys are provided individually by users
+        # No global HF_TOKEN is required - each user provides their own API key
+        logger.info("✅ Individual user API key system configured (no global HF_TOKEN needed)")
         
         # Fail fast if critical errors found
         if validation_errors:
