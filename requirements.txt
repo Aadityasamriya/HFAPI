@@ -42,3 +42,22 @@ psutil>=6.0.0
 #
 # These can be re-added later if specific features requiring them are needed.
 # For Railway deployment, we prioritize build reliability and faster deployments.
+aiohttp
+asyncio-throttle
+asyncpg
+cryptography
+filetype
+huggingface_hub==0.34.5
+motor
+Pillow==11.0.0
+psutil
+psycopg2-binary
+pymongo[srv]
+PyMuPDF
+python-dotenv
+python-magic
+python-telegram-bot[ext]==22.4
+requests==2.32.4
+sqlalchemy[asyncio]
+tenacity
+typing-extensions
