@@ -1,0 +1,423 @@
+{
+  "test_results": {
+    "model_caller_integration": {
+      "api_connectivity": false,
+      "authentication": false,
+      "session_management": false,
+      "error_handling": true,
+      "retry_mechanisms": false,
+      "provider_initialization": true,
+      "supported_models": [
+        "gpt2",
+        "gpt2-medium",
+        "gpt2-large",
+        "microsoft/DialoGPT-medium",
+        "facebook/bart-large-cnn",
+        "deepset/roberta-base-squad2",
+        "cardiffnlp/twitter-roberta-base-sentiment-latest"
+      ],
+      "performance_metrics": {
+        "total_test_time": 0.0023953914642333984
+      }
+    },
+    "intelligent_router": {
+      "prompt_analysis": {
+        "code_request": {
+          "success": true,
+          "analysis": {
+            "intent_type": "code_generation",
+            "complexity_score": 3.8016455057162712,
+            "recommended_models": [
+              "microsoft/Phi-3-mini-4k-instruct"
+            ],
+            "risk_level": "low"
+          },
+          "response_time": 0.005906105041503906
+        },
+        "creative_writing": {
+          "success": true,
+          "analysis": {
+            "intent_type": "text_generation",
+            "complexity_score": 1.0428371423731166,
+            "recommended_models": [
+              "Qwen/Qwen2.5-1.5B-Instruct"
+            ],
+            "risk_level": "low"
+          },
+          "response_time": 0.002026081085205078
+        },
+        "technical_question": {
+          "success": true,
+          "analysis": {
+            "intent_type": "question_answering",
+            "complexity_score": 3.3891651689888374,
+            "recommended_models": [
+              "Qwen/Qwen2.5-1.5B-Instruct"
+            ],
+            "risk_level": "low"
+          },
+          "response_time": 0.007494449615478516
+        },
+        "math_problem": {
+          "success": true,
+          "analysis": {
+            "intent_type": "mathematical_reasoning",
+            "complexity_score": 0.7259728975466307,
+            "recommended_models": [
+              "deepseek-ai/DeepSeek-V3-0324"
+            ],
+            "risk_level": "low"
+          },
+          "response_time": 0.002003908157348633
+        },
+        "general_conversation": {
+          "success": true,
+          "analysis": {
+            "intent_type": "question_answering",
+            "complexity_score": 0.6771651689888372,
+            "recommended_models": [
+              "Qwen/Qwen2.5-1.5B-Instruct"
+            ],
+            "risk_level": "low"
+          },
+          "response_time": 0.00191497802734375
+        },
+        "complex_reasoning": {
+          "success": true,
+          "analysis": {
+            "intent_type": "text_generation",
+            "complexity_score": 3.778149151652235,
+            "recommended_models": [
+              "Qwen/Qwen2.5-1.5B-Instruct"
+            ],
+            "risk_level": "low"
+          },
+          "response_time": 0.0022759437561035156
+        }
+      },
+      "intent_classification": {},
+      "model_selection": {},
+      "complexity_analysis": {
+        "test_1": {
+          "prompt": "Hello",
+          "complexity_score": 0.2644680669464169,
+          "expected_level": "simple"
+        },
+        "test_2": {
+          "prompt": "Explain machine learning algorithms",
+          "complexity_score": 3.555994189574628,
+          "expected_level": "medium"
+        },
+        "test_3": {
+          "prompt": "Design a distributed system for processing petabyt...",
+          "complexity_score": 1.9457192317885441,
+          "expected_level": "complex"
+        }
+      },
+      "fallback_mechanisms": {},
+      "performance_metrics": {}
+    },
+    "ai_capabilities": {
+      "text_generation": {
+        "simple_question": {
+          "success": false,
+          "prompt": "What is artificial intelligence?",
+          "error": "Unknown error",
+          "response_time": 0.0005614757537841797
+        },
+        "explanation_request": {
+          "success": false,
+          "prompt": "Explain how machine learning works in simple terms",
+          "error": "Unknown error",
+          "response_time": 0.0007631778717041016
+        },
+        "creative_writing": {
+          "success": false,
+          "prompt": "Write a short story about a robot learning to paint",
+          "error": "Unknown error",
+          "response_time": 0.0005283355712890625
+        },
+        "conversation": {
+          "success": false,
+          "prompt": "Hello! I'm interested in learning about Python programming. Can you help me get started?",
+          "error": "Unknown error",
+          "response_time": 0.0006542205810546875
+        },
+        "complex_reasoning": {
+          "success": false,
+          "prompt": "Compare the advantages and disadvantages of different sorting algorithms",
+          "error": "Unknown error",
+          "response_time": 0.0005056858062744141
+        }
+      },
+      "code_generation": {
+        "python_function": {
+          "success": false,
+          "prompt": "Write a Python function to calculate the fibonacci sequence",
+          "error": "Unknown error",
+          "response_time": 0.0005786418914794922
+        },
+        "javascript_example": {
+          "success": false,
+          "prompt": "Create a JavaScript function to validate email addresses using regex",
+          "error": "Unknown error",
+          "response_time": 0.001009225845336914
+        },
+        "algorithm_explanation": {
+          "success": false,
+          "prompt": "Implement a binary search algorithm in Python with detailed comments",
+          "error": "Unknown error",
+          "response_time": 0.0021278858184814453
+        },
+        "debug_code": {
+          "success": false,
+          "prompt": "Fix this Python code: def factorial(n): if n = 0: return 1 else: return n * factorial(n-1)",
+          "error": "Unknown error",
+          "response_time": 0.0006239414215087891
+        },
+        "data_structure": {
+          "success": false,
+          "prompt": "Implement a binary tree class in Python with insert and search methods",
+          "error": "Unknown error",
+          "response_time": 0.0012416839599609375
+        }
+      },
+      "technical_analysis": {
+        "system_design": {
+          "success": false,
+          "prompt": "Design a scalable microservices architecture for an e-commerce platform",
+          "error": "Unknown error",
+          "response_time": 0.0005040168762207031
+        },
+        "documentation": {
+          "success": false,
+          "prompt": "Write comprehensive documentation for a REST API endpoint",
+          "error": "Unknown error",
+          "response_time": 0.0006988048553466797
+        },
+        "troubleshooting": {
+          "success": false,
+          "prompt": "Analyze potential performance bottlenecks in a web application",
+          "error": "Unknown error",
+          "response_time": 0.0005810260772705078
+        },
+        "security_analysis": {
+          "success": false,
+          "prompt": "Identify security vulnerabilities in a user authentication system",
+          "error": "Unknown error",
+          "response_time": 0.0020356178283691406
+        },
+        "architecture_review": {
+          "success": false,
+          "prompt": "Review the pros and cons of serverless vs container deployment",
+          "error": "Unknown error",
+          "response_time": 0.0009424686431884766
+        }
+      },
+      "mathematical_solving": {
+        "calculation": {
+          "success": false,
+          "prompt": "Calculate the integral of x^2 from 0 to 5",
+          "error": "Unknown error",
+          "response_time": 0.0007066726684570312
+        },
+        "word_problem": {
+          "success": false,
+          "prompt": "If a train travels 120 km in 2 hours, then speeds up and travels 180 km in the next 1.5 hours, what is its average speed?",
+          "error": "Unknown error",
+          "response_time": 0.000762939453125
+        },
+        "statistical_analysis": {
+          "success": false,
+          "prompt": "Explain the difference between correlation and causation with examples",
+          "error": "Unknown error",
+          "response_time": 0.0007233619689941406
+        },
+        "probability": {
+          "success": false,
+          "prompt": "What's the probability of rolling three sixes in a row with a fair die?",
+          "error": "Unknown error",
+          "response_time": 0.0008957386016845703
+        },
+        "optimization": {
+          "success": false,
+          "prompt": "Find the minimum value of f(x) = x^2 - 4x + 7",
+          "error": "Unknown error",
+          "response_time": 0.0012063980102539062
+        }
+      },
+      "creative_content": {
+        "short_story": {
+          "success": false,
+          "prompt": "Write a creative short story about time travel with an unexpected twist",
+          "error": "Unknown error",
+          "response_time": 0.0006120204925537109
+        },
+        "poetry": {
+          "success": false,
+          "prompt": "Compose a haiku about artificial intelligence",
+          "error": "Unknown error",
+          "response_time": 0.00048041343688964844
+        },
+        "brainstorming": {
+          "success": false,
+          "prompt": "Generate 10 creative business ideas for sustainable technology",
+          "error": "Unknown error",
+          "response_time": 0.0005719661712646484
+        },
+        "character_creation": {
+          "success": false,
+          "prompt": "Create a detailed character profile for a fantasy novel protagonist",
+          "error": "Unknown error",
+          "response_time": 0.0006849765777587891
+        },
+        "dialogue_writing": {
+          "success": false,
+          "prompt": "Write a dialogue between a human and AI discussing the future of work",
+          "error": "Unknown error",
+          "response_time": 0.0012538433074951172
+        }
+      }
+    },
+    "intent_classification": {
+      "classification_tests": {
+        "Write a Python function": {
+          "expected": "CODE_GENERATION",
+          "classified": "ERROR",
+          "correct": false,
+          "error": "ClassificationResult.__init__() missing 5 required positional arguments: 'domain_expertise', 'context_awareness_score', 'follow_up_likelihood', 'multi_turn_context', and 'user_expertise_match'",
+          "response_time": 0.012985706329345703
+        },
+        "Create a JavaScript class": {
+          "expected": "CODE_GENERATION",
+          "classified": "ERROR",
+          "correct": false,
+          "error": "ClassificationResult.__init__() missing 5 required positional arguments: 'domain_expertise', 'context_awareness_score', 'follow_up_likelihood', 'multi_turn_context', and 'user_expertise_match'",
+          "response_time": 0.0027794837951660156
+        },
+        "Debug this code": {
+          "expected": "CODE_GENERATION",
+          "classified": "ERROR",
+          "correct": false,
+          "error": "ClassificationResult.__init__() missing 5 required positional arguments: 'domain_expertise', 'context_awareness_score', 'follow_up_likelihood', 'multi_turn_context', and 'user_expertise_match'",
+          "response_time": 0.0023431777954101562
+        },
+        "Write a story about": {
+          "expected": "CREATIVE_WRITING",
+          "classified": "ERROR",
+          "correct": false,
+          "error": "ClassificationResult.__init__() missing 5 required positional arguments: 'domain_expertise', 'context_awareness_score', 'follow_up_likelihood', 'multi_turn_context', and 'user_expertise_match'",
+          "response_time": 0.002513885498046875
+        },
+        "Compose a poem": {
+          "expected": "CREATIVE_WRITING",
+          "classified": "ERROR",
+          "correct": false,
+          "error": "ClassificationResult.__init__() missing 5 required positional arguments: 'domain_expertise', 'context_awareness_score', 'follow_up_likelihood', 'multi_turn_context', and 'user_expertise_match'",
+          "response_time": 0.0023491382598876953
+        },
+        "Create a character": {
+          "expected": "CREATIVE_WRITING",
+          "classified": "ERROR",
+          "correct": false,
+          "error": "ClassificationResult.__init__() missing 5 required positional arguments: 'domain_expertise', 'context_awareness_score', 'follow_up_likelihood', 'multi_turn_context', and 'user_expertise_match'",
+          "response_time": 0.002274751663208008
+        },
+        "What is machine learning?": {
+          "expected": "QUESTION_ANSWERING",
+          "classified": "ERROR",
+          "correct": false,
+          "error": "ClassificationResult.__init__() missing 5 required positional arguments: 'domain_expertise', 'context_awareness_score', 'follow_up_likelihood', 'multi_turn_context', and 'user_expertise_match'",
+          "response_time": 0.0019621849060058594
+        },
+        "How does encryption work?": {
+          "expected": "QUESTION_ANSWERING",
+          "classified": "ERROR",
+          "correct": false,
+          "error": "ClassificationResult.__init__() missing 5 required positional arguments: 'domain_expertise', 'context_awareness_score', 'follow_up_likelihood', 'multi_turn_context', and 'user_expertise_match'",
+          "response_time": 0.001775979995727539
+        },
+        "Explain quantum computing": {
+          "expected": "QUESTION_ANSWERING",
+          "classified": "ERROR",
+          "correct": false,
+          "error": "ClassificationResult.__init__() missing 5 required positional arguments: 'domain_expertise', 'context_awareness_score', 'follow_up_likelihood', 'multi_turn_context', and 'user_expertise_match'",
+          "response_time": 0.0017952919006347656
+        },
+        "Tell me about": {
+          "expected": "TEXT_GENERATION",
+          "classified": "ERROR",
+          "correct": false,
+          "error": "ClassificationResult.__init__() missing 5 required positional arguments: 'domain_expertise', 'context_awareness_score', 'follow_up_likelihood', 'multi_turn_context', and 'user_expertise_match'",
+          "response_time": 0.0017628669738769531
+        },
+        "Describe the process": {
+          "expected": "TEXT_GENERATION",
+          "classified": "ERROR",
+          "correct": false,
+          "error": "ClassificationResult.__init__() missing 5 required positional arguments: 'domain_expertise', 'context_awareness_score', 'follow_up_likelihood', 'multi_turn_context', and 'user_expertise_match'",
+          "response_time": 0.0023376941680908203
+        },
+        "Write an essay": {
+          "expected": "TEXT_GENERATION",
+          "classified": "ERROR",
+          "correct": false,
+          "error": "ClassificationResult.__init__() missing 5 required positional arguments: 'domain_expertise', 'context_awareness_score', 'follow_up_likelihood', 'multi_turn_context', and 'user_expertise_match'",
+          "response_time": 0.002788066864013672
+        },
+        "Calculate the integral": {
+          "expected": "MATHEMATICAL_REASONING",
+          "classified": "ERROR",
+          "correct": false,
+          "error": "ClassificationResult.__init__() missing 5 required positional arguments: 'domain_expertise', 'context_awareness_score', 'follow_up_likelihood', 'multi_turn_context', and 'user_expertise_match'",
+          "response_time": 0.0025382041931152344
+        },
+        "Solve this equation": {
+          "expected": "MATHEMATICAL_REASONING",
+          "classified": "ERROR",
+          "correct": false,
+          "error": "ClassificationResult.__init__() missing 5 required positional arguments: 'domain_expertise', 'context_awareness_score', 'follow_up_likelihood', 'multi_turn_context', and 'user_expertise_match'",
+          "response_time": 0.0021822452545166016
+        },
+        "Find the derivative": {
+          "expected": "MATHEMATICAL_REASONING",
+          "classified": "ERROR",
+          "correct": false,
+          "error": "ClassificationResult.__init__() missing 5 required positional arguments: 'domain_expertise', 'context_awareness_score', 'follow_up_likelihood', 'multi_turn_context', and 'user_expertise_match'",
+          "response_time": 0.0016798973083496094
+        }
+      },
+      "accuracy_metrics": {
+        "accuracy_percentage": 0.0,
+        "correct_classifications": 0,
+        "total_tests": 15,
+        "target_accuracy": 90.0
+      },
+      "performance_metrics": {
+        "average_response_time": 0.0,
+        "total_classification_time": 0,
+        "classifications_per_second": 0
+      }
+    }
+  },
+  "performance_metrics": {
+    "total_test_suite_time": 16.633060455322266
+  },
+  "quality_assessments": {},
+  "error_scenarios": {},
+  "test_summary": {
+    "overall_status": "CRITICAL_ISSUES",
+    "critical_systems": {
+      "model_caller_integration": "ISSUES_DETECTED",
+      "intelligent_router": "ISSUES_DETECTED",
+      "intent_classification": "ISSUES_DETECTED"
+    },
+    "capabilities_tested": 25,
+    "success_rate": 0.0,
+    "performance_summary": {},
+    "quality_summary": {},
+    "recommendations": [
+      "Improve error handling and fallback mechanisms"
+    ]
+  }
+}

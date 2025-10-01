@@ -1,0 +1,194 @@
+{
+  "timestamp": "20250929_041553",
+  "discovery_results": {
+    "working_models": {
+      "text_generation": [],
+      "code_generation": [],
+      "question_answering": [],
+      "summarization": [],
+      "sentiment": [],
+      "text_classification": [],
+      "translation": [],
+      "image": [],
+      "fallback": []
+    },
+    "failed_models": {
+      "text_generation": [
+        {
+          "model": "gpt2",
+          "error": "Model not available: HTTP 404: Not Found"
+        },
+        {
+          "model": "distilgpt2",
+          "error": "Model not available: HTTP 404: Not Found"
+        },
+        {
+          "model": "microsoft/DialoGPT-small",
+          "error": "Model not available: HTTP 404: Not Found"
+        },
+        {
+          "model": "microsoft/DialoGPT-medium",
+          "error": "Model not available: HTTP 404: Not Found"
+        },
+        {
+          "model": "EleutherAI/gpt-neo-125m",
+          "error": "Model not available: HTTP 404: Not Found"
+        },
+        {
+          "model": "EleutherAI/gpt-neo-1.3B",
+          "error": "Model not available: HTTP 404: Not Found"
+        },
+        {
+          "model": "facebook/blenderbot_small-90M",
+          "error": "Model not available: HTTP 404: Not Found"
+        },
+        {
+          "model": "microsoft/DialoGPT-large",
+          "error": "Model not available: HTTP 404: Not Found"
+        }
+      ],
+      "code_generation": [
+        {
+          "model": "microsoft/CodeBERT-base",
+          "error": "Model not available: HTTP 404: Not Found"
+        },
+        {
+          "model": "huggingface/CodeBERTa-small-v1",
+          "error": "Inference error: HTTP 400: {\"error\":\"FillMaskPipeline._sanitize_parameters() got an unexpected keyword argument 'return_full_text'\"}"
+        },
+        {
+          "model": "microsoft/codebert-base-mlm",
+          "error": "Inference error: HTTP 400: {\"error\":\"FillMaskPipeline._sanitize_parameters() got an unexpected keyword argument 'return_full_text'\"}"
+        },
+        {
+          "model": "microsoft/graphcodebert-base",
+          "error": "Inference error: HTTP 400: {\"error\":\"FillMaskPipeline._sanitize_parameters() got an unexpected keyword argument 'return_full_text'\"}"
+        },
+        {
+          "model": "EleutherAI/gpt-neo-125m",
+          "error": "Model not available: HTTP 404: Not Found"
+        },
+        {
+          "model": "gpt2",
+          "error": "Model not available: HTTP 404: Not Found"
+        }
+      ],
+      "question_answering": [],
+      "summarization": [],
+      "sentiment": [],
+      "text_classification": [],
+      "translation": [],
+      "image": [],
+      "fallback": [
+        {
+          "model": "gpt2",
+          "error": "Model not available: HTTP 404: Not Found"
+        },
+        {
+          "model": "distilgpt2",
+          "error": "Model not available: HTTP 404: Not Found"
+        },
+        {
+          "model": "distilbert-base-uncased",
+          "error": "Model not available: HTTP 404: Not Found"
+        }
+      ]
+    },
+    "total_working": 0,
+    "total_tested": 17,
+    "success_rate": 0.0
+  },
+  "working_models_by_category": {
+    "text_generation": [],
+    "code_generation": [],
+    "question_answering": [],
+    "summarization": [],
+    "sentiment": [],
+    "text_classification": [],
+    "translation": [],
+    "image": [],
+    "fallback": []
+  },
+  "failed_models_by_category": {
+    "text_generation": [
+      {
+        "model": "gpt2",
+        "error": "Model not available: HTTP 404: Not Found"
+      },
+      {
+        "model": "distilgpt2",
+        "error": "Model not available: HTTP 404: Not Found"
+      },
+      {
+        "model": "microsoft/DialoGPT-small",
+        "error": "Model not available: HTTP 404: Not Found"
+      },
+      {
+        "model": "microsoft/DialoGPT-medium",
+        "error": "Model not available: HTTP 404: Not Found"
+      },
+      {
+        "model": "EleutherAI/gpt-neo-125m",
+        "error": "Model not available: HTTP 404: Not Found"
+      },
+      {
+        "model": "EleutherAI/gpt-neo-1.3B",
+        "error": "Model not available: HTTP 404: Not Found"
+      },
+      {
+        "model": "facebook/blenderbot_small-90M",
+        "error": "Model not available: HTTP 404: Not Found"
+      },
+      {
+        "model": "microsoft/DialoGPT-large",
+        "error": "Model not available: HTTP 404: Not Found"
+      }
+    ],
+    "code_generation": [
+      {
+        "model": "microsoft/CodeBERT-base",
+        "error": "Model not available: HTTP 404: Not Found"
+      },
+      {
+        "model": "huggingface/CodeBERTa-small-v1",
+        "error": "Inference error: HTTP 400: {\"error\":\"FillMaskPipeline._sanitize_parameters() got an unexpected keyword argument 'return_full_text'\"}"
+      },
+      {
+        "model": "microsoft/codebert-base-mlm",
+        "error": "Inference error: HTTP 400: {\"error\":\"FillMaskPipeline._sanitize_parameters() got an unexpected keyword argument 'return_full_text'\"}"
+      },
+      {
+        "model": "microsoft/graphcodebert-base",
+        "error": "Inference error: HTTP 400: {\"error\":\"FillMaskPipeline._sanitize_parameters() got an unexpected keyword argument 'return_full_text'\"}"
+      },
+      {
+        "model": "EleutherAI/gpt-neo-125m",
+        "error": "Model not available: HTTP 404: Not Found"
+      },
+      {
+        "model": "gpt2",
+        "error": "Model not available: HTTP 404: Not Found"
+      }
+    ],
+    "question_answering": [],
+    "summarization": [],
+    "sentiment": [],
+    "text_classification": [],
+    "translation": [],
+    "image": [],
+    "fallback": [
+      {
+        "model": "gpt2",
+        "error": "Model not available: HTTP 404: Not Found"
+      },
+      {
+        "model": "distilgpt2",
+        "error": "Model not available: HTTP 404: Not Found"
+      },
+      {
+        "model": "distilbert-base-uncased",
+        "error": "Model not available: HTTP 404: Not Found"
+      }
+    ]
+  }
+}

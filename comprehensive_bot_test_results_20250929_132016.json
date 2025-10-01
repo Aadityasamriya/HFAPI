@@ -1,0 +1,167 @@
+{
+  "timestamp": "2025-09-29T13:20:14.131553",
+  "total_tests": 9,
+  "passed_tests": 6,
+  "failed_tests": 3,
+  "test_details": {
+    "AI Text Generation": {
+      "success": false,
+      "details": {
+        "model_caller_init": true,
+        "basic_generation": false,
+        "intent_routing": false,
+        "fallback_mechanisms": false,
+        "response_quality": false,
+        "error": "<bot.core.model_health_monitor.ModelHealthMonitor object at 0x7f661c525e50> does not have the attribute 'is_model_healthy'"
+      },
+      "timestamp": "2025-09-29T13:20:15.707985"
+    },
+    "Intent Classification": {
+      "success": true,
+      "details": {
+        "classifier_init": true,
+        "basic_classification": true,
+        "accuracy_tests": {
+          "Write a Python function": {
+            "expected": "code_generation",
+            "actual": "code_generation",
+            "confidence": 18.700000000000003,
+            "correct": true
+          },
+          "What is machine learning?": {
+            "expected": "question_answering",
+            "actual": "question_answering",
+            "confidence": 14.1,
+            "correct": true
+          },
+          "Write a story about robots": {
+            "expected": "creative_writing",
+            "actual": "creative_writing",
+            "confidence": 15.6,
+            "correct": true
+          },
+          "Hello, how are you?": {
+            "expected": "conversation",
+            "actual": "conversation",
+            "confidence": 18.1,
+            "correct": true
+          },
+          "Calculate 2+2": {
+            "expected": "mathematical_reasoning",
+            "actual": "mathematical_reasoning",
+            "confidence": 8.091988811740253,
+            "correct": true
+          },
+          "Create an image of a sunset": {
+            "expected": "image_generation",
+            "actual": "image_generation",
+            "confidence": 28.906666666666666,
+            "correct": true
+          },
+          "Analyze this sentiment": {
+            "expected": "sentiment_analysis",
+            "actual": "sentiment_analysis",
+            "confidence": 15.0,
+            "correct": true
+          },
+          "Translate this to French": {
+            "expected": "translation",
+            "actual": "translation",
+            "confidence": 6.1,
+            "correct": true
+          }
+        },
+        "processing_speed": true,
+        "advanced_features": false,
+        "accuracy_percentage": 100.0,
+        "meets_target": true,
+        "avg_processing_time": 0.011982381343841553
+      },
+      "timestamp": "2025-09-29T13:20:15.907124"
+    },
+    "File Processing": {
+      "success": false,
+      "details": {
+        "processor_init": true,
+        "security_validation": true,
+        "image_processing": false,
+        "document_processing": false,
+        "error_handling": false
+      },
+      "timestamp": "2025-09-29T13:20:16.007853"
+    },
+    "Database Operations": {
+      "success": true,
+      "details": {
+        "storage_init": true,
+        "connection_status": true,
+        "encryption_ready": false,
+        "user_isolation": true,
+        "health_check": true
+      },
+      "timestamp": "2025-09-29T13:20:16.113822"
+    },
+    "Command Handlers": {
+      "success": false,
+      "details": {
+        "start_command": false,
+        "help_command": false,
+        "status_command": false,
+        "setup_command": false,
+        "admin_command": false,
+        "error": "object MagicMock can't be used in 'await' expression"
+      },
+      "timestamp": "2025-09-29T13:20:16.257686"
+    },
+    "Security Features": {
+      "success": true,
+      "details": {
+        "rate_limiting": true,
+        "input_validation": true,
+        "encryption_config": true,
+        "admin_access_control": true,
+        "security_utils": true
+      },
+      "timestamp": "2025-09-29T13:20:16.358480"
+    },
+    "Admin System": {
+      "success": true,
+      "details": {
+        "admin_init": true,
+        "owner_detection": true,
+        "admin_commands": true,
+        "access_control": true,
+        "statistics": true
+      },
+      "timestamp": "2025-09-29T13:20:16.459736"
+    },
+    "Error Handling": {
+      "success": true,
+      "details": {
+        "graceful_degradation": true,
+        "fallback_models": true,
+        "exception_handling": true,
+        "error_logging": true,
+        "recovery_mechanisms": true
+      },
+      "timestamp": "2025-09-29T13:20:16.568979"
+    },
+    "Performance": {
+      "success": true,
+      "details": {
+        "response_times": {
+          "classification_init": 0.0003972053527832031,
+          "classification_exec": 0.004742860794067383
+        },
+        "memory_usage": true,
+        "concurrent_handling": true,
+        "caching_system": true,
+        "optimization_features": true,
+        "memory_mb": 173.5390625
+      },
+      "timestamp": "2025-09-29T13:20:16.720863"
+    }
+  },
+  "success_rate": 66.66666666666666,
+  "overall_status": "FAIL"
+}

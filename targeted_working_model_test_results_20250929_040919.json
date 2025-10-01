@@ -1,0 +1,56 @@
+{
+  "error": "No working models found",
+  "model_test_results": [
+    {
+      "model": "gpt2",
+      "status": "failed",
+      "error": "Model not available: HTTP 404: Not Found"
+    },
+    {
+      "model": "distilgpt2",
+      "status": "failed",
+      "error": "Model not available: HTTP 404: Not Found"
+    },
+    {
+      "model": "microsoft/DialoGPT-small",
+      "status": "failed",
+      "error": "Model not available: HTTP 404: Not Found"
+    },
+    {
+      "model": "microsoft/DialoGPT-medium",
+      "status": "failed",
+      "error": "Model not available: HTTP 404: Not Found"
+    },
+    {
+      "model": "facebook/blenderbot_small-90M",
+      "status": "failed",
+      "error": "Model not available: HTTP 404: Not Found"
+    },
+    {
+      "model": "EleutherAI/gpt-neo-125m",
+      "status": "failed",
+      "error": "Model not available: HTTP 404: Not Found"
+    },
+    {
+      "model": "t5-small",
+      "status": "failed",
+      "error": "Model not available: HTTP 404: Not Found"
+    },
+    {
+      "model": "google/flan-t5-small",
+      "status": "failed",
+      "error": "Model not available: HTTP 404: Not Found"
+    },
+    {
+      "model": "microsoft/CodeBERT-base",
+      "status": "failed",
+      "error": "Model not available: HTTP 404: Not Found"
+    },
+    {
+      "model": "huggingface/CodeBERTa-small-v1",
+      "status": "failed",
+      "error": "Inference error: HTTP 400: {\"error\":\"FillMaskPipeline._sanitize_parameters() got an unexpected keyword argument 'return_full_text'\"}"
+    }
+  ],
+  "timestamp": "2025-09-29T04:09:19.709925"
+}
