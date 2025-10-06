@@ -11,7 +11,7 @@ from typing import Dict, List, Tuple, Any, Optional, Set
 from enum import Enum
 from collections import defaultdict, Counter, OrderedDict
 from dataclasses import dataclass
-from .types import IntentType, ClassificationResult, PromptComplexity
+from .bot_types import IntentType, ClassificationResult, PromptComplexity
 from .router import IntelligentRouter
 
 logger = logging.getLogger(__name__)
@@ -699,55 +699,25 @@ class AdvancedIntentClassifier:
         
         processing_time = time.time() - start_time
         
-        # Extract secondary intent and confidence from list
-        secondary_intent = secondary_intents[0][0] if secondary_intents else None
-        secondary_confidence = secondary_intents[0][1] if secondary_intents else 0.0
+        # Calculate enhanced metrics for new ClassificationResult structure
+        context_awareness_score = min(1.0, features['word_count'] / 50.0) if features['word_count'] > 0 else 0.0
+        follow_up_likelihood = 0.7 if primary_intent in [IntentType.QUESTION_ANSWERING, IntentType.CONVERSATION] else 0.3
+        user_expertise_match = 0.5  # Default neutral match
         
-        # Create PromptComplexity object
-        complexity_obj = PromptComplexity(
-            score=complexity_score,
-            factors={},
-            reasoning=""
-        )
-        
-        # Get recommended models from router
-        recommended_models_list = []
-        model_prefs = {}
-        if router_info.get('model'):
-            recommended_models_list.append(router_info['model'])
-            model_prefs[router_info['model']] = router_info.get('confidence', 0.5)
-        
-        # Calculate quality indicators
-        quality_metrics = {
-            'intent_confidence': confidence,
-            'feature_richness': len(special_features) / 10.0,
-            'complexity_appropriateness': min(1.0, complexity_score / 5.0)
-        }
-        
-        # Identify uncertainty factors
-        uncertainty_list = []
-        if confidence < 0.7:
-            uncertainty_list.append('low_confidence')
-        if len(intent_scores) > 3 and sorted(intent_scores.values(), reverse=True)[0] - sorted(intent_scores.values(), reverse=True)[1] < 1.0:
-            uncertainty_list.append('ambiguous_intent')
-        if features['word_count'] < 3:
-            uncertainty_list.append('insufficient_context')
-        
-        # Create result with ALL required fields (FIXED: Added missing fields from updated template)
+        # Create result with ALL required fields (UPDATED for bot_types.py structure)
         result = ClassificationResult(
-            intent=primary_intent,
+            primary_intent=primary_intent,
             confidence=confidence,
-            secondary_intent=secondary_intent,
-            secondary_confidence=secondary_confidence,
+            secondary_intents=secondary_intents,
             reasoning=reasoning,
-            detected_features=special_features,
-            processing_time_ms=processing_time * 1000,
-            complexity=complexity_obj,
-            recommended_models=recommended_models_list,
-            model_preferences=model_prefs,
-            context_state=None,
-            quality_indicators=quality_metrics,
-            uncertainty_factors=uncertainty_list
+            processing_time=processing_time,
+            complexity_score=complexity_score,
+            special_features=special_features,
+            domain_expertise=None,
+            context_awareness_score=context_awareness_score,
+            follow_up_likelihood=follow_up_likelihood,
+            multi_turn_context=None,
+            user_expertise_match=user_expertise_match
         )
         
         # Cache result for performance with memory leak prevention
@@ -963,56 +933,25 @@ class AdvancedIntentClassifier:
         
         processing_time = time.time() - start_time
         
-        # Extract secondary intent and confidence from list
-        secondary_intent = secondary_intents[0][0] if secondary_intents else None
-        secondary_confidence = secondary_intents[0][1] if secondary_intents else 0.0
+        # Calculate enhanced metrics for new ClassificationResult structure
+        context_awareness_score = min(1.0, features['word_count'] / 50.0) if features['word_count'] > 0 else 0.0
+        follow_up_likelihood = 0.7 if primary_intent in [IntentType.QUESTION_ANSWERING, IntentType.CONVERSATION] else 0.3
+        user_expertise_match = 0.5  # Default neutral match
         
-        # Create PromptComplexity object
-        complexity_obj = PromptComplexity(
-            score=complexity_score,
-            factors={},
-            reasoning=""
-        )
-        
-        # Get recommended models from router (if available)
-        recommended_models_list = []
-        model_prefs = {}
-        # In classify_advanced, we use analysis instead of router_info
-        if 'analysis' in locals() and isinstance(analysis, dict) and analysis.get('model'):
-            recommended_models_list.append(analysis['model'])
-            model_prefs[analysis['model']] = analysis.get('confidence', 0.5)
-        
-        # Calculate quality indicators
-        quality_metrics = {
-            'intent_confidence': confidence,
-            'feature_richness': len(special_features) / 10.0,
-            'complexity_appropriateness': min(1.0, complexity_score / 5.0)
-        }
-        
-        # Identify uncertainty factors
-        uncertainty_list = []
-        if confidence < 0.7:
-            uncertainty_list.append('low_confidence')
-        if len(intent_scores) > 3 and sorted(intent_scores.values(), reverse=True)[0] - sorted(intent_scores.values(), reverse=True)[1] < 1.0:
-            uncertainty_list.append('ambiguous_intent')
-        if features['word_count'] < 3:
-            uncertainty_list.append('insufficient_context')
-        
-        # Create result with ALL required fields (FIXED: Added missing fields from updated template)
+        # Create result with ALL required fields (UPDATED for bot_types.py structure)
         result = ClassificationResult(
-            intent=primary_intent,
+            primary_intent=primary_intent,
             confidence=confidence,
-            secondary_intent=secondary_intent,
-            secondary_confidence=secondary_confidence,
+            secondary_intents=secondary_intents,
             reasoning=reasoning,
-            detected_features=special_features,
-            processing_time_ms=processing_time * 1000,
-            complexity=complexity_obj,
-            recommended_models=recommended_models_list,
-            model_preferences=model_prefs,
-            context_state=None,
-            quality_indicators=quality_metrics,
-            uncertainty_factors=uncertainty_list
+            processing_time=processing_time,
+            complexity_score=complexity_score,
+            special_features=special_features,
+            domain_expertise=None,
+            context_awareness_score=context_awareness_score,
+            follow_up_likelihood=follow_up_likelihood,
+            multi_turn_context=None,
+            user_expertise_match=user_expertise_match
         )
         
         # Cache result for performance

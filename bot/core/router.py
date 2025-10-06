@@ -11,8 +11,7 @@ import json
 from typing import Dict, List, Tuple, Any, Optional
 from collections import defaultdict, deque
 from datetime import datetime, timedelta
-from .types import IntentType
-from .bot_types import PromptComplexity, ModelPerformance, ContextState, DomainExpertise
+from .bot_types import IntentType, PromptComplexity, ModelPerformance, ContextState, DomainExpertise
 from .model_health_monitor import health_monitor
 from .performance_predictor import performance_predictor, PredictionContext
 from .dynamic_fallback_strategy import dynamic_fallback_strategy, ErrorType

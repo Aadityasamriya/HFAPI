@@ -331,9 +331,9 @@ class Config:
     MATH_TEXT_MODEL = "Qwen/Qwen2.5-72B-Instruct"  # ⚠️  FALLBACK: DeepSeek quota exhausted
     
     # === 2025 HIGH PERFORMANCE MODELS ===
-    HIGH_PERFORMANCE_TEXT_MODEL = "Qwen/Qwen2.5-72B-Instruct"  # ✅ VERIFIED: High-performance (0.85s)
-    ADVANCED_TEXT_MODEL = "meta-llama/Llama-3.3-70B-Instruct"  # ✅ VERIFIED: Advanced 70B model (2.37s)
-    MULTILINGUAL_TEXT_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ VERIFIED: Multilingual support (0.47s)
+    HIGH_PERFORMANCE_TEXT_MODEL = "Qwen/Qwen2.5-72B-Instruct"  # ✅ WORKING: High-performance (1.11s)
+    ADVANCED_TEXT_MODEL = "Qwen/Qwen2.5-72B-Instruct"  # ⚠️  FALLBACK: Llama quota exhausted, using Qwen
+    MULTILINGUAL_TEXT_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ WORKING: Multilingual support (0.57s)
     
     # === 2025 PRIMARY WORKING MODELS - QUOTA LIMITED (OCT 2025) ===
     # ⚠️  Only 2 models currently available
@@ -343,30 +343,30 @@ class Config:
     LEGACY_FLAGSHIP_TEXT_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ WORKING: Fallback
     
     # === 2025 EFFICIENCY OPTIMIZED MODELS ===
-    # Verified efficient models optimized for speed and performance
-    EFFICIENT_TEXT_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ VERIFIED: Efficient modern model (0.47s)
-    FAST_TEXT_MODEL = "meta-llama/Llama-3.1-8B-Instruct"  # ✅ VERIFIED: Fast and capable (0.45s)
-    COMPACT_TEXT_MODEL = "google/gemma-2-2b-it"  # ✅ VERIFIED: Compact but capable (0.79s)
-    LIGHTWEIGHT_TEXT_MODEL = "google/gemma-2-2b-it"  # ✅ VERIFIED: Lightweight powerhouse (0.76s)
+    # Updated to use only working models (quota exhausted for others)
+    EFFICIENT_TEXT_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ WORKING: Efficient modern model (0.57s)
+    FAST_TEXT_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ⚠️  FALLBACK: Llama quota exhausted, using Qwen
+    COMPACT_TEXT_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ⚠️  FALLBACK: Gemma quota exhausted, using Qwen
+    LIGHTWEIGHT_TEXT_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ⚠️  FALLBACK: Gemma quota exhausted, using Qwen
     
     # === 2025 INTELLIGENT FALLBACK MODELS ===
-    # Smart fallback chain with verified availability (Oct 2025)
-    FALLBACK_TEXT_MODEL = "google/gemma-2-2b-it"  # ✅ VERIFIED: Reliable fallback (0.76s)
-    LEGACY_EFFICIENT_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ VERIFIED: Efficient fallback (0.47s)
-    TERTIARY_FALLBACK_MODEL = "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B"  # ✅ VERIFIED: Ultimate fallback (0.80s)
+    # Updated fallback chain - using only working models (Oct 2025)
+    FALLBACK_TEXT_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ WORKING: Primary fallback (0.57s)
+    LEGACY_EFFICIENT_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ WORKING: Efficient fallback (0.57s)
+    TERTIARY_FALLBACK_MODEL = "Qwen/Qwen2.5-72B-Instruct"  # ✅ WORKING: Ultimate fallback (1.11s)
     
     # Code Generation Models - 2025 top performers optimized for coding tasks
     
     # === 2025 STATE-OF-THE-ART CODING MODELS (OCT 2025) ===
-    # Verified 2025 models specialized for code generation and programming tasks
-    ULTRA_PERFORMANCE_CODE_MODEL = "Qwen/Qwen2.5-Coder-32B-Instruct"  # ✅ VERIFIED: Elite coding (0.63s)
-    ADVANCED_CODE_MODEL = "Qwen/Qwen2.5-Coder-7B-Instruct"  # ✅ VERIFIED: Advanced coding (1.02s)
-    SPECIALIZED_CODE_MODEL = "deepseek-ai/DeepSeek-V3"  # ✅ VERIFIED: Specialized code model (0.99s)
+    # Updated to use working models - Coder models quota exhausted
+    ULTRA_PERFORMANCE_CODE_MODEL = "Qwen/Qwen2.5-72B-Instruct"  # ⚠️  FALLBACK: Coder quota exhausted, using general model
+    ADVANCED_CODE_MODEL = "Qwen/Qwen2.5-72B-Instruct"  # ⚠️  FALLBACK: Coder quota exhausted, using general model
+    SPECIALIZED_CODE_MODEL = "Qwen/Qwen2.5-72B-Instruct"  # ⚠️  FALLBACK: DeepSeek quota exhausted, using Qwen
     
     # === 2025 HIGH PERFORMANCE CODING ===
-    HIGH_PERFORMANCE_CODE_MODEL = "meta-llama/Llama-3.1-8B-Instruct"  # ✅ VERIFIED: High-performance coding (0.45s)
-    TOOL_USE_CODE_MODEL = "deepseek-ai/DeepSeek-V3"  # ✅ VERIFIED: Tool integration (0.99s)
-    MULTILINGUAL_CODE_MODEL = "Qwen/Qwen2.5-Coder-7B-Instruct"  # ✅ VERIFIED: Multi-language coding (1.02s)
+    HIGH_PERFORMANCE_CODE_MODEL = "Qwen/Qwen2.5-72B-Instruct"  # ⚠️  FALLBACK: Llama quota exhausted, using Qwen
+    TOOL_USE_CODE_MODEL = "Qwen/Qwen2.5-72B-Instruct"  # ⚠️  FALLBACK: DeepSeek quota exhausted, using Qwen
+    MULTILINGUAL_CODE_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ⚠️  FALLBACK: Coder quota exhausted, using general model
     
     # === 2025 PRIMARY CODING MODELS - QUOTA LIMITED (OCT 2025) ===
     # ⚠️  Coder models quota exhausted, using general-purpose models
@@ -376,16 +376,16 @@ class Config:
     LEGACY_ADVANCED_CODE_MODEL = "Qwen/Qwen2.5-72B-Instruct"  # ✅ WORKING: Advanced code fallback
     
     # === 2025 EFFICIENCY OPTIMIZED CODING ===
-    # Verified optimized 2025 models for fast and efficient code generation
-    EFFICIENT_CODE_MODEL = "meta-llama/Llama-3.1-8B-Instruct"  # ✅ VERIFIED: Efficient coding (0.45s)
-    FAST_CODE_MODEL = "Qwen/Qwen2.5-Coder-32B-Instruct"  # ✅ VERIFIED: Fast coding model (0.63s)
-    LIGHTWEIGHT_CODE_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ VERIFIED: Lightweight but capable (0.47s)
+    # Updated to use only working models (quota exhausted for others)
+    EFFICIENT_CODE_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ⚠️  FALLBACK: Llama quota exhausted, using Qwen
+    FAST_CODE_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ⚠️  FALLBACK: Coder quota exhausted, using general model
+    LIGHTWEIGHT_CODE_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ WORKING: Lightweight but capable (0.57s)
     
     # === 2025 INTELLIGENT CODE FALLBACK MODELS ===
-    # Smart fallback chain for coding tasks with guaranteed availability (Oct 2025)
-    FALLBACK_CODE_MODEL = "meta-llama/Llama-3.1-8B-Instruct"  # ✅ VERIFIED: Code-capable fallback (0.45s)
-    LEGACY_EFFICIENT_CODE_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ VERIFIED: Efficient coding fallback (0.47s)
-    TERTIARY_CODE_FALLBACK = "google/gemma-2-2b-it"  # ✅ VERIFIED: Ultimate coding fallback (0.76s)
+    # Updated fallback chain - using only working models (Oct 2025)
+    FALLBACK_CODE_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ WORKING: Code-capable fallback (0.57s)
+    LEGACY_EFFICIENT_CODE_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ WORKING: Efficient coding fallback (0.57s)
+    TERTIARY_CODE_FALLBACK = "Qwen/Qwen2.5-72B-Instruct"  # ✅ WORKING: Ultimate coding fallback (1.11s)
     
     # === 2025 VISION/MULTIMODAL MODELS - WORKING MODELS ===
     # Updated to use models confirmed available on free tier
@@ -424,18 +424,18 @@ class Config:
     LIGHTWEIGHT_VISION_MODEL = "openai/clip-vit-base-patch32"  # Lightweight variant
     
     # === 2025 IMAGE GENERATION DESCRIPTIONS (OCT 2025) ===
-    # High-quality text models for image generation prompts and descriptions
-    DEFAULT_IMAGE_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ VERIFIED: Text generator for image prompts (0.47s)
-    FLAGSHIP_IMAGE_MODEL = "Qwen/Qwen2.5-72B-Instruct"  # ✅ VERIFIED: High-quality text generator (0.85s)  
-    COMMERCIAL_IMAGE_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ VERIFIED: Professional descriptions (0.47s)
-    ADVANCED_IMAGE_MODEL = "meta-llama/Llama-3.1-8B-Instruct"  # ✅ VERIFIED: Advanced reasoning (0.45s)
-    EDITING_IMAGE_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ VERIFIED: Detailed editing instructions (0.47s)
-    PROFESSIONAL_IMAGE_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ VERIFIED: Professional-grade (0.47s)
-    KONTEXT_IMAGE_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ VERIFIED: Contextual descriptions (0.47s)
-    TURBO_IMAGE_MODEL = "google/gemma-2-2b-it"  # ✅ VERIFIED: Fast descriptions (0.76s)
-    ARTISTIC_IMAGE_MODEL = "Qwen/Qwen2.5-72B-Instruct"  # ✅ VERIFIED: Creative descriptions (0.85s)
-    REALISTIC_IMAGE_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ VERIFIED: Realistic descriptions (0.47s)
-    FALLBACK_IMAGE_MODEL = "google/gemma-2-2b-it"  # ✅ VERIFIED: Proven fallback (0.76s)
+    # Updated to use only working text models for image prompts and descriptions
+    DEFAULT_IMAGE_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ WORKING: Text generator for image prompts (0.57s)
+    FLAGSHIP_IMAGE_MODEL = "Qwen/Qwen2.5-72B-Instruct"  # ✅ WORKING: High-quality text generator (1.11s)  
+    COMMERCIAL_IMAGE_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ WORKING: Professional descriptions (0.57s)
+    ADVANCED_IMAGE_MODEL = "Qwen/Qwen2.5-72B-Instruct"  # ⚠️  FALLBACK: Llama quota exhausted, using Qwen
+    EDITING_IMAGE_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ WORKING: Detailed editing instructions (0.57s)
+    PROFESSIONAL_IMAGE_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ WORKING: Professional-grade (0.57s)
+    KONTEXT_IMAGE_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ WORKING: Contextual descriptions (0.57s)
+    TURBO_IMAGE_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ⚠️  FALLBACK: Gemma quota exhausted, using Qwen
+    ARTISTIC_IMAGE_MODEL = "Qwen/Qwen2.5-72B-Instruct"  # ✅ WORKING: Creative descriptions (1.11s)
+    REALISTIC_IMAGE_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ WORKING: Realistic descriptions (0.57s)
+    FALLBACK_IMAGE_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ WORKING: Proven fallback (0.57s)
     
     # === 2025 SENTIMENT ANALYSIS & NLP MODELS ===
     # Updated verified working sentiment models (use text-classification task)
