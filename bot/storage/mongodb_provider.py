@@ -188,7 +188,7 @@ class MongoDBProvider(StorageProvider):
             logger.error(f"Failed to get user data for user {user_id}, key {data_key}: {e}")
             return None
     
-    async def save_user_data(self, user_id: int, data_key: str, data: Any, encrypt: bool = True) -> bool:
+    async def save_user_data(self, user_id: int, data_key: str, data_value: Any, encrypt: bool = True) -> bool:
         """Save user-specific data with encryption and isolation"""
         try:
             if not self.connected:
@@ -210,16 +210,16 @@ class MongoDBProvider(StorageProvider):
             collection = self.db.user_data_isolation
             
             # Prepare data for storage
-            storage_data = data
+            storage_data = data_value
             encrypted = False
             
             if encrypt:
                 try:
                     # Serialize data if needed
-                    if not isinstance(data, str):
-                        serialized_data = json.dumps(data, default=str)
+                    if not isinstance(data_value, str):
+                        serialized_data = json.dumps(data_value, default=str)
                     else:
-                        serialized_data = data
+                        serialized_data = data_value
                     
                     # Encrypt the data
                     crypto = get_crypto()
@@ -229,7 +229,7 @@ class MongoDBProvider(StorageProvider):
                 except Exception as e:
                     logger.warning(f"Failed to encrypt user data for user {user_id}: {e}")
                     # Fall back to unencrypted storage
-                    storage_data = data
+                    storage_data = data_value
                     encrypted = False
             
             # Create document with user isolation using sanitized key
@@ -263,6 +263,59 @@ class MongoDBProvider(StorageProvider):
             
         except Exception as e:
             logger.error(f"Failed to save user data for user {user_id}, key {data_key}: {e}")
+            return False
+    
+    async def delete_user_data(self, user_id: int, data_key: str) -> bool:
+        """
+        Delete user-specific data with security validation (SECURITY FIX Issue #5)
+        
+        Args:
+            user_id: User ID (validated)
+            data_key: Data key to delete (validated and sanitized)
+            
+        Returns:
+            bool: True if deleted successfully, False otherwise
+        """
+        try:
+            if not self.connected:
+                await self.connect()
+            
+            if self.db is None:
+                raise RuntimeError("Database connection required")
+            
+            # SECURITY: Validate user_id
+            user_id = self._validate_user_id(user_id)
+            
+            # SECURITY: Validate and sanitize data_key
+            if not isinstance(data_key, str) or not data_key.strip():
+                raise ValueError("Invalid data key")
+            
+            validator = InputValidator()
+            is_safe, sanitized_key, report = validator.validate_input(data_key, strict_mode=True)
+            
+            if not is_safe:
+                raise ValueError("Data key contains invalid content")
+            
+            collection = self.db.user_data_isolation
+            
+            # Delete with user isolation using sanitized key
+            query = {
+                'user_id': user_id,
+                'data_key': sanitized_key
+            }
+            
+            result = await collection.delete_one(query)
+            
+            if result.deleted_count > 0:
+                logger.debug(f"Deleted user data for user {user_id}, key {data_key}")
+                return True
+            
+            # No data found to delete (not an error)
+            return True
+            
+        except Exception as e:
+            # SECURITY FIX (Issue #6): Sanitized error - no sensitive data exposure
+            logger.error(f"Data deletion operation failed for user {user_id}")
             return False
     
     async def initialize(self) -> None:

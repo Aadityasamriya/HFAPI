@@ -54,38 +54,48 @@ def admin_required(min_level: str = 'admin', allow_bootstrap: bool = False):
                 # Check if bootstrap is needed and allowed
                 if not admin_system.is_bootstrap_completed():
                     if allow_bootstrap:
-                        # SECURITY ENFORCEMENT: Validate bootstrap authorization
-                        # Only allow bootstrap if user is authorized via OWNER_ID or is first legitimate user
+                        # SECURITY FIX (Issue #4): STRICT OWNER_ID enforcement for admin bootstrap
+                        # Bootstrap is ONLY allowed if OWNER_ID is properly configured AND matches the user
                         from bot.config import Config
                         
-                        # Check if OWNER_ID is configured in environment
-                        if Config.OWNER_ID and Config.OWNER_ID > 0:
-                            # SECURITY: If OWNER_ID is set, ONLY that user can bootstrap
-                            if user_id != Config.OWNER_ID:
-                                user_hash = hashlib.sha256(f"{user_id}".encode()).hexdigest()[:8]
-                                owner_hash = hashlib.sha256(f"{Config.OWNER_ID}".encode()).hexdigest()[:8]
-                                logger.critical(f"🚨 SECURITY: Unauthorized bootstrap attempt by user_hash={user_hash} (expected owner_hash={owner_hash})")
-                                
-                                # Log security event for unauthorized bootstrap attempt
-                                await AdminSecurityLogger.log_security_event(
-                                    'unauthorized_bootstrap_attempt',
-                                    {'user_id': user_id, 'username': username, 'expected_owner_id': Config.OWNER_ID}
+                        # CRITICAL SECURITY: OWNER_ID must be set and valid for bootstrap
+                        if not hasattr(Config, 'OWNER_ID') or Config.OWNER_ID is None or Config.OWNER_ID <= 0:
+                            # SECURITY FIX: REJECT bootstrap if OWNER_ID is not properly configured
+                            logger.critical("🚨 SECURITY: Bootstrap attempt rejected - OWNER_ID not configured")
+                            
+                            if update.message:
+                                await update.message.reply_text(
+                                    "🚫 **Bootstrap Unavailable**\n\n"
+                                    "Admin bootstrap requires OWNER_ID to be configured.\n\n"
+                                    "Contact the system administrator.",
+                                    parse_mode='Markdown'
                                 )
-                                
-                                if update.message:
-                                    await update.message.reply_text(
-                                        "🚫 **Unauthorized Bootstrap Attempt**\n\n"
-                                        "Bootstrap is restricted to the configured bot owner only.\n\n"
-                                        "This incident has been logged.",
-                                        parse_mode='Markdown'
-                                    )
-                                return
-                        else:
-                            # SECURITY WARNING: No OWNER_ID configured - allowing first-come-first-served
-                            # This is a security risk in production environments
+                            return
+                        
+                        # SECURITY FIX: Strict validation - ONLY the configured OWNER can bootstrap
+                        if user_id != Config.OWNER_ID:
                             user_hash = hashlib.sha256(f"{user_id}".encode()).hexdigest()[:8]
-                            logger.warning(f"⚠️ SECURITY: No OWNER_ID configured - allowing bootstrap by first user user_hash={user_hash}")
-                            logger.warning(f"⚠️ SECURITY: Set OWNER_ID environment variable to restrict bootstrap to specific user")
+                            owner_hash = hashlib.sha256(f"{Config.OWNER_ID}".encode()).hexdigest()[:8]
+                            logger.critical(f"🚨 SECURITY: Unauthorized bootstrap attempt by user_hash={user_hash} (expected owner_hash={owner_hash})")
+                            
+                            # Log security event for unauthorized bootstrap attempt
+                            await AdminSecurityLogger.log_security_event(
+                                'unauthorized_bootstrap_attempt',
+                                {'user_id': user_id, 'username': username, 'expected_owner_id': Config.OWNER_ID}
+                            )
+                            
+                            if update.message:
+                                await update.message.reply_text(
+                                    "🚫 **Unauthorized Bootstrap Attempt**\n\n"
+                                    "Bootstrap is restricted to the configured bot owner only.\n\n"
+                                    "This incident has been logged.",
+                                    parse_mode='Markdown'
+                                )
+                            return
+                        
+                        # SECURITY: Log successful OWNER_ID validation
+                        user_hash = hashlib.sha256(f"{user_id}".encode()).hexdigest()[:8]
+                        logger.info(f"✅ SECURITY: Bootstrap authorized for owner user_hash={user_hash}")
                         
                         # Rate limiting for bootstrap attempts to prevent abuse
                         # Use admin rate limiter with stricter limits for bootstrap

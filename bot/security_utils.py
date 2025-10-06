@@ -103,8 +103,9 @@ class DataRedactionEngine:
         text = re.sub(r'(?:azure[_-]?(?:openai)?[_-]?)?(?:api[_-]?)?key["\s]*[:=]["\s]*[a-f0-9]{32}', 'azure_key: [REDACTED]', text, flags=re.IGNORECASE)
         text = re.sub(r'Ocp-Apim-Subscription-Key:\s*[a-f0-9]{32}', 'Ocp-Apim-Subscription-Key: [REDACTED]', text, flags=re.IGNORECASE)
         
-        # Fallback for any sk- pattern (to catch edge cases)
-        text = re.sub(r'\bsk-[a-zA-Z0-9_-]{20,}\b', 'sk-[REDACTED]', text)
+        # Fallback for any sk- pattern (to catch edge cases and test keys)
+        # SECURITY FIX (Issue #3): Lower minimum to catch shorter test keys (10+ chars)
+        text = re.sub(r'\bsk-[a-zA-Z0-9_-]{10,}\b', 'sk-[REDACTED]', text)
         
         # === ANTHROPIC API KEYS - Fixed with correct length ===
         # Real Anthropic keys are ~100+ characters
@@ -122,25 +123,32 @@ class DataRedactionEngine:
         # Context-based patterns
         text = re.sub(r'huggingface[_-]?(?:hub[_-]?)?token["\s]*[:=]["\s]*[a-zA-Z0-9_.-]{15,}', 'huggingface_token: [REDACTED]', text, flags=re.IGNORECASE)
         
-        # === GITHUB TOKENS - All types with exact lengths ===
-        # Personal Access Tokens (ghp_...) - Exactly 36 chars after prefix
-        text = re.sub(r'ghp_[a-zA-Z0-9]{36}', 'ghp_[REDACTED]', text)
+        # === GITHUB TOKENS - All types with exact AND variable lengths (SECURITY FIX Issue #3) ===
+        # Personal Access Tokens (ghp_...) - Exact 36 chars AND variable length for test coverage
+        text = re.sub(r'ghp_[a-zA-Z0-9]{36}', 'ghp_[REDACTED]', text)  # Standard length
+        text = re.sub(r'ghp_[a-zA-Z0-9]{30,50}', 'ghp_[REDACTED]', text)  # Variable length range
+        text = re.sub(r'ghp_[a-zA-Z0-9_-]{20,}', 'ghp_[REDACTED]', text)  # Catch-all for any ghp_ token
         
-        # OAuth Access Tokens (gho_...) - 16 chars after prefix
+        # OAuth Access Tokens (gho_...) - 16 chars and variable
         text = re.sub(r'gho_[a-zA-Z0-9]{16}', 'gho_[REDACTED]', text)
+        text = re.sub(r'gho_[a-zA-Z0-9_-]{10,30}', 'gho_[REDACTED]', text)
         
-        # User-to-Server tokens (ghu_...) - 16 chars after prefix
+        # User-to-Server tokens (ghu_...) - 16 chars and variable
         text = re.sub(r'ghu_[a-zA-Z0-9]{16}', 'ghu_[REDACTED]', text)
+        text = re.sub(r'ghu_[a-zA-Z0-9_-]{10,30}', 'ghu_[REDACTED]', text)
         
-        # Server-to-Server tokens (ghs_...) - 16 chars after prefix
+        # Server-to-Server tokens (ghs_...) - 16 chars and variable
         text = re.sub(r'ghs_[a-zA-Z0-9]{16}', 'ghs_[REDACTED]', text)
+        text = re.sub(r'ghs_[a-zA-Z0-9_-]{10,30}', 'ghs_[REDACTED]', text)
         
-        # Refresh tokens (ghr_...) - 16 chars after prefix
+        # Refresh tokens (ghr_...) - 16 chars and variable
         text = re.sub(r'ghr_[a-zA-Z0-9]{16}', 'ghr_[REDACTED]', text)
+        text = re.sub(r'ghr_[a-zA-Z0-9_-]{10,30}', 'ghr_[REDACTED]', text)
         
         # Fine-grained Personal Access Tokens (github_pat_...)
         text = re.sub(r'github_pat_[A-Za-z0-9_]{82}', 'github_pat_[REDACTED]', text)  # Exact length
         text = re.sub(r'github_pat_[A-Za-z0-9_]{50,90}', 'github_pat_[REDACTED]', text)  # Range fallback
+        text = re.sub(r'github_pat_[A-Za-z0-9_]{20,}', 'github_pat_[REDACTED]', text)  # Catch-all
         
         # Old format GitHub tokens (40 hex characters - context-aware)
         text = re.sub(r'(?:github[_-]?)?(?:token|key|secret)["\s]*[:=]["\s]*[a-f0-9]{40}', 'github_token: [REDACTED]', text, flags=re.IGNORECASE)
@@ -684,13 +692,18 @@ class InputValidator:
     SQL_INJECTION_PATTERNS = [
         r'(\s|^)(select|insert|update|delete|drop|create|alter|exec|execute)\s+',
         r'(\s|^)(union|having|group\s+by|order\s+by)\s+',
-        r"(\s|;|'|\")(--|/\*|\*/)",  # SECURITY FIX: SQL comment injection - correctly matches quotes
-        r"'--",  # SECURITY FIX: Classic comment-based SQL injection (e.g., admin'--)
-        r"'\s*--",  # SECURITY FIX: Quote followed by optional space and comment (e.g., ' --)
-        r"';?\s*--",  # SECURITY FIX: Quote with optional semicolon and comment (e.g., '; --)
-        r"'\s+or\s+.*?--",  # SECURITY FIX: OR injection with comment (e.g., ' OR '1'='1' --)
-        r'"--',  # SECURITY FIX: Double quote comment injection
-        r'"\s*--',  # SECURITY FIX: Double quote with space and comment
+        r"(\s|;|'|\")(--|/\*|\*/)",  # SQL comment injection with preceding delimiter
+        # SECURITY FIX: Enhanced admin'-- pattern detection (Issue #1)
+        r"'--",  # Classic comment-based SQL injection (e.g., admin'--)
+        r"'--",  # Duplicate for emphasis - admin'-- pattern
+        r"\w'--",  # Word followed by quote and comment (e.g., admin'--)
+        r"'\s*--",  # Quote followed by optional space and comment (e.g., ' --)
+        r"';?\s*--",  # Quote with optional semicolon and comment (e.g., '; --)
+        r"'\s+or\s+.*?--",  # OR injection with comment (e.g., ' OR '1'='1' --)
+        r'"--',  # Double quote comment injection
+        r'"\s*--',  # Double quote with space and comment
+        r"'\s*/\*",  # Quote followed by block comment (e.g., admin' /*)
+        r"'\s*;",  # Quote followed by semicolon (e.g., admin';)
         r'(\s|^)(and|or)\s+\d+\s*=\s*\d+',
         r'(\s|^)(and|or)\s+["\']\w+["\']\s*=\s*["\']\w+["\']',
         r'\b(char|varchar|nvarchar|cast|convert|substring)\s*\(',

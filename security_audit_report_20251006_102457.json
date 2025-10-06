@@ -1,0 +1,188 @@
+{
+  "overall_score": 92.10526315789474,
+  "tests_passed": 15,
+  "tests_failed": 4,
+  "critical_issues": 0,
+  "high_issues": 2,
+  "medium_issues": 2,
+  "low_issues": 0,
+  "enterprise_compliance": false,
+  "timestamp": "2025-10-06T10:24:57.813060",
+  "recommendations": [
+    "⚠️ Resolve 2 HIGH-risk security issues",
+    "❌ System does not meet enterprise security standards - address critical and high-risk issues"
+  ],
+  "results": [
+    {
+      "test_name": "Rate Limiting - Premature Block",
+      "category": "Rate Limiting",
+      "passed": false,
+      "details": "Request 4 blocked prematurely",
+      "risk_level": "HIGH",
+      "recommendation": "Review rate limiting thresholds",
+      "timestamp": "2025-10-06T10:24:57.425101"
+    },
+    {
+      "test_name": "Encryption - Empty String Handling",
+      "category": "Encryption",
+      "passed": true,
+      "details": "Correctly rejected empty string encryption",
+      "risk_level": "LOW",
+      "recommendation": "Good input validation",
+      "timestamp": "2025-10-06T10:24:57.470589"
+    },
+    {
+      "test_name": "Encryption - Overall Assessment",
+      "category": "Encryption",
+      "passed": true,
+      "details": "Encryption success rate: 100.0% (5/5)",
+      "risk_level": "LOW",
+      "recommendation": "Encryption system is robust",
+      "timestamp": "2025-10-06T10:24:57.471069"
+    },
+    {
+      "test_name": "Input Sanitization - Overall Assessment",
+      "category": "Input Sanitization",
+      "passed": true,
+      "details": "Sanitization effectiveness: 100.0%",
+      "risk_level": "LOW",
+      "recommendation": "Input sanitization is robust",
+      "timestamp": "2025-10-06T10:24:57.512281"
+    },
+    {
+      "test_name": "File Validation - Overall Assessment",
+      "category": "File Validation",
+      "passed": true,
+      "details": "File validation accuracy: 100.0% (5/5)",
+      "risk_level": "LOW",
+      "recommendation": "File validation is working",
+      "timestamp": "2025-10-06T10:24:57.524193"
+    },
+    {
+      "test_name": "API Key Protection - Overall Assessment",
+      "category": "API Key Protection",
+      "passed": true,
+      "details": "Redaction effectiveness: 100.0%",
+      "risk_level": "LOW",
+      "recommendation": "Sensitive data protection is robust",
+      "timestamp": "2025-10-06T10:24:57.530820"
+    },
+    {
+      "test_name": "Security Logging - Redaction",
+      "category": "Security Logging",
+      "passed": true,
+      "details": "Sensitive data properly redacted in logs",
+      "risk_level": "LOW",
+      "recommendation": "Logging redaction is working correctly",
+      "timestamp": "2025-10-06T10:24:57.531879"
+    },
+    {
+      "test_name": "Security Logging - Production Config",
+      "category": "Security Logging",
+      "passed": true,
+      "details": "Production logging properly configured (stack traces disabled)",
+      "risk_level": "LOW",
+      "recommendation": "Production logging is secure",
+      "timestamp": "2025-10-06T10:24:57.532237"
+    },
+    {
+      "test_name": "Security Logging - Audit Trail",
+      "category": "Security Logging",
+      "passed": true,
+      "details": "Audit logging functionality working",
+      "risk_level": "LOW",
+      "recommendation": "Audit trail is functional",
+      "timestamp": "2025-10-06T10:24:57.532989"
+    },
+    {
+      "test_name": "Authentication - Admin Bootstrap",
+      "category": "Authentication",
+      "passed": false,
+      "details": "Admin system bootstrap: pending",
+      "risk_level": "MEDIUM",
+      "recommendation": "Complete admin bootstrap for production",
+      "timestamp": "2025-10-06T10:24:57.533776"
+    },
+    {
+      "test_name": "Authorization - Non-Admin Access",
+      "category": "Authentication",
+      "passed": true,
+      "details": "Non-admin access correctly denied: System error",
+      "risk_level": "LOW",
+      "recommendation": "Admin access control working",
+      "timestamp": "2025-10-06T10:24:57.757697"
+    },
+    {
+      "test_name": "Authorization - Admin Rate Limiting",
+      "category": "Authentication",
+      "passed": true,
+      "details": "Admin rate limiting activated after 4 requests",
+      "risk_level": "LOW",
+      "recommendation": "Admin rate limiting is working",
+      "timestamp": "2025-10-06T10:24:57.760553"
+    },
+    {
+      "test_name": "Authentication - Session Management",
+      "category": "Authentication",
+      "passed": true,
+      "details": "Session management system detected",
+      "risk_level": "LOW",
+      "recommendation": "Session management is implemented",
+      "timestamp": "2025-10-06T10:24:57.761237"
+    },
+    {
+      "test_name": "Data Privacy - Storage System",
+      "category": "Data Privacy",
+      "passed": false,
+      "details": "Storage system not available for testing",
+      "risk_level": "HIGH",
+      "recommendation": "Initialize storage system",
+      "timestamp": "2025-10-06T10:24:57.762006"
+    },
+    {
+      "test_name": "Data Privacy - Encryption Test",
+      "category": "Data Privacy",
+      "passed": false,
+      "details": "Per-user encryption test failed: cannot access local variable 'user1_id' where it is not associated with a value",
+      "risk_level": "MEDIUM",
+      "recommendation": "Fix per-user encryption system",
+      "timestamp": "2025-10-06T10:24:57.762871"
+    },
+    {
+      "test_name": "Network Security - MongoDB TLS",
+      "category": "Network Security",
+      "passed": true,
+      "details": "MongoDB connection uses TLS encryption",
+      "risk_level": "LOW",
+      "recommendation": "MongoDB TLS configuration is secure",
+      "timestamp": "2025-10-06T10:24:57.765104"
+    },
+    {
+      "test_name": "Network Security - PostgreSQL TLS",
+      "category": "Network Security",
+      "passed": true,
+      "details": "PostgreSQL connection uses SSL/TLS",
+      "risk_level": "LOW",
+      "recommendation": "PostgreSQL TLS configuration is secure",
+      "timestamp": "2025-10-06T10:24:57.765574"
+    },
+    {
+      "test_name": "Network Security - Production Validation",
+      "category": "Network Security",
+      "passed": true,
+      "details": "Production security validation completed",
+      "risk_level": "LOW",
+      "recommendation": "Production security checks are working",
+      "timestamp": "2025-10-06T10:24:57.808455"
+    },
+    {
+      "test_name": "Error Security - Overall Assessment",
+      "category": "Error Security",
+      "passed": true,
+      "details": "Error message security: 100.0% secure",
+      "risk_level": "LOW",
+      "recommendation": "Error handling is secure",
+      "timestamp": "2025-10-06T10:24:57.812530"
+    }
+  ]
+}

@@ -158,6 +158,69 @@ class StorageProvider(ABC):
         """
         pass
     
+    # SECURITY FIX (Issue #5): Generic User Data Management with Security Validation
+    @abstractmethod
+    async def save_user_data(self, user_id: int, data_key: str, data_value: Any) -> bool:
+        """
+        Save generic user data with comprehensive security validation
+        
+        SECURITY: This method enforces input validation to prevent:
+        - SQL injection attacks
+        - XSS attacks
+        - Command injection
+        - Data corruption
+        
+        Args:
+            user_id (int): Telegram user ID (validated)
+            data_key (str): Data key identifier (validated and sanitized)
+            data_value (Any): Data value to store (validated if string/dict)
+            
+        Returns:
+            bool: True if successful, False otherwise
+            
+        Raises:
+            ValueError: If validation fails on user_id, data_key, or data_value
+        """
+        pass
+    
+    @abstractmethod
+    async def get_user_data(self, user_id: int, data_key: str) -> Optional[Any]:
+        """
+        Retrieve generic user data with security validation
+        
+        SECURITY: This method validates user_id and data_key before retrieval
+        
+        Args:
+            user_id (int): Telegram user ID (validated)
+            data_key (str): Data key identifier (validated and sanitized)
+            
+        Returns:
+            Optional[Any]: Data value or None if not found
+            
+        Raises:
+            ValueError: If validation fails on user_id or data_key
+        """
+        pass
+    
+    @abstractmethod
+    async def delete_user_data(self, user_id: int, data_key: str) -> bool:
+        """
+        Delete specific user data with security validation
+        
+        SECURITY: This method validates user_id and data_key before deletion
+        
+        Args:
+            user_id (int): Telegram user ID (validated)
+            data_key (str): Data key identifier (validated and sanitized)
+            
+        Returns:
+            bool: True if deleted successfully, False otherwise
+            
+        Raises:
+            ValueError: If validation fails on user_id or data_key
+        """
+        pass
+    
     # Conversation Storage
     @abstractmethod
     async def save_conversation(self, user_id: int, conversation_data: Dict[str, Any]) -> bool:

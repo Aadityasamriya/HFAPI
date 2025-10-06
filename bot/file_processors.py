@@ -266,15 +266,29 @@ class AdvancedFileProcessor:
         Args:
             file_data (bytes): File content
             filename (str): Original filename
-            expected_type (str): Expected file type ('pdf', 'zip', 'image')
+            expected_type (str): Expected file type ('pdf', 'zip', 'image', 'document')
             
         Returns:
             Tuple[bool, str]: (is_valid, error_message)
         """
+        # SECURITY FIX (Issue #2): File size check MUST be first and cannot be bypassed
+        # This is the PRIMARY security control for file size validation
+        if not isinstance(file_data, bytes):
+            return False, "Invalid file data type - must be bytes"
+        
+        file_size = len(file_data)
+        
+        # CRITICAL SECURITY: Universal 10MB file size limit for ALL files (Issue #2)
+        # This check MUST come before ANY other processing to prevent DoS and resource exhaustion
+        if file_size > AdvancedFileProcessor.MAX_FILE_SIZE:
+            return False, f"File exceeds maximum allowed size: {file_size:,} bytes (limit: {AdvancedFileProcessor.MAX_FILE_SIZE:,} bytes)"
+        
+        # Zero-byte file check
+        if file_size == 0:
+            return False, "File is empty (0 bytes)"
+        
         try:
-            # Check file size limits
-            file_size = len(file_data)
-            
+            # Check file size limits (redundant but explicit for different file types)
             # SECURITY FIX: General file size limit for ALL files (10MB universal limit)
             if file_size > AdvancedFileProcessor.MAX_FILE_SIZE:
                 return False, f"File too large: {file_size:,} bytes (universal limit: {AdvancedFileProcessor.MAX_FILE_SIZE:,} bytes)"

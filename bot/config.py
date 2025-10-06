@@ -284,57 +284,63 @@ class Config:
     # Optional fine-tuning parameters for advanced users
     
     # ========================================================================
-    # 2025 MODEL CONFIGURATION - VERIFIED WORKING MODELS (OCTOBER 2025)
+    # 2025 MODEL CONFIGURATION - CRITICAL QUOTA LIMITATION (OCTOBER 2025)
     # ========================================================================
     # 
-    # IMPORTANT UPDATE (2025-10-06):
-    # HuggingFace API migrated to "Inference Providers" system in 2025
-    # Old models (gpt2, distilgpt2, microsoft/Phi-*) are NO LONGER AVAILABLE
+    # 🚨 CRITICAL ISSUE (2025-10-06):
+    # HuggingFace account has EXCEEDED MONTHLY CREDITS for Inference Providers
+    # HTTP 402 Error: "You have exceeded your monthly included credits"
     # 
-    # All models below have been tested and verified working via:
-    # - Script: discover_working_models.py
-    # - Date: 2025-10-06
-    # - API: HuggingFace Inference Providers API
-    # - Success Rate: 64.3% (18 working models out of 28 tested)
+    # Discovery script results (working_models_discovery_20251006_100737.json):
+    # - Total models tested: 28
+    # - Working models: 2 (7.1% success rate)
+    # - Failed: 26 models (quota exhausted or not supported)
     # 
-    # VERIFIED WORKING MODEL FAMILIES:
-    # ✅ Qwen/Qwen2.5-* (7B, 72B, Coder variants) - Fast, reliable
-    # ✅ meta-llama/Llama-3.1-8B-Instruct - Excellent performance
-    # ✅ meta-llama/Llama-3.3-70B-Instruct - High-end performance  
-    # ✅ deepseek-ai/DeepSeek-* (V3, R1-Distill variants) - Reasoning
-    # ✅ google/gemma-2-2b-it - Reliable fallback
+    # CURRENTLY WORKING MODELS (LIMITED):
+    # ✅ Qwen/Qwen2.5-7B-Instruct - Primary model (0.57s response time)
+    # ✅ Qwen/Qwen2.5-72B-Instruct - High-performance alternative (1.11s)
     # 
-    # FAILED MODELS (DO NOT USE):
+    # UNAVAILABLE DUE TO QUOTA EXHAUSTION (HTTP 402):
+    # ❌ meta-llama/* - All Llama models quota exhausted
+    # ❌ deepseek-ai/* - All DeepSeek models quota exhausted  
+    # ❌ google/gemma-* - All Gemma models quota exhausted
+    # ❌ Qwen/Qwen2.5-Coder-* - All Coder models quota exhausted
+    # 
+    # UNSUPPORTED MODELS (HTTP 400):
     # ❌ microsoft/Phi-* (all variants) - Not supported by any provider
     # ❌ Qwen/Qwen2.5-1.5B-Instruct - Not supported
-    # ❌ microsoft/DialoGPT-* - Not supported
-    # ❌ Old base models (gpt2, distilgpt2) - Removed from API
     # 
-    # Performance metrics are included as comments (e.g., "0.47s" = response time)
+    # RECOMMENDED ACTIONS:
+    # 1. Upgrade to HuggingFace PRO for 20x more monthly credits
+    # 2. Rotate to a new HF_TOKEN with fresh credits
+    # 3. Wait for monthly quota reset
+    # 4. Implement caching and rate limiting to reduce API usage
+    # 
+    # Models below are kept for when quota is restored
     # ========================================================================
     
     # 2025 LATEST TOP PERFORMING MODELS - Updated with best performers from research
     # Text Generation Models - Latest 2025 best performers with intelligent fallback chains
     
-    # === 2025 STATE-OF-THE-ART MODELS - VERIFIED WORKING MODELS (OCT 2025) ===
-    # Updated with verified working models confirmed on HuggingFace Inference Providers API
-    # All models tested and verified working on 2025-10-06 via discover_working_models.py
-    FLAGSHIP_TEXT_MODEL = "meta-llama/Llama-3.1-8B-Instruct"  # ✅ VERIFIED: Fast (0.47s), superior reasoning
-    ULTRA_PERFORMANCE_TEXT_MODEL = "Qwen/Qwen2.5-72B-Instruct"  # ✅ VERIFIED: Ultra-high performance (0.85s)
-    REASONING_TEXT_MODEL = "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B"  # ✅ VERIFIED: Reasoning-focused (0.93s)
-    MATH_TEXT_MODEL = "deepseek-ai/DeepSeek-V3"  # ✅ VERIFIED: Mathematical reasoning (0.99s)
+    # === 2025 STATE-OF-THE-ART MODELS - QUOTA LIMITED (OCT 2025) ===
+    # ⚠️  WARNING: Most models unavailable due to quota exhaustion (HTTP 402)
+    # Only Qwen/Qwen2.5-7B-Instruct and Qwen/Qwen2.5-72B-Instruct currently work
+    FLAGSHIP_TEXT_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ WORKING: Primary model (0.57s)
+    ULTRA_PERFORMANCE_TEXT_MODEL = "Qwen/Qwen2.5-72B-Instruct"  # ✅ WORKING: High-performance (1.11s)
+    REASONING_TEXT_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ⚠️  FALLBACK: DeepSeek quota exhausted
+    MATH_TEXT_MODEL = "Qwen/Qwen2.5-72B-Instruct"  # ⚠️  FALLBACK: DeepSeek quota exhausted
     
     # === 2025 HIGH PERFORMANCE MODELS ===
     HIGH_PERFORMANCE_TEXT_MODEL = "Qwen/Qwen2.5-72B-Instruct"  # ✅ VERIFIED: High-performance (0.85s)
     ADVANCED_TEXT_MODEL = "meta-llama/Llama-3.3-70B-Instruct"  # ✅ VERIFIED: Advanced 70B model (2.37s)
     MULTILINGUAL_TEXT_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ VERIFIED: Multilingual support (0.47s)
     
-    # === 2025 PRIMARY WORKING MODELS - VERIFIED ON HF INFERENCE PROVIDERS API ===
-    # Latest 2025 models with confirmed serverless availability (Oct 2025)
-    DEFAULT_TEXT_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ VERIFIED: Default choice, fast (0.47s) and capable
-    BALANCED_TEXT_MODEL = "meta-llama/Llama-3.1-8B-Instruct"  # ✅ VERIFIED: Balanced performance (0.45s)
-    EFFICIENT_7B_TEXT_MODEL = "meta-llama/Llama-3.1-8B-Instruct"  # ✅ VERIFIED: Efficient large model (0.47s)
-    LEGACY_FLAGSHIP_TEXT_MODEL = "meta-llama/Llama-3.1-8B-Instruct"  # ✅ VERIFIED: Proven fallback (0.45s)
+    # === 2025 PRIMARY WORKING MODELS - QUOTA LIMITED (OCT 2025) ===
+    # ⚠️  Only 2 models currently available
+    DEFAULT_TEXT_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ WORKING: Default choice, fast (0.57s)
+    BALANCED_TEXT_MODEL = "Qwen/Qwen2.5-72B-Instruct"  # ✅ WORKING: High-performance alternative (1.11s)
+    EFFICIENT_7B_TEXT_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ WORKING: Primary efficient model
+    LEGACY_FLAGSHIP_TEXT_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ WORKING: Fallback
     
     # === 2025 EFFICIENCY OPTIMIZED MODELS ===
     # Verified efficient models optimized for speed and performance
@@ -362,12 +368,12 @@ class Config:
     TOOL_USE_CODE_MODEL = "deepseek-ai/DeepSeek-V3"  # ✅ VERIFIED: Tool integration (0.99s)
     MULTILINGUAL_CODE_MODEL = "Qwen/Qwen2.5-Coder-7B-Instruct"  # ✅ VERIFIED: Multi-language coding (1.02s)
     
-    # === 2025 PRIMARY CODING MODELS ===
-    # Verified 2025 models optimized for code generation and programming
-    DEFAULT_CODE_MODEL = "Qwen/Qwen2.5-Coder-7B-Instruct"  # ✅ VERIFIED: Excellent default coding (1.02s)
-    CODE_GENERATION_MODEL = "meta-llama/Llama-3.1-8B-Instruct"  # ✅ VERIFIED: Primary code generation (0.45s)
-    EFFICIENT_7B_CODE_MODEL = "meta-llama/Llama-3.1-8B-Instruct"  # ✅ VERIFIED: Large efficient coding (0.47s)
-    LEGACY_ADVANCED_CODE_MODEL = "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B"  # ✅ VERIFIED: Advanced fallback (0.93s)
+    # === 2025 PRIMARY CODING MODELS - QUOTA LIMITED (OCT 2025) ===
+    # ⚠️  Coder models quota exhausted, using general-purpose models
+    DEFAULT_CODE_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ WORKING: Fallback for code (0.57s)
+    CODE_GENERATION_MODEL = "Qwen/Qwen2.5-72B-Instruct"  # ✅ WORKING: High-performance code (1.11s)
+    EFFICIENT_7B_CODE_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ WORKING: Efficient code model
+    LEGACY_ADVANCED_CODE_MODEL = "Qwen/Qwen2.5-72B-Instruct"  # ✅ WORKING: Advanced code fallback
     
     # === 2025 EFFICIENCY OPTIMIZED CODING ===
     # Verified optimized 2025 models for fast and efficient code generation
