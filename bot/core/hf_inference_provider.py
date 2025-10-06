@@ -21,7 +21,8 @@ from .ai_providers import (
     ModelNotAvailableError,
     RateLimitError,
     AuthenticationError,
-    TimeoutError as ProviderTimeoutError
+    TimeoutError as ProviderTimeoutError,
+    QuotaExceededError
 )
 from bot.security_utils import redact_sensitive_data, get_secure_logger
 
@@ -127,6 +128,8 @@ class HFInferenceProvider(AIProvider):
                 error_msg = str(e)
                 if "401" in error_msg or "unauthorized" in error_msg.lower():
                     raise AuthenticationError(f"Authentication failed: {e}", "huggingface_inference", request.model)
+                elif "402" in error_msg or "payment required" in error_msg.lower() or "quota exceeded" in error_msg.lower() or "credit" in error_msg.lower():
+                    raise QuotaExceededError(f"API quota/credits exceeded: {e}", "huggingface_inference", request.model)
                 elif "429" in error_msg or "rate limit" in error_msg.lower():
                     raise RateLimitError(f"Rate limit exceeded: {e}", "huggingface_inference", request.model)
                 elif "404" in error_msg or "not found" in error_msg.lower():
@@ -134,7 +137,7 @@ class HFInferenceProvider(AIProvider):
                 else:
                     raise ProviderError(f"Inference error: {e}", "huggingface_inference", request.model)
                     
-        except (ProviderError, AuthenticationError, RateLimitError, ModelNotAvailableError, ProviderTimeoutError) as e:
+        except (ProviderError, AuthenticationError, RateLimitError, ModelNotAvailableError, ProviderTimeoutError, QuotaExceededError) as e:
             response_time = time.time() - start_time
             secure_logger.error(f"❌ HF Chat completion failed: {e}")
             
@@ -221,6 +224,8 @@ class HFInferenceProvider(AIProvider):
                 error_msg = str(e)
                 if "401" in error_msg or "unauthorized" in error_msg.lower():
                     raise AuthenticationError(f"Authentication failed: {e}", "huggingface_inference", request.model)
+                elif "402" in error_msg or "payment required" in error_msg.lower() or "quota exceeded" in error_msg.lower() or "credit" in error_msg.lower():
+                    raise QuotaExceededError(f"API quota/credits exceeded: {e}", "huggingface_inference", request.model)
                 elif "429" in error_msg or "rate limit" in error_msg.lower():
                     raise RateLimitError(f"Rate limit exceeded: {e}", "huggingface_inference", request.model)
                 elif "404" in error_msg or "not found" in error_msg.lower():
@@ -228,7 +233,7 @@ class HFInferenceProvider(AIProvider):
                 else:
                     raise ProviderError(f"Inference error: {e}", "huggingface_inference", request.model)
                     
-        except (ProviderError, AuthenticationError, RateLimitError, ModelNotAvailableError, ProviderTimeoutError) as e:
+        except (ProviderError, AuthenticationError, RateLimitError, ModelNotAvailableError, ProviderTimeoutError, QuotaExceededError) as e:
             response_time = time.time() - start_time
             secure_logger.error(f"❌ HF Text completion failed: {e}")
             

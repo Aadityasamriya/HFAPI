@@ -734,14 +734,14 @@ class SupabaseUserProvider(StorageProvider):
             logger.error(f"Failed to get user data for user {user_id}, key {data_key}: {e}")
             return None
     
-    async def save_user_data(self, user_id: int, data_key: str, data: Any, encrypt: bool = True) -> bool:
+    async def save_user_data(self, user_id: int, data_key: str, data_value: Any, encrypt: bool = True) -> bool:
         """
         Save user-specific data with encryption and isolation
         
         Args:
             user_id (int): Telegram user ID
             data_key (str): Key to identify the data
-            data (Any): Data to save
+            data_value (Any): Data to save
             encrypt (bool): Whether to encrypt the data
             
         Returns:
@@ -760,17 +760,17 @@ class SupabaseUserProvider(StorageProvider):
             await self._ensure_user_data_table(user_id)
             
             # Prepare data for storage
-            storage_data = data
+            storage_data = data_value
             encrypted_flag = False
             
             if encrypt:
                 try:
                     # Serialize data if needed
                     import json
-                    if not isinstance(data, str):
-                        serialized_data = json.dumps(data, default=str)
+                    if not isinstance(data_value, str):
+                        serialized_data = json.dumps(data_value, default=str)
                     else:
-                        serialized_data = data
+                        serialized_data = data_value
                     
                     # Encrypt the data
                     storage_data = self._encrypt_data(serialized_data, user_id, "user_data")
@@ -779,7 +779,7 @@ class SupabaseUserProvider(StorageProvider):
                 except Exception as e:
                     logger.warning(f"Failed to encrypt user data for user {user_id}, key {data_key}: {e}")
                     # Fall back to unencrypted storage
-                    storage_data = data
+                    storage_data = data_value
                     encrypted_flag = False
             
             async with user_engine.begin() as conn:
@@ -805,6 +805,52 @@ class SupabaseUserProvider(StorageProvider):
             
         except Exception as e:
             logger.error(f"Failed to save user data for user {user_id}, key {data_key}: {e}")
+            return False
+    
+    async def delete_user_data(self, user_id: int, data_key: str) -> bool:
+        """
+        Delete specific user data with security validation
+        
+        Args:
+            user_id (int): Telegram user ID
+            data_key (str): Key to identify the data to delete
+            
+        Returns:
+            bool: True if deleted successfully, False otherwise
+        """
+        # Type assertion for SQLAlchemy imports
+        assert text is not None, "SQLAlchemy text function not available"
+        try:
+            user_id = self._validate_user_id(user_id)
+            if not data_key or not isinstance(data_key, str):
+                raise ValueError("data_key must be a non-empty string")
+                
+            user_engine = await self._get_user_engine(user_id)
+            
+            async with user_engine.begin() as conn:
+                result = await conn.execute(
+                    text("""
+                    DELETE FROM user_data 
+                    WHERE user_id = :user_id AND data_key = :data_key
+                    """),
+                    {
+                        "user_id": user_id,
+                        "data_key": data_key
+                    }
+                )
+                
+                # Check if any rows were deleted
+                deleted = result.rowcount > 0
+                
+                if deleted:
+                    logger.info(f"✅ Deleted user data for user {user_id}, key {data_key}")
+                else:
+                    logger.debug(f"No data found to delete for user {user_id}, key {data_key}")
+                
+                return deleted
+            
+        except Exception as e:
+            logger.error(f"Failed to delete user data for user {user_id}, key {data_key}: {e}")
             return False
     
     async def _ensure_user_data_table(self, user_id: int) -> None:

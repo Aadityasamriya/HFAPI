@@ -228,7 +228,10 @@ class DynamicFallbackStrategy:
                     r"usage.?limit",
                     r"billing",
                     r"payment.?required",
-                    r"subscription"
+                    r"subscription",
+                    r"402",
+                    r"credit.?exceeded",
+                    r"monthly.?credits"
                 ],
                 severity=0.8,  # Need different provider/model
                 recovery_time=120,

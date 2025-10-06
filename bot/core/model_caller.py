@@ -30,6 +30,7 @@ from .ai_providers import (
 )
 from .math_calculator import MathReasoningEnhancer
 from .types import IntentType
+from .model_health_monitor import health_monitor
 PROVIDER_SYSTEM_AVAILABLE = True
 
 
@@ -236,9 +237,9 @@ class ModelCaller:
         # Additional validation for API key format
         hf_token = Config.get_hf_token()
         if hf_token:
-            is_valid, error_msg = Config.validate_hf_token(hf_token)
+            is_valid = Config.validate_hf_token()
             if not is_valid:
-                return False, f"HF_TOKEN validation failed: {error_msg}"
+                return False, f"HF_TOKEN validation failed"
         
         return True, "AI functionality ready"
     
@@ -327,6 +328,7 @@ class ModelCaller:
         
         current_model = model_name
         result = "No models were attempted"
+        error_type = ErrorType.UNKNOWN  # Initialize to avoid unbound variable
         
         # Enhanced fallback management
         max_fallback_attempts = 8  # Reasonable limit with intelligent selection
@@ -409,7 +411,7 @@ class ModelCaller:
                 error_type=error_type,
                 failed_model=current_model,
                 intent_type=intent_type,
-                complexity=complexity,
+                complexity=complexity if complexity is not None else 5.0,
                 available_models=available_models,
                 conversation_context=conversation_context.__dict__ if conversation_context else None
             )
@@ -469,7 +471,7 @@ class ModelCaller:
             'total_attempts': len(used_models),
             'total_time': f"{total_time:.2f}s",
             'fallback_strategies': fallback_explanations,
-            'final_error_type': error_type.value if 'error_type' in locals() else 'unknown',
+            'final_error_type': error_type.value if hasattr(error_type, 'value') else 'unknown',
             'last_error': redact_sensitive_data(str(result))
         }
         
@@ -762,6 +764,20 @@ class ModelCaller:
                     safe_error_text = redact_sensitive_data(error_text)
                     secure_logger.error(f"Unauthorized access for model {model_name}: {safe_error_text}")
                     return False, "Invalid API key. Please check your Hugging Face API key."
+                
+                elif response.status == 402:  # Payment Required / Quota Exceeded - NO RETRIES
+                    error_text = await response.text()
+                    safe_error_text = redact_sensitive_data(error_text)
+                    secure_logger.error(f"🚨 QUOTA EXCEEDED for model {model_name}: {safe_error_text}")
+                    
+                    # Return user-friendly message that triggers fallback without retrying
+                    fallback_msg = "AI service temporarily unavailable due to quota limits. Switching to alternative models..."
+                    
+                    # Log for monitoring
+                    secure_logger.warning(f"⚠️ HuggingFace API quota/credits exceeded (HTTP 402). Model '{model_name}' unavailable. Triggering fallback to free-tier models.")
+                    
+                    # Return error that will trigger fallback in _make_api_call_with_fallbacks
+                    return False, f"QUOTA_EXCEEDED: {fallback_msg}"
                 
                 elif response.status == 403:  # Forbidden - CRITICAL FIX: Trigger actual fallback instead of just message
                     error_text = await response.text()
@@ -3145,27 +3161,31 @@ class SuperiorModelCaller(ModelCaller):
             if intent_type in ["code_generation", "code", "programming"]:
                 success, content = await self.generate_code(
                     prompt=prompt,
-                    model_override=model_name,
-                    special_params=kwargs.get('special_params'),
-                    language=kwargs.get('language', 'python')
+                    api_key=None,
+                    language=kwargs.get('language', 'python'),
+                    special_params=kwargs.get('special_params')
                 )
             elif intent_type in ["image_generation", "image", "visual"]:
                 success, result = await self.generate_image(
                     prompt=prompt,
-                    model_override=model_name,
+                    api_key=None,
                     special_params=kwargs.get('special_params'),
                     **kwargs
                 )
-                content = str(result) if success else result
+                content = str(result) if success else str(result)
             else:
                 # Default to text generation
                 success, content = await self.generate_text(
                     prompt=prompt,
-                    model_override=model_name,
+                    api_key=None,
                     special_params=kwargs.get('special_params'),
                     intent_type=intent_type,
                     chat_history=kwargs.get('chat_history')
                 )
+            
+            # Ensure content is always a string for type consistency
+            if not isinstance(content, str):
+                content = str(content)
             
             return success, content
             

@@ -201,3 +201,7 @@ class AuthenticationError(ProviderError):
 class TimeoutError(ProviderError):
     """Raised when request times out"""
     pass
+
+class QuotaExceededError(ProviderError):
+    """Raised when API quota/credits are exceeded"""
+    pass

@@ -579,13 +579,13 @@ class ResilientHybridProvider(StorageProvider):
         raise RuntimeError("No storage backend available for preference save")
     
     # User Data Isolation Support - SECURITY FIX: Added missing methods
-    async def save_user_data(self, user_id: int, data_key: str, data: Any, encrypt: bool = True) -> bool:
+    async def save_user_data(self, user_id: int, data_key: str, data_value: Any, encrypt: bool = True) -> bool:
         """Save user-specific data with encryption and isolation (Supabase preferred, MongoDB fallback)"""
         if self.supabase_provider and self.supabase_connected:
             try:
                 # Check if Supabase provider has save_user_data method
                 if hasattr(self.supabase_provider, 'save_user_data'):
-                    return await self.supabase_provider.save_user_data(user_id, data_key, data, encrypt)
+                    return await self.supabase_provider.save_user_data(user_id, data_key, data_value, encrypt)
                 else:
                     logger.warning("Supabase provider doesn't support save_user_data, falling back to MongoDB")
                     self._trigger_fallback_mode()
@@ -595,7 +595,7 @@ class ResilientHybridProvider(StorageProvider):
         
         # Fallback to MongoDB
         if self.mongodb_provider and self.mongodb_connected:
-            return await self.mongodb_provider.save_user_data(user_id, data_key, data, encrypt)
+            return await self.mongodb_provider.save_user_data(user_id, data_key, data_value, encrypt)
         
         raise RuntimeError("No storage backend available for user data save")
     
@@ -618,6 +618,26 @@ class ResilientHybridProvider(StorageProvider):
             return await self.mongodb_provider.get_user_data(user_id, data_key)
         
         return None  # Return None if data not found or no backend available
+    
+    async def delete_user_data(self, user_id: int, data_key: str) -> bool:
+        """Delete user-specific data (Supabase preferred, MongoDB fallback)"""
+        if self.supabase_provider and self.supabase_connected:
+            try:
+                # Check if Supabase provider has delete_user_data method
+                if hasattr(self.supabase_provider, 'delete_user_data'):
+                    return await self.supabase_provider.delete_user_data(user_id, data_key)
+                else:
+                    logger.warning("Supabase provider doesn't support delete_user_data, falling back to MongoDB")
+                    self._trigger_fallback_mode()
+            except Exception as e:
+                logger.warning(f"Supabase user data deletion failed, falling back to MongoDB: {e}")
+                self._trigger_fallback_mode()
+        
+        # Fallback to MongoDB
+        if self.mongodb_provider and self.mongodb_connected:
+            return await self.mongodb_provider.delete_user_data(user_id, data_key)
+        
+        return False  # Return False if deletion failed or no backend available
     
     # User Management (MongoDB only - simplified for core functionality)
     async def create_user(self, user_id: int, username: Optional[str] = None, metadata: Optional[Dict[str, Any]] = None) -> bool:
