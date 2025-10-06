@@ -502,12 +502,20 @@ class AdvancedFileProcessor:
                 if signature == b'\x37\x7a\xbc\xaf\x27\x1c' and expected_type in ['zip', 'archive']:
                     continue  # Allow 7z signature for archive processing
                 
-                # Check for exact signature match
+                # SECURITY FIX: For executable headers, only flag if at file start (prevent false positives)
+                # Legitimate images can contain MZ/ELF bytes in pixel data, but executables must have
+                # these headers at offset 0. This prevents polyglot attacks while reducing false positives.
+                if signature in [b'\x4d\x5a', b'\x7f\x45\x4c\x46']:
+                    # Only flag if signature is at the very beginning (first 4 bytes)
+                    if len(file_data) >= len(signature) and file_data[:len(signature)] == signature:
+                        return "Executable file header detected"
+                    # Skip further checks for this signature - don't flag if found elsewhere
+                    continue
+                
+                # Check for exact signature match (for non-header signatures)
                 if signature in file_data:
                     if signature == b'X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*':
                         return "EICAR test signature (antivirus test file)"
-                    elif signature in [b'\x4d\x5a', b'\x7f\x45\x4c\x46']:
-                        return "Executable file header detected"
                     elif signature in [b'#!/bin/sh', b'#!/bin/bash']:
                         return "Shell script signature detected"
                     elif signature == b'<script':
