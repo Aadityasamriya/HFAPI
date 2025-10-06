@@ -15,7 +15,8 @@ from enum import Enum
 from pathlib import Path
 from collections import defaultdict, deque
 
-from .bot_types import IntentType, PromptComplexity
+from .types import IntentType
+from .bot_types import PromptComplexity
 from ..security_utils import redact_sensitive_data, get_secure_logger
 
 logger = logging.getLogger(__name__)

@@ -1214,7 +1214,7 @@ class Config:
     @classmethod
     def get_supabase_user_base_url(cls) -> str | None:
         """Get Supabase user base database URL, defaults to management URL"""
-        return cls.SUPABASE_USER_BASE_URL or cls.SUPABASE_MGMT_URL
+        return cls.SUPABASE_USER_BASE_URL or cls.get_supabase_mgmt_url()
     
     @classmethod
     def has_supabase_config(cls) -> bool:
@@ -2032,6 +2032,22 @@ To access all AI features (image analysis, code generation, advanced reasoning),
             raise ValueError("ENCRYPTION_SEED must be at least 32 characters for security")
         
         return cls.ENCRYPTION_SEED
+    
+    @classmethod
+    def get_encryption_seed(cls) -> str:
+        """
+        Get the encryption seed, ensuring it's available
+        
+        This is an alias to ensure_encryption_seed() for API clarity and backward compatibility.
+        Recommended by architect for use with initialize_crypto().
+        
+        Returns:
+            str: The encryption seed value
+            
+        Raises:
+            ValueError: If seed cannot be obtained in production
+        """
+        return cls.ensure_encryption_seed()
     
     @classmethod
     def validate_config(cls):

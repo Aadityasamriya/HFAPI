@@ -11,7 +11,7 @@ from typing import Dict, List, Tuple, Any, Optional, Set
 from enum import Enum
 from collections import defaultdict, Counter, OrderedDict
 from dataclasses import dataclass
-from .bot_types import IntentType, ClassificationResult
+from .types import IntentType, ClassificationResult, PromptComplexity
 from .router import IntelligentRouter
 
 logger = logging.getLogger(__name__)
@@ -699,20 +699,27 @@ class AdvancedIntentClassifier:
         
         processing_time = time.time() - start_time
         
+        # Extract secondary intent and confidence from list
+        secondary_intent = secondary_intents[0][0] if secondary_intents else None
+        secondary_confidence = secondary_intents[0][1] if secondary_intents else 0.0
+        
+        # Create PromptComplexity object
+        complexity_obj = PromptComplexity(
+            score=complexity_score,
+            factors={},
+            reasoning=""
+        )
+        
         # Create result with all required fields
         result = ClassificationResult(
-            primary_intent=primary_intent,
+            intent=primary_intent,
             confidence=confidence,
-            secondary_intents=secondary_intents,
+            secondary_intent=secondary_intent,
+            secondary_confidence=secondary_confidence,
             reasoning=reasoning,
-            processing_time=processing_time,
-            complexity_score=complexity_score,
-            special_features=special_features,
-            domain_expertise=None,  # Will be enhanced in future updates
-            context_awareness_score=min(confidence * 0.8, 1.0),  # Based on confidence
-            follow_up_likelihood=0.5 if primary_intent in [IntentType.QUESTION_ANSWERING, IntentType.CONVERSATION] else 0.2,
-            multi_turn_context=None,  # Will be enhanced with conversation tracking
-            user_expertise_match=0.5  # Default assumption of medium expertise
+            detected_features=special_features,
+            processing_time_ms=processing_time * 1000,
+            complexity=complexity_obj
         )
         
         # Cache result for performance with memory leak prevention
@@ -927,20 +934,27 @@ class AdvancedIntentClassifier:
         
         processing_time = time.time() - start_time
         
+        # Extract secondary intent and confidence from list
+        secondary_intent = secondary_intents[0][0] if secondary_intents else None
+        secondary_confidence = secondary_intents[0][1] if secondary_intents else 0.0
+        
+        # Create PromptComplexity object
+        complexity_obj = PromptComplexity(
+            score=complexity_score,
+            factors={},
+            reasoning=""
+        )
+        
         # Create result with all required fields
         result = ClassificationResult(
-            primary_intent=primary_intent,
+            intent=primary_intent,
             confidence=confidence,
-            secondary_intents=secondary_intents,
+            secondary_intent=secondary_intent,
+            secondary_confidence=secondary_confidence,
             reasoning=reasoning,
-            processing_time=processing_time,
-            complexity_score=complexity_score,
-            special_features=special_features,
-            domain_expertise=None,  # Will be enhanced in future updates
-            context_awareness_score=min(confidence * 0.8, 1.0),  # Based on confidence
-            follow_up_likelihood=0.5 if primary_intent in [IntentType.QUESTION_ANSWERING, IntentType.CONVERSATION] else 0.2,
-            multi_turn_context=None,  # Will be enhanced with conversation tracking
-            user_expertise_match=0.5  # Default assumption of medium expertise
+            detected_features=special_features,
+            processing_time_ms=processing_time * 1000,
+            complexity=complexity_obj
         )
         
         # Cache result for performance

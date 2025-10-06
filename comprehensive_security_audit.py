@@ -218,8 +218,10 @@ class ComprehensiveSecurityAudit:
                 os.environ['ENCRYPTION_SEED'] = test_seed
                 secure_logger.warning("Using test encryption seed for security audit")
             
-            initialize_crypto()
-            crypto = SecureCrypto(Config.ENCRYPTION_SEED)
+            # CRITICAL FIX: Pass encryption_seed parameter to initialize_crypto()
+            encryption_seed = Config.get_encryption_seed()
+            initialize_crypto(encryption_seed)
+            crypto = SecureCrypto(encryption_seed)
             
             # Test data samples
             test_cases = [

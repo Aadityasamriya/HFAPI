@@ -333,13 +333,32 @@ class ResilientHybridProvider(StorageProvider):
     
     async def initialize(self) -> None:
         """
-        Initialize both storage backends (MongoDB required, Supabase optional)
+        Initialize both storage backends with security hooks (MongoDB required, Supabase optional)
+        
+        SECURITY FIX: Ensures crypto system is initialized before any encryption operations
         """
         if not self.connected:
             raise ValueError("Must be connected before initialization")
         
         try:
             logger.info("⚙️ Initializing resilient hybrid storage backends...")
+            
+            # SECURITY FIX: Ensure crypto system is initialized
+            from bot.config import Config
+            from bot.crypto_utils import initialize_crypto, get_crypto
+            
+            encryption_seed = Config.ENCRYPTION_SEED
+            if not encryption_seed:
+                raise ValueError("ENCRYPTION_SEED not available - crypto initialization failed")
+            
+            # Initialize crypto if not already done
+            try:
+                get_crypto()
+                logger.info("🔒 Crypto system already initialized")
+            except RuntimeError:
+                # Crypto not initialized yet, initialize it now
+                initialize_crypto(encryption_seed)
+                logger.info("🔒 Crypto system initialized successfully")
             
             # Initialize MongoDB (REQUIRED)
             if self.mongodb_provider and self.mongodb_connected:
@@ -373,7 +392,8 @@ class ResilientHybridProvider(StorageProvider):
                 logger.info("   MongoDB: API keys, admin data, core functionality")
                 logger.info("   Supabase: User conversations, preferences, files")
             
-            logger.info("🎉 Resilient hybrid storage initialization completed")
+            self._encryption_initialized = True
+            logger.info("🎉 Resilient hybrid storage initialization completed with security hooks")
             
         except Exception as e:
             logger.error(f"❌ Storage initialization failed: {e}")
@@ -416,16 +436,60 @@ class ResilientHybridProvider(StorageProvider):
     
     # API Key Management (MongoDB only - critical functionality)
     async def save_user_api_key(self, user_id: int, api_key: str) -> bool:
-        """Save user's API key (MongoDB only - critical functionality)"""
+        """
+        Save user's API key with encryption verification (MongoDB only - critical functionality)
+        
+        SECURITY FIX: Verifies crypto is initialized before encryption
+        """
         if not self.mongodb_provider or not self.mongodb_connected:
             raise RuntimeError("MongoDB not connected - cannot save API key")
-        return await self.mongodb_provider.save_user_api_key(user_id, api_key)
+        
+        # SECURITY FIX: Verify crypto is initialized before encryption
+        from bot.crypto_utils import get_crypto
+        try:
+            get_crypto()
+        except RuntimeError:
+            logger.error("❌ CRITICAL: Crypto not initialized - cannot encrypt API key")
+            raise RuntimeError("Crypto not initialized - cannot encrypt API key")
+        
+        try:
+            result = await self.mongodb_provider.save_user_api_key(user_id, api_key)
+            if result:
+                logger.info(f"🔒 API key encrypted and saved successfully for user {user_id}")
+            return result
+        except Exception as e:
+            logger.error(f"❌ Error saving API key: {e}")
+            raise
     
     async def get_user_api_key(self, user_id: int) -> Optional[str]:
-        """Get user's API key (MongoDB only - critical functionality)"""
+        """
+        Get user's API key with tamper detection (MongoDB only - critical functionality)
+        
+        SECURITY FIX: Includes tamper detection and crypto verification
+        """
         if not self.mongodb_provider or not self.mongodb_connected:
             raise RuntimeError("MongoDB not connected - cannot retrieve API key")
-        return await self.mongodb_provider.get_user_api_key(user_id)
+        
+        # SECURITY FIX: Verify crypto is initialized before decryption
+        from bot.crypto_utils import get_crypto, TamperDetectionError
+        try:
+            get_crypto()
+        except RuntimeError:
+            logger.error("❌ CRITICAL: Crypto not initialized - cannot decrypt API key")
+            raise RuntimeError("Crypto not initialized - cannot decrypt API key")
+        
+        try:
+            api_key = await self.mongodb_provider.get_user_api_key(user_id)
+            if api_key:
+                logger.info(f"🔓 API key retrieved and verified for user {user_id}")
+            return api_key
+        except TamperDetectionError:
+            # SECURITY CRITICAL: Data tampering detected
+            logger.error(f"🚨 SECURITY ALERT: Tamper detection triggered for user {user_id} API key")
+            raise
+        except Exception as e:
+            logger.error(f"❌ Error retrieving API key: {e}")
+            raise
     
     # User Data Management (required by base class)
     async def reset_user_database(self, user_id: int) -> bool:

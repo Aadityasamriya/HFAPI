@@ -84,9 +84,19 @@ class StorageManager:
                 
                 # CRITICAL: Ensure ENCRYPTION_SEED is available before storage initialization
                 from bot.config import Config
+                from bot.crypto_utils import initialize_crypto
+                
                 try:
                     Config.ensure_encryption_seed()
                     logger.info("🔐 ENCRYPTION_SEED verified before storage initialization")
+                    
+                    # SECURITY FIX: Initialize global crypto instance immediately after validation
+                    encryption_seed = Config.ENCRYPTION_SEED
+                    if not encryption_seed:
+                        raise ValueError("ENCRYPTION_SEED is None despite validation - critical error")
+                    
+                    initialize_crypto(encryption_seed)
+                    logger.info("🔒 Global crypto system initialized successfully")
                 except ValueError as e:
                     logger.error(f"❌ ENCRYPTION_SEED validation failed: {e}")
                     raise RuntimeError(f"ENCRYPTION_SEED validation failed: {e}")

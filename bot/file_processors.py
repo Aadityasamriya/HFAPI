@@ -165,6 +165,7 @@ class AdvancedFileProcessor:
     """
     
     # SECURITY: Enforced file size limits per user requirements (10MB max)
+    MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB universal file size limit
     MAX_ZIP_SIZE = 10 * 1024 * 1024   # 10MB for ZIP files (enforced limit)
     MAX_PDF_SIZE = 10 * 1024 * 1024   # 10MB for PDF files (enforced limit)
     MAX_IMAGE_SIZE = 10 * 1024 * 1024  # 10MB for images (enforced limit)
@@ -275,9 +276,8 @@ class AdvancedFileProcessor:
             file_size = len(file_data)
             
             # SECURITY FIX: General file size limit for ALL files (10MB universal limit)
-            MAX_GENERAL_FILE_SIZE = 10 * 1024 * 1024  # 10MB universal limit
-            if file_size > MAX_GENERAL_FILE_SIZE:
-                return False, f"File too large: {file_size:,} bytes (universal limit: {MAX_GENERAL_FILE_SIZE:,} bytes)"
+            if file_size > AdvancedFileProcessor.MAX_FILE_SIZE:
+                return False, f"File too large: {file_size:,} bytes (universal limit: {AdvancedFileProcessor.MAX_FILE_SIZE:,} bytes)"
             
             # Type-specific size checks (redundant but kept for clarity)
             if expected_type == 'zip' and file_size > AdvancedFileProcessor.MAX_ZIP_SIZE:
@@ -567,6 +567,12 @@ class AdvancedFileProcessor:
         Returns:
             Dict[str, Any]: Extracted content and metadata
         """
+        # SECURITY: Check file size BEFORE processing begins
+        file_size = len(pdf_data)
+        if file_size > AdvancedFileProcessor.MAX_FILE_SIZE:
+            logger.error(f"PDF file size exceeds limit: {file_size:,} bytes (limit: {AdvancedFileProcessor.MAX_FILE_SIZE:,} bytes)")
+            raise FileSizeError(f"PDF file too large: {file_size:,} bytes (limit: {AdvancedFileProcessor.MAX_FILE_SIZE:,} bytes)")
+        
         if not PYMUPDF_AVAILABLE:
             return {'error': 'PDF processing not available - PyMuPDF not installed'}
         
@@ -669,6 +675,12 @@ class AdvancedFileProcessor:
         Returns:
             Dict[str, Any]: Archive analysis results
         """
+        # SECURITY: Check ZIP file size BEFORE processing begins
+        file_size = len(zip_data)
+        if file_size > AdvancedFileProcessor.MAX_FILE_SIZE:
+            logger.error(f"ZIP file size exceeds limit: {file_size:,} bytes (limit: {AdvancedFileProcessor.MAX_FILE_SIZE:,} bytes)")
+            raise FileSizeError(f"ZIP file too large: {file_size:,} bytes (limit: {AdvancedFileProcessor.MAX_FILE_SIZE:,} bytes)")
+        
         try:
             file_contents = []
             
@@ -685,6 +697,11 @@ class AdvancedFileProcessor:
                 for zinfo in zip_ref.filelist[:AdvancedFileProcessor.MAX_EXTRACTED_FILES]:
                     if zinfo.is_dir():
                         continue
+                    
+                    # SECURITY: Check individual ZIP member size BEFORE any extraction/reading
+                    if zinfo.file_size > AdvancedFileProcessor.MAX_FILE_SIZE:
+                        logger.error(f"ZIP member '{zinfo.filename}' exceeds size limit: {zinfo.file_size:,} bytes (limit: {AdvancedFileProcessor.MAX_FILE_SIZE:,} bytes)")
+                        raise FileSizeError(f"ZIP member too large: '{zinfo.filename}' ({zinfo.file_size:,} bytes, limit: {AdvancedFileProcessor.MAX_FILE_SIZE:,} bytes)")
                     
                     try:
                         # Get file info
@@ -781,6 +798,12 @@ class AdvancedFileProcessor:
         Returns:
             Dict[str, Any]: Image processing results
         """
+        # SECURITY: Check file size BEFORE processing begins
+        file_size = len(image_data)
+        if file_size > AdvancedFileProcessor.MAX_FILE_SIZE:
+            logger.error(f"Image file size exceeds limit: {file_size:,} bytes (limit: {AdvancedFileProcessor.MAX_FILE_SIZE:,} bytes)")
+            raise FileSizeError(f"Image file too large: {file_size:,} bytes (limit: {AdvancedFileProcessor.MAX_FILE_SIZE:,} bytes)")
+        
         if not PIL_AVAILABLE:
             return {
                 'success': False,
@@ -925,6 +948,12 @@ class AdvancedFileProcessor:
         Advanced PDF analysis that surpasses ChatGPT, Grok, and Gemini capabilities
         Extracts structure, tables, images, and provides intelligent summarization
         """
+        # SECURITY: Check file size BEFORE processing begins
+        file_size = len(pdf_data)
+        if file_size > AdvancedFileProcessor.MAX_FILE_SIZE:
+            logger.error(f"PDF file size exceeds limit: {file_size:,} bytes (limit: {AdvancedFileProcessor.MAX_FILE_SIZE:,} bytes)")
+            raise FileSizeError(f"PDF file too large: {file_size:,} bytes (limit: {AdvancedFileProcessor.MAX_FILE_SIZE:,} bytes)")
+        
         start_time = time.time()
         
         # CRITICAL FIX: Ensure proper resource cleanup for PDF documents
@@ -1076,6 +1105,12 @@ class AdvancedFileProcessor:
         Superior image analysis that outperforms ChatGPT, Grok, and Gemini
         Combines OCR, object detection, and intelligent content description
         """
+        # SECURITY: Check file size BEFORE processing begins
+        file_size = len(image_data)
+        if file_size > AdvancedFileProcessor.MAX_FILE_SIZE:
+            logger.error(f"Image file size exceeds limit: {file_size:,} bytes (limit: {AdvancedFileProcessor.MAX_FILE_SIZE:,} bytes)")
+            raise FileSizeError(f"Image file too large: {file_size:,} bytes (limit: {AdvancedFileProcessor.MAX_FILE_SIZE:,} bytes)")
+        
         start_time = time.time()
         
         try:
@@ -1348,6 +1383,12 @@ class AdvancedFileProcessor:
         Intelligent ZIP analysis that surpasses standard file managers
         Provides detailed structure analysis and content classification
         """
+        # SECURITY: Check ZIP file size BEFORE processing begins
+        file_size = len(zip_data)
+        if file_size > AdvancedFileProcessor.MAX_FILE_SIZE:
+            logger.error(f"ZIP file size exceeds limit: {file_size:,} bytes (limit: {AdvancedFileProcessor.MAX_FILE_SIZE:,} bytes)")
+            raise FileSizeError(f"ZIP file too large: {file_size:,} bytes (limit: {AdvancedFileProcessor.MAX_FILE_SIZE:,} bytes)")
+        
         start_time = time.time()
         
         try:
@@ -1366,6 +1407,11 @@ class AdvancedFileProcessor:
                 for zinfo in zip_ref.filelist:
                     if zinfo.is_dir():
                         continue
+                    
+                    # SECURITY: Check individual ZIP member size BEFORE any extraction/reading
+                    if zinfo.file_size > AdvancedFileProcessor.MAX_FILE_SIZE:
+                        logger.error(f"ZIP member '{zinfo.filename}' exceeds size limit: {zinfo.file_size:,} bytes (limit: {AdvancedFileProcessor.MAX_FILE_SIZE:,} bytes)")
+                        raise FileSizeError(f"ZIP member too large: '{zinfo.filename}' ({zinfo.file_size:,} bytes, limit: {AdvancedFileProcessor.MAX_FILE_SIZE:,} bytes)")
                     
                     # Build directory structure
                     path_parts = zinfo.filename.split('/')

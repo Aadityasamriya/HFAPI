@@ -33,22 +33,52 @@ class IntentType(Enum):
     SENTIMENT_ANALYSIS = "sentiment_analysis"
     SUMMARIZATION = "summarization"
     TRANSLATION = "translation"
+    DATA_ANALYSIS = "data_analysis"
     
     # Visual & Media
     IMAGE_ANALYSIS = "image_analysis"
     IMAGE_GENERATION = "image_generation"
+    
+    # Code & Development
+    CODE_REVIEW = "code_review"
+    ALGORITHM_DESIGN = "algorithm_design"
+    TECHNICAL_DOCUMENTATION = "technical_documentation"
+    
+    # Research & Education
+    RESEARCH = "research"
+    EXPLANATION = "explanation"
+    EDUCATIONAL_CONTENT = "educational_content"
     
     # File & Data Processing (P1 Features)
     PDF_PROCESSING = "pdf_processing"
     ZIP_ANALYSIS = "zip_analysis"
     FILE_GENERATION = "file_generation"
     DOCUMENT_CONVERSION = "document_conversion"
+    DOCUMENT_PROCESSING = "document_processing"
+    
+    # Advanced Reasoning
+    MATHEMATICAL_REASONING = "mathematical_reasoning"
+    ADVANCED_REASONING = "advanced_reasoning"
+    SCIENTIFIC_ANALYSIS = "scientific_analysis"
+    
+    # Domain-Specific Analysis
+    MEDICAL_ANALYSIS = "medical_analysis"
+    BUSINESS_ANALYSIS = "business_analysis"
+    
+    # Creative & Design
+    CREATIVE_DESIGN = "creative_design"
+    
+    # Language & Communication
+    MULTILINGUAL_PROCESSING = "multilingual_processing"
     
     # Advanced Capabilities (Breakthrough Features)
     GUI_AUTOMATION = "gui_automation"
     TOOL_USE = "tool_use"
     API_INTEGRATION = "api_integration"
     SYSTEM_COMMANDS = "system_commands"
+    SYSTEM_INTERACTION = "system_interaction"
+    PREMIUM_VISION = "premium_vision"
+    MULTI_MODAL = "multi_modal"
     
     # Administrative
     ADMIN_COMMAND = "admin_command"

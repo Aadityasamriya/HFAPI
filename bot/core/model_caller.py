@@ -29,7 +29,7 @@ from .ai_providers import (
     CompletionRequest, ProviderResponse, ProviderError
 )
 from .math_calculator import MathReasoningEnhancer
-from .bot_types import IntentType
+from .types import IntentType
 PROVIDER_SYSTEM_AVAILABLE = True
 
 
@@ -319,7 +319,7 @@ class ModelCaller:
         from .conversation_context_tracker import conversation_context_tracker
         from .model_selection_explainer import model_selection_explainer
         from .router import complexity_analyzer
-        from .bot_types import IntentType
+        from .types import IntentType
         import time
         
         # Setup tier-aware fallback chain as backup

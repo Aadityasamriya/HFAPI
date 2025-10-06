@@ -209,54 +209,6 @@ class AdminSystem:
                     logger.warning(f"⚠️ Failed to auto-bootstrap owner from OWNER_ID environment variable")
             except Exception as e:
                 logger.error(f"❌ Error during auto-bootstrap from OWNER_ID: {e}")
-        else:
-            # SECURITY FIX: Production-ready bootstrap completion without OWNER_ID
-            await self._complete_production_bootstrap()
-    
-    async def _complete_production_bootstrap(self) -> None:
-        """
-        Complete admin system bootstrap for production readiness without OWNER_ID
-        
-        This ensures the admin system is properly initialized and ready for production
-        deployment even when OWNER_ID environment variable is not set.
-        """
-        if self._bootstrap_completed:
-            return
-            
-        try:
-            logger.info("🔧 Completing production bootstrap without OWNER_ID...")
-            
-            # Mark bootstrap as completed for production readiness
-            self._bootstrap_completed = True
-            
-            # Initialize empty admin set - admins can be added later via /bootstrap command
-            # This ensures the system is ready but secure (no default admins)
-            if not self._admin_users:
-                logger.info("🔐 Production bootstrap: Admin system ready, no default admins configured")
-            
-            # Save bootstrap completion to storage
-            success = await self._save_admin_data()
-            
-            if success:
-                logger.info("✅ Production bootstrap completed successfully - Admin system ready for deployment")
-                # Log this important security event
-                await self._log_admin_action(
-                    None,  # No specific user for system bootstrap
-                    'production_bootstrap', 
-                    {
-                        'action': 'system_bootstrap_completed',
-                        'admin_count': len(self._admin_users),
-                        'owner_id_configured': bool(Config.OWNER_ID)
-                    }
-                )
-            else:
-                logger.error("❌ Failed to save production bootstrap completion to storage")
-                # Reset bootstrap status on save failure
-                self._bootstrap_completed = False
-                
-        except Exception as e:
-            logger.error(f"❌ Production bootstrap completion failed: {e}")
-            self._bootstrap_completed = False
     
     async def _check_bootstrap_status(self) -> None:
         """Check if bootstrap process is completed"""

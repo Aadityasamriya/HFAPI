@@ -34,7 +34,7 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 import logging
 from .base import StorageProvider
 from bot.config import Config
-from bot.security_utils import SecureLogger
+from bot.security_utils import SecureLogger, InputValidator
 from bot.crypto_utils import (
     initialize_crypto, get_crypto, encrypt_api_key, decrypt_api_key, 
     is_encrypted_data, CryptoError, EncryptionError, DecryptionError,
@@ -144,12 +144,23 @@ class MongoDBProvider(StorageProvider):
             
             if self.db is None:
                 raise RuntimeError("Database not connected")
+            
+            # SECURITY FIX: Validate data_key to prevent injection attacks
+            if not isinstance(data_key, str) or not data_key.strip():
+                raise ValueError("data_key must be a non-empty string")
+            
+            validator = InputValidator()
+            is_safe, sanitized_key, report = validator.validate_input(data_key, strict_mode=True)
+            
+            if not is_safe:
+                raise ValueError(f"data_key contains potentially malicious content: {report.get('severity_level', 'unknown')}")
+            
             collection = self.db.user_data_isolation
             
-            # Query with user isolation
+            # Query with user isolation using sanitized key
             query = {
                 'user_id': user_id,
-                'data_key': data_key
+                'data_key': sanitized_key
             }
             
             result = await collection.find_one(query)
@@ -185,6 +196,17 @@ class MongoDBProvider(StorageProvider):
             
             if self.db is None:
                 raise RuntimeError("Database not connected")
+            
+            # SECURITY FIX: Validate data_key to prevent injection attacks
+            if not isinstance(data_key, str) or not data_key.strip():
+                raise ValueError("data_key must be a non-empty string")
+            
+            validator = InputValidator()
+            is_safe, sanitized_key, report = validator.validate_input(data_key, strict_mode=True)
+            
+            if not is_safe:
+                raise ValueError(f"data_key contains potentially malicious content: {report.get('severity_level', 'unknown')}")
+            
             collection = self.db.user_data_isolation
             
             # Prepare data for storage
@@ -210,20 +232,20 @@ class MongoDBProvider(StorageProvider):
                     storage_data = data
                     encrypted = False
             
-            # Create document with user isolation
+            # Create document with user isolation using sanitized key
             document = {
                 'user_id': user_id,
-                'data_key': data_key,
+                'data_key': sanitized_key,
                 'data': storage_data,
                 'encrypted': encrypted,
                 'updated_at': datetime.utcnow(),
                 'created_at': datetime.utcnow()
             }
             
-            # Upsert with user isolation
+            # Upsert with user isolation using sanitized key
             query = {
                 'user_id': user_id,
-                'data_key': data_key
+                'data_key': sanitized_key
             }
             
             # Update timestamp for existing documents
@@ -493,11 +515,30 @@ class MongoDBProvider(StorageProvider):
             
             user_id = self._validate_user_id(user_id)
             
+            # SECURITY FIX: Validate key and value to prevent injection attacks
+            if not isinstance(key, str) or not key.strip():
+                raise ValueError("Preference key must be a non-empty string")
+            
+            if not isinstance(value, str):
+                raise ValueError("Preference value must be a string")
+            
+            # Validate with InputValidator to prevent malicious content
+            validator = InputValidator()
+            is_safe_key, sanitized_key, key_report = validator.validate_input(key, strict_mode=True)
+            is_safe_value, sanitized_value, value_report = validator.validate_input(value, strict_mode=False)
+            
+            if not is_safe_key:
+                raise ValueError(f"Preference key contains potentially malicious content: {key_report.get('severity_level', 'unknown')}")
+            
+            if not is_safe_value:
+                logger.warning(f"Preference value flagged by security validator for user {user_id}, key '{sanitized_key}'")
+                # Use sanitized value but log the warning
+            
             # Get current preferences or use defaults
             current_preferences = await self.get_user_preferences(user_id)
             
-            # Update the specific key
-            current_preferences[key] = value
+            # Update the specific key with sanitized values
+            current_preferences[sanitized_key] = sanitized_value
             
             # Save the updated preferences
             return await self.save_user_preferences(user_id, current_preferences)
@@ -592,6 +633,9 @@ class MongoDBProvider(StorageProvider):
             
             user_id = self._validate_user_id(user_id)
             
+            # SECURITY FIX: Validate conversation_id to prevent injection attacks
+            conversation_id = self._validate_conversation_id(conversation_id)
+            
             from bson import ObjectId
             
             # Validate and convert conversation_id
@@ -631,6 +675,9 @@ class MongoDBProvider(StorageProvider):
                 raise ValueError("Database not connected")
             
             user_id = self._validate_user_id(user_id)
+            
+            # SECURITY FIX: Validate conversation_id to prevent injection attacks
+            conversation_id = self._validate_conversation_id(conversation_id)
             
             from bson import ObjectId
             
@@ -712,6 +759,9 @@ class MongoDBProvider(StorageProvider):
             
             user_id = self._validate_user_id(user_id)
             
+            # SECURITY FIX: Validate file_id to prevent injection attacks
+            file_id = self._validate_file_id(file_id)
+            
             if not file_data:
                 raise ValueError("File data cannot be empty")
             
@@ -740,6 +790,9 @@ class MongoDBProvider(StorageProvider):
                 raise ValueError("Database not connected")
             
             user_id = self._validate_user_id(user_id)
+            
+            # SECURITY FIX: Validate file_id to prevent injection attacks
+            file_id = self._validate_file_id(file_id)
             
             # First try to get from GridFS
             gridfs_result = await self._get_file_gridfs(user_id, file_id)
@@ -770,6 +823,9 @@ class MongoDBProvider(StorageProvider):
                 raise ValueError("Database not connected")
             
             user_id = self._validate_user_id(user_id)
+            
+            # SECURITY FIX: Validate file_id to prevent injection attacks
+            file_id = self._validate_file_id(file_id)
             
             deleted_any = False
             
@@ -1012,10 +1068,31 @@ class MongoDBProvider(StorageProvider):
             
             user_id = self._validate_user_id(user_id)
             
+            # SECURITY FIX: Validate action and model_used to prevent injection attacks
+            if not isinstance(action, str) or not action.strip():
+                raise ValueError("action must be a non-empty string")
+            
+            if not isinstance(model_used, str) or not model_used.strip():
+                raise ValueError("model_used must be a non-empty string")
+            
+            if not isinstance(tokens_used, int) or tokens_used < 0:
+                raise ValueError("tokens_used must be a non-negative integer")
+            
+            # Validate with InputValidator
+            validator = InputValidator()
+            is_safe_action, sanitized_action, action_report = validator.validate_input(action, strict_mode=True)
+            is_safe_model, sanitized_model, model_report = validator.validate_input(model_used, strict_mode=True)
+            
+            if not is_safe_action:
+                raise ValueError(f"action contains potentially malicious content: {action_report.get('severity_level', 'unknown')}")
+            
+            if not is_safe_model:
+                raise ValueError(f"model_used contains potentially malicious content: {model_report.get('severity_level', 'unknown')}")
+            
             usage_doc = {
                 "user_id": user_id,
-                "action": action,
-                "model_used": model_used,
+                "action": sanitized_action,
+                "model_used": sanitized_model,
                 "tokens_used": tokens_used,
                 "timestamp": datetime.utcnow()
             }

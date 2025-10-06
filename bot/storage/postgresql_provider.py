@@ -37,7 +37,7 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 import logging
 from .base import StorageProvider
 from bot.config import Config
-from bot.security_utils import SecureLogger
+from bot.security_utils import SecureLogger, InputValidator
 
 logger = logging.getLogger(__name__)
 
@@ -480,11 +480,30 @@ class PostgreSQLProvider(StorageProvider):
             
             user_id = self._validate_user_id(user_id)
             
+            # SECURITY FIX: Validate key and value to prevent injection attacks
+            if not isinstance(key, str) or not key.strip():
+                raise ValueError("Preference key must be a non-empty string")
+            
+            if not isinstance(value, str):
+                raise ValueError("Preference value must be a string")
+            
+            # Validate with InputValidator to prevent malicious content
+            validator = InputValidator()
+            is_safe_key, sanitized_key, key_report = validator.validate_input(key, strict_mode=True)
+            is_safe_value, sanitized_value, value_report = validator.validate_input(value, strict_mode=False)
+            
+            if not is_safe_key:
+                raise ValueError(f"Preference key contains potentially malicious content: {key_report.get('severity_level', 'unknown')}")
+            
+            if not is_safe_value:
+                logger.warning(f"Preference value flagged by security validator for user {user_id}, key '{sanitized_key}'")
+                # Use sanitized value but log the warning
+            
             # Get current preferences or use empty dict
             current_preferences = await self.get_user_preferences(user_id)
             
-            # Update the specific key
-            current_preferences[key] = value
+            # Update the specific key with sanitized values
+            current_preferences[sanitized_key] = sanitized_value
             
             # Save the updated preferences
             return await self.save_user_preferences(user_id, current_preferences)
@@ -571,6 +590,9 @@ class PostgreSQLProvider(StorageProvider):
             
             user_id = self._validate_user_id(user_id)
             
+            # SECURITY FIX: Validate conversation_id to prevent injection attacks
+            conversation_id = self._validate_conversation_id(conversation_id)
+            
             async with self.pool.acquire() as conn:
                 row = await conn.fetchrow("""
                     SELECT * FROM conversations 
@@ -601,6 +623,9 @@ class PostgreSQLProvider(StorageProvider):
                 return False
             
             user_id = self._validate_user_id(user_id)
+            
+            # SECURITY FIX: Validate conversation_id to prevent injection attacks
+            conversation_id = self._validate_conversation_id(conversation_id)
             
             async with self.pool.acquire() as conn:
                 result = await conn.execute("""
@@ -664,6 +689,9 @@ class PostgreSQLProvider(StorageProvider):
             
             user_id = self._validate_user_id(user_id)
             
+            # SECURITY FIX: Validate file_id to prevent injection attacks
+            file_id = self._validate_file_id(file_id)
+            
             async with self.pool.acquire() as conn:
                 # Ensure user exists
                 await conn.execute("""
@@ -694,6 +722,9 @@ class PostgreSQLProvider(StorageProvider):
             
             user_id = self._validate_user_id(user_id)
             
+            # SECURITY FIX: Validate file_id to prevent injection attacks
+            file_id = self._validate_file_id(file_id)
+            
             async with self.pool.acquire() as conn:
                 row = await conn.fetchrow("""
                     SELECT file_data, metadata FROM files
@@ -719,6 +750,9 @@ class PostgreSQLProvider(StorageProvider):
                 return False
             
             user_id = self._validate_user_id(user_id)
+            
+            # SECURITY FIX: Validate file_id to prevent injection attacks
+            file_id = self._validate_file_id(file_id)
             
             async with self.pool.acquire() as conn:
                 result = await conn.execute("""
@@ -830,6 +864,27 @@ class PostgreSQLProvider(StorageProvider):
             
             user_id = self._validate_user_id(user_id)
             
+            # SECURITY FIX: Validate action and model_used to prevent injection attacks
+            if not isinstance(action, str) or not action.strip():
+                raise ValueError("action must be a non-empty string")
+            
+            if not isinstance(model_used, str) or not model_used.strip():
+                raise ValueError("model_used must be a non-empty string")
+            
+            if not isinstance(tokens_used, int) or tokens_used < 0:
+                raise ValueError("tokens_used must be a non-negative integer")
+            
+            # Validate with InputValidator
+            validator = InputValidator()
+            is_safe_action, sanitized_action, action_report = validator.validate_input(action, strict_mode=True)
+            is_safe_model, sanitized_model, model_report = validator.validate_input(model_used, strict_mode=True)
+            
+            if not is_safe_action:
+                raise ValueError(f"action contains potentially malicious content: {action_report.get('severity_level', 'unknown')}")
+            
+            if not is_safe_model:
+                raise ValueError(f"model_used contains potentially malicious content: {model_report.get('severity_level', 'unknown')}")
+            
             async with self.pool.acquire() as conn:
                 # Ensure user exists
                 await conn.execute("""
@@ -837,11 +892,11 @@ class PostgreSQLProvider(StorageProvider):
                     ON CONFLICT (user_id) DO NOTHING
                 """, user_id)
                 
-                # Log usage
+                # Log usage with sanitized values
                 await conn.execute("""
                     INSERT INTO usage_analytics (user_id, action, model_used, tokens_used)
                     VALUES ($1, $2, $3, $4)
-                """, user_id, action, model_used, tokens_used)
+                """, user_id, sanitized_action, sanitized_model, tokens_used)
             
             return True
             
@@ -857,8 +912,13 @@ class PostgreSQLProvider(StorageProvider):
             
             user_id = self._validate_user_id(user_id)
             
+            # SECURITY FIX: Validate days parameter to prevent SQL injection
+            if not isinstance(days, int) or days < 1 or days > 365:
+                raise ValueError("days must be an integer between 1 and 365")
+            
             async with self.pool.acquire() as conn:
-                # Get usage stats for the last N days
+                # SECURITY FIX: Use proper parameterization with make_interval for safe SQL
+                # Calculate the interval safely using parameterized query
                 stats = await conn.fetchrow("""
                     SELECT 
                         COUNT(*) as total_actions,
@@ -867,15 +927,15 @@ class PostgreSQLProvider(StorageProvider):
                         COUNT(DISTINCT model_used) as unique_models
                     FROM usage_analytics 
                     WHERE user_id = $1 
-                    AND created_at >= NOW() - INTERVAL '%s days'
+                    AND created_at >= NOW() - make_interval(days => $2)
                 """, user_id, days)
                 
-                # Get action breakdown
+                # SECURITY FIX: Use proper parameterization with make_interval for safe SQL
                 action_stats = await conn.fetch("""
                     SELECT action, COUNT(*) as count
                     FROM usage_analytics 
                     WHERE user_id = $1 
-                    AND created_at >= NOW() - INTERVAL '%s days'
+                    AND created_at >= NOW() - make_interval(days => $2)
                     GROUP BY action
                     ORDER BY count DESC
                 """, user_id, days)

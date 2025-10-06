@@ -11,7 +11,8 @@ from typing import Dict, List, Optional, Tuple, Any
 from datetime import datetime, timedelta
 from dataclasses import dataclass, asdict
 
-from .bot_types import IntentType, PromptComplexity
+from .types import IntentType
+from .bot_types import PromptComplexity
 from .performance_predictor import performance_predictor, PredictionContext
 from .model_health_monitor import health_monitor
 from .dynamic_fallback_strategy import dynamic_fallback_strategy, ErrorType
@@ -635,7 +636,6 @@ class DynamicModelSelector:
         """Calculate task suitability score for a model"""
         # Use the enhanced task suitability from router
         try:
-            from .bot_types import IntentType
             intent_enum = IntentType[intent_type.upper()]
             return intelligent_router._calculate_task_suitability(model, intent_enum, complexity)
         except:
@@ -644,7 +644,6 @@ class DynamicModelSelector:
     async def _get_fallback_model_list(self, intent_type: str) -> List[str]:
         """Get fallback model list for intent type"""
         try:
-            from .bot_types import IntentType
             intent_enum = IntentType[intent_type.upper()]
             return intelligent_router._get_fallback_models(intent_enum)
         except:

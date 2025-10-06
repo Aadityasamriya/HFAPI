@@ -8,7 +8,8 @@ import time
 from typing import Dict, List, Optional, Tuple, Any
 from datetime import datetime
 
-from .bot_types import IntentType, PromptComplexity
+from .types import IntentType
+from .bot_types import PromptComplexity
 from .dynamic_model_selector import dynamic_model_selector, ModelSelectionRequest, ModelSelectionResponse
 from .router import router as intelligent_router, AdvancedComplexityAnalyzer
 from .model_selection_explainer import model_selection_explainer

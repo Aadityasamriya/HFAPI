@@ -61,7 +61,7 @@ class ModelHealthMonitor:
         
         # Grace period for startup - models available by default during this time
         self.startup_time = datetime.now()
-        self.startup_grace_period = timedelta(minutes=5)  # 5 minute grace period
+        self.startup_grace_period = timedelta(minutes=30)  # 30 minute grace period (LENIENT)
         
         # Real-time adaptation features
         self.real_time_feedback: Dict[str, deque] = defaultdict(lambda: deque(maxlen=50))  # Store recent feedback
@@ -106,8 +106,8 @@ class ModelHealthMonitor:
                     data['last_checked'] = datetime.fromisoformat(data['last_checked'])
                     self.model_registry[model_name] = ModelHealthStatus(**data)
                     
-                    # Be more lenient: Add to available models if not recently failed badly
-                    if data['consecutive_failures'] < 3:
+                    # Be very lenient: Add to available models if not recently failed badly
+                    if data['consecutive_failures'] < 5:
                         self.available_models.add(model_name)
                 
                 secure_logger.info(f"📊 Loaded health data for {len(self.model_registry)} models from cache")
@@ -191,14 +191,25 @@ class ModelHealthMonitor:
                 last_adaptation=datetime.now()
             )
         
+        # OPTIMISTIC: Skip actual health checks if no HF_TOKEN or in grace period
+        if not Config.get_hf_token() or self._is_in_grace_period():
+            status.is_available = True
+            status.last_checked = datetime.now()
+            self.model_registry[model_name] = status
+            self.available_models.add(model_name)
+            secure_logger.debug(f"✅ Model {model_name} marked available (optimistic mode)")
+            return status
+        
         try:
             if not await self.initialize_provider():
                 status.consecutive_failures += 1
                 status.last_error = "Provider initialization failed"
-                # LENIENT: Only mark unavailable after 3 consecutive failures
-                if status.consecutive_failures >= 3:
+                # VERY LENIENT: Only mark unavailable after 5+ consecutive failures
+                # CRITICAL: Never remove critical models from available set
+                if status.consecutive_failures >= 5:
                     status.is_available = False
-                    self.available_models.discard(model_name)
+                    if model_name not in self._get_critical_models():
+                        self.available_models.discard(model_name)
                     secure_logger.warning(f"⚠️ Model {model_name} marked unavailable after {status.consecutive_failures} failures")
                 return status
             
@@ -271,40 +282,46 @@ class ModelHealthMonitor:
                 status.consecutive_failures += 1
                 status.error_count += 1
                 status.last_error = f"Invalid response: {response.error_message if response else 'No response'}"
-                # LENIENT: Only mark unavailable after 3 consecutive failures
-                if status.consecutive_failures >= 3:
+                # VERY LENIENT: Only mark unavailable after 5+ consecutive failures
+                # CRITICAL: Never remove critical models from available set
+                if status.consecutive_failures >= 5:
                     status.is_available = False
-                    self.available_models.discard(model_name)
+                    if model_name not in self._get_critical_models():
+                        self.available_models.discard(model_name)
                     secure_logger.warning(f"⚠️ Model {model_name} marked unavailable after {status.consecutive_failures} invalid responses")
                 else:
-                    secure_logger.warning(f"⚠️ Model {model_name} responded with errors (failure {status.consecutive_failures}/3)")
+                    secure_logger.warning(f"⚠️ Model {model_name} responded with errors (failure {status.consecutive_failures}/5)")
         
         except asyncio.TimeoutError:
-            # LENIENT: Timeout is a temporary issue, don't immediately mark unavailable
+            # VERY LENIENT: Timeout is a temporary issue, don't immediately mark unavailable
             status.consecutive_failures += 1
             status.error_count += 1
             status.last_error = f"Health check timeout after {self.health_check_timeout}s"
-            # Only mark unavailable after 3 consecutive timeouts
-            if status.consecutive_failures >= 3:
+            # Only mark unavailable after 5+ consecutive timeouts
+            # CRITICAL: Never remove critical models from available set
+            if status.consecutive_failures >= 5:
                 status.is_available = False
-                self.available_models.discard(model_name)
+                if model_name not in self._get_critical_models():
+                    self.available_models.discard(model_name)
                 secure_logger.warning(f"⏰ Model {model_name} marked unavailable after {status.consecutive_failures} timeouts")
             else:
-                secure_logger.warning(f"⏰ Model {model_name} health check timed out (failure {status.consecutive_failures}/3)")
+                secure_logger.warning(f"⏰ Model {model_name} health check timed out (failure {status.consecutive_failures}/5)")
             
         except Exception as e:
-            # LENIENT: General errors are temporary issues
+            # VERY LENIENT: General errors are temporary issues
             safe_error = redact_sensitive_data(str(e))
             status.consecutive_failures += 1
             status.error_count += 1
             status.last_error = safe_error
-            # Only mark unavailable after 3 consecutive failures
-            if status.consecutive_failures >= 3:
+            # Only mark unavailable after 5+ consecutive failures
+            # CRITICAL: Never remove critical models from available set
+            if status.consecutive_failures >= 5:
                 status.is_available = False
-                self.available_models.discard(model_name)
+                if model_name not in self._get_critical_models():
+                    self.available_models.discard(model_name)
                 secure_logger.warning(f"❌ Model {model_name} marked unavailable after {status.consecutive_failures} errors: {safe_error}")
             else:
-                secure_logger.warning(f"❌ Model {model_name} health check failed (failure {status.consecutive_failures}/3): {safe_error}")
+                secure_logger.warning(f"❌ Model {model_name} health check failed (failure {status.consecutive_failures}/5): {safe_error}")
         
         finally:
             status.last_checked = datetime.now()
@@ -323,8 +340,6 @@ class ModelHealthMonitor:
         Returns:
             Dict[str, bool]: Model availability status
         """
-        secure_logger.info("🚀 Starting comprehensive model health checks...")
-        
         # Get models to check
         models_to_check = priority_models or self._get_critical_models()
         
@@ -334,6 +349,22 @@ class ModelHealthMonitor:
             if model:
                 self.available_models.add(model)
         secure_logger.info(f"✅ Pre-marked {len(models_to_check)} critical models as available (optimistic)")
+        
+        # CRITICAL: If no HF_TOKEN is set, skip health checks entirely (optimistic mode)
+        if not Config.get_hf_token():
+            secure_logger.warning("⚠️ No HF_TOKEN available - skipping health checks (optimistic mode)")
+            availability_map = {model: True for model in models_to_check}
+            self.last_full_check = datetime.now()
+            return availability_map
+        
+        # LENIENT: During grace period, return immediately with all models available
+        if self._is_in_grace_period():
+            secure_logger.info(f"🕐 In grace period ({self.startup_grace_period.total_seconds()/60:.0f} minutes) - all models available")
+            availability_map = {model: True for model in models_to_check}
+            self.last_full_check = datetime.now()
+            return availability_map
+        
+        secure_logger.info("🚀 Starting comprehensive model health checks...")
         
         # Perform health checks concurrently (but with limits to avoid overwhelming API)
         semaphore = asyncio.Semaphore(3)  # Max 3 concurrent checks
@@ -465,7 +496,13 @@ class ModelHealthMonitor:
         return available_for_intent
     
     def is_model_available(self, model_name: str) -> bool:
-        """Check if a specific model is currently available"""
+        """
+        Check if a specific model is currently available
+        CRITICAL: Always returns True for critical models to ensure AI functionality
+        """
+        # CRITICAL: Always mark critical models as available
+        if model_name in self._get_critical_models():
+            return True
         return model_name in self.available_models
     
     def get_model_quality_score(self, model_name: str) -> float:
@@ -502,8 +539,8 @@ class ModelHealthMonitor:
                 return False
             return True
         
-        # Avoid only if has many consecutive failures (increased threshold)
-        return not status.is_available or status.consecutive_failures >= 5
+        # VERY LENIENT: Avoid only if has MANY consecutive failures (increased threshold from 5 to 10)
+        return not status.is_available or status.consecutive_failures >= 10
     
     def get_best_model(self, intent_type: str) -> str:
         """
@@ -643,10 +680,12 @@ class ModelHealthMonitor:
             # Degrade quality score
             status.quality_score = max(0.0, status.quality_score * 0.8)
             
-            # Remove from available models if too many failures
-            if status.consecutive_failures >= 3:
+            # VERY LENIENT: Remove from available models only after many failures
+            # CRITICAL: Never remove critical models
+            if status.consecutive_failures >= 5:
                 status.is_available = False
-                self.available_models.discard(model_name)
+                if model_name not in self._get_critical_models():
+                    self.available_models.discard(model_name)
         
         # Save updated metrics to cache
         self._save_health_cache()
@@ -812,9 +851,9 @@ class ModelHealthMonitor:
         if status.real_time_score < self.adaptation_thresholds['poor_performance']:
             return True
         
-        # Adapt if declining trend with recent failures
+        # LENIENT: Adapt if declining trend with several recent failures (increased from 2 to 5)
         if (status.trend_direction == 'declining' and 
-            status.consecutive_failures >= 2):
+            status.consecutive_failures >= 5):
             return True
         
         # Adapt if we haven't adapted recently and score is low

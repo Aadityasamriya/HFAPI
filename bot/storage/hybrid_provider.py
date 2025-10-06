@@ -220,16 +220,35 @@ class HybridProvider(StorageProvider):
     
     async def initialize(self) -> None:
         """
-        Initialize both MongoDB and Supabase providers
+        Initialize both MongoDB and Supabase providers with security hooks
         
         This should be called after successful connection to set up
         indexes, encryption, and other required components.
+        
+        SECURITY FIX: Ensures crypto system is initialized before any encryption operations
         """
         if not self.connected:
             raise ValueError("Must be connected before initialization")
         
         try:
             logger.info("🔧 Initializing hybrid storage provider...")
+            
+            # SECURITY FIX: Ensure crypto system is initialized
+            from bot.config import Config
+            from bot.crypto_utils import initialize_crypto, get_crypto
+            
+            encryption_seed = Config.ENCRYPTION_SEED
+            if not encryption_seed:
+                raise ValueError("ENCRYPTION_SEED not available - crypto initialization failed")
+            
+            # Initialize crypto if not already done
+            try:
+                get_crypto()
+                logger.info("🔒 Crypto system already initialized")
+            except RuntimeError:
+                # Crypto not initialized yet, initialize it now
+                initialize_crypto(encryption_seed)
+                logger.info("🔒 Crypto system initialized successfully")
             
             # Initialize both providers in parallel for faster setup
             initialization_tasks = []
@@ -262,7 +281,7 @@ class HybridProvider(StorageProvider):
             await asyncio.gather(*initialization_tasks)
             
             self._encryption_initialized = True
-            logger.info("🎉 Hybrid storage provider initialized successfully")
+            logger.info("🎉 Hybrid storage provider initialized successfully with security hooks")
             
         except Exception as e:
             logger.error(f"❌ Failed to initialize hybrid storage provider: {e}")
@@ -319,7 +338,7 @@ class HybridProvider(StorageProvider):
     
     async def save_user_api_key(self, user_id: int, api_key: str) -> bool:
         """
-        Save user's API key to MongoDB (routed operation)
+        Save user's API key to MongoDB with encryption verification (routed operation)
         
         Args:
             user_id (int): Telegram user ID
@@ -334,15 +353,26 @@ class HybridProvider(StorageProvider):
             logger.error("❌ MongoDB not available for API key storage")
             return False
         
+        # SECURITY FIX: Verify crypto is initialized before encryption
+        from bot.crypto_utils import get_crypto
         try:
-            return await self.mongodb_provider.save_user_api_key(user_id, api_key)
+            get_crypto()
+        except RuntimeError:
+            logger.error("❌ CRITICAL: Crypto not initialized - cannot encrypt API key")
+            return False
+        
+        try:
+            result = await self.mongodb_provider.save_user_api_key(user_id, api_key)
+            if result:
+                logger.info(f"🔒 API key encrypted and saved successfully for user {user_id}")
+            return result
         except Exception as e:
             logger.error(f"❌ Error saving API key via MongoDB: {e}")
             return False
     
     async def get_user_api_key(self, user_id: int) -> Optional[str]:
         """
-        Retrieve user's API key from MongoDB (routed operation)
+        Retrieve user's API key from MongoDB with tamper detection (routed operation)
         
         Args:
             user_id (int): Telegram user ID
@@ -356,8 +386,23 @@ class HybridProvider(StorageProvider):
             logger.error("❌ MongoDB not available for API key retrieval")
             return None
         
+        # SECURITY FIX: Verify crypto is initialized before decryption
+        from bot.crypto_utils import get_crypto, TamperDetectionError
         try:
-            return await self.mongodb_provider.get_user_api_key(user_id)
+            get_crypto()
+        except RuntimeError:
+            logger.error("❌ CRITICAL: Crypto not initialized - cannot decrypt API key")
+            return None
+        
+        try:
+            api_key = await self.mongodb_provider.get_user_api_key(user_id)
+            if api_key:
+                logger.info(f"🔓 API key retrieved and verified for user {user_id}")
+            return api_key
+        except TamperDetectionError:
+            # SECURITY CRITICAL: Data tampering detected
+            logger.error(f"🚨 SECURITY ALERT: Tamper detection triggered for user {user_id} API key")
+            return None
         except Exception as e:
             logger.error(f"❌ Error retrieving API key via MongoDB: {e}")
             return None
