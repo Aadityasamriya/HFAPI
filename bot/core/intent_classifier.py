@@ -710,7 +710,30 @@ class AdvancedIntentClassifier:
             reasoning=""
         )
         
-        # Create result with all required fields
+        # Get recommended models from router
+        recommended_models_list = []
+        model_prefs = {}
+        if router_info.get('model'):
+            recommended_models_list.append(router_info['model'])
+            model_prefs[router_info['model']] = router_info.get('confidence', 0.5)
+        
+        # Calculate quality indicators
+        quality_metrics = {
+            'intent_confidence': confidence,
+            'feature_richness': len(special_features) / 10.0,
+            'complexity_appropriateness': min(1.0, complexity_score / 5.0)
+        }
+        
+        # Identify uncertainty factors
+        uncertainty_list = []
+        if confidence < 0.7:
+            uncertainty_list.append('low_confidence')
+        if len(intent_scores) > 3 and sorted(intent_scores.values(), reverse=True)[0] - sorted(intent_scores.values(), reverse=True)[1] < 1.0:
+            uncertainty_list.append('ambiguous_intent')
+        if features['word_count'] < 3:
+            uncertainty_list.append('insufficient_context')
+        
+        # Create result with ALL required fields (FIXED: Added missing fields from updated template)
         result = ClassificationResult(
             intent=primary_intent,
             confidence=confidence,
@@ -719,7 +742,12 @@ class AdvancedIntentClassifier:
             reasoning=reasoning,
             detected_features=special_features,
             processing_time_ms=processing_time * 1000,
-            complexity=complexity_obj
+            complexity=complexity_obj,
+            recommended_models=recommended_models_list,
+            model_preferences=model_prefs,
+            context_state=None,
+            quality_indicators=quality_metrics,
+            uncertainty_factors=uncertainty_list
         )
         
         # Cache result for performance with memory leak prevention
@@ -820,6 +848,7 @@ class AdvancedIntentClassifier:
             return cached_result
         
         # Use router.analyze_prompt_advanced for complexity analysis
+        analysis = {}  # Initialize to empty dict to satisfy LSP
         try:
             analysis = await self.router.analyze_prompt_advanced(prompt, context)
             complexity_score = analysis.get("complexity_score", 3.0)
@@ -945,7 +974,31 @@ class AdvancedIntentClassifier:
             reasoning=""
         )
         
-        # Create result with all required fields
+        # Get recommended models from router (if available)
+        recommended_models_list = []
+        model_prefs = {}
+        # In classify_advanced, we use analysis instead of router_info
+        if 'analysis' in locals() and isinstance(analysis, dict) and analysis.get('model'):
+            recommended_models_list.append(analysis['model'])
+            model_prefs[analysis['model']] = analysis.get('confidence', 0.5)
+        
+        # Calculate quality indicators
+        quality_metrics = {
+            'intent_confidence': confidence,
+            'feature_richness': len(special_features) / 10.0,
+            'complexity_appropriateness': min(1.0, complexity_score / 5.0)
+        }
+        
+        # Identify uncertainty factors
+        uncertainty_list = []
+        if confidence < 0.7:
+            uncertainty_list.append('low_confidence')
+        if len(intent_scores) > 3 and sorted(intent_scores.values(), reverse=True)[0] - sorted(intent_scores.values(), reverse=True)[1] < 1.0:
+            uncertainty_list.append('ambiguous_intent')
+        if features['word_count'] < 3:
+            uncertainty_list.append('insufficient_context')
+        
+        # Create result with ALL required fields (FIXED: Added missing fields from updated template)
         result = ClassificationResult(
             intent=primary_intent,
             confidence=confidence,
@@ -954,7 +1007,12 @@ class AdvancedIntentClassifier:
             reasoning=reasoning,
             detected_features=special_features,
             processing_time_ms=processing_time * 1000,
-            complexity=complexity_obj
+            complexity=complexity_obj,
+            recommended_models=recommended_models_list,
+            model_preferences=model_prefs,
+            context_state=None,
+            quality_indicators=quality_metrics,
+            uncertainty_factors=uncertainty_list
         )
         
         # Cache result for performance
