@@ -268,8 +268,9 @@ class HFInferenceProvider(AIProvider):
             bool: True if provider is healthy
         """
         try:
-            # Try a simple text generation with a verified working model
-            test_model = "gpt2"  # Verified working model
+            # CRITICAL FIX: Use a verified working model from discovery
+            from ..config import Config
+            test_model = Config.FLAGSHIP_TEXT_MODEL  # Qwen/Qwen2.5-7B-Instruct (verified working)
             
             # Use direct sync call for health check to avoid complications
             response = self.client.text_generation(
@@ -294,15 +295,12 @@ class HFInferenceProvider(AIProvider):
         Returns:
             List[str]: List of supported model names
         """
-        # Return verified working models that are actually available
+        # CRITICAL FIX: Return only verified working models from discovery
+        # Only these 2 models passed quota and availability checks as of 2025-10-06
+        from ..config import Config
         return [
-            "gpt2",
-            "gpt2-medium", 
-            "gpt2-large",
-            "microsoft/DialoGPT-medium",
-            "facebook/bart-large-cnn",
-            "deepset/roberta-base-squad2",
-            "cardiffnlp/twitter-roberta-base-sentiment-latest"
+            Config.FLAGSHIP_TEXT_MODEL,        # Qwen/Qwen2.5-7B-Instruct
+            Config.ULTRA_PERFORMANCE_TEXT_MODEL  # Qwen/Qwen2.5-72B-Instruct
         ]
     
     def _format_chat_messages_for_hf(self, messages: List[ChatMessage]) -> str:
