@@ -1,0 +1,194 @@
+{
+  "timestamp": "20251006_053723",
+  "discovery_results": {
+    "working_models": {
+      "text_generation": [],
+      "code_generation": [],
+      "question_answering": [],
+      "summarization": [],
+      "sentiment": [],
+      "text_classification": [],
+      "translation": [],
+      "image": [],
+      "fallback": []
+    },
+    "failed_models": {
+      "text_generation": [
+        {
+          "model": "gpt2",
+          "error": "Inference error: HTTP 400: {\"error\":{\"message\":\"The requested model 'gpt2' does not exist.\",\"type\":\"invalid_request_error\",\"param\":\"model\",\"code\":\"model_not_found\"}}"
+        },
+        {
+          "model": "distilgpt2",
+          "error": "Inference error: HTTP 400: {\"error\":{\"message\":\"The requested model 'distilgpt2' does not exist.\",\"type\":\"invalid_request_error\",\"param\":\"model\",\"code\":\"model_not_found\"}}"
+        },
+        {
+          "model": "microsoft/DialoGPT-small",
+          "error": "Inference error: HTTP 400: {\"error\":{\"message\":\"The requested model 'microsoft/DialoGPT-small' is not supported by any provider you have enabled.\",\"type\":\"invalid_request_error\",\"param\":\"model\",\"code\":\"model_not_supported\"}}"
+        },
+        {
+          "model": "microsoft/DialoGPT-medium",
+          "error": "Inference error: HTTP 400: {\"error\":{\"message\":\"The requested model 'microsoft/DialoGPT-medium' is not supported by any provider you have enabled.\",\"type\":\"invalid_request_error\",\"param\":\"model\",\"code\":\"model_not_supported\"}}"
+        },
+        {
+          "model": "EleutherAI/gpt-neo-125m",
+          "error": "Inference error: HTTP 400: {\"error\":{\"message\":\"The requested model 'EleutherAI/gpt-neo-125m' is not a chat model.\",\"type\":\"invalid_request_error\",\"param\":\"model\",\"code\":\"model_not_supported\"}}"
+        },
+        {
+          "model": "EleutherAI/gpt-neo-1.3B",
+          "error": "Inference error: HTTP 400: {\"error\":{\"message\":\"The requested model 'EleutherAI/gpt-neo-1.3B' is not a chat model.\",\"type\":\"invalid_request_error\",\"param\":\"model\",\"code\":\"model_not_supported\"}}"
+        },
+        {
+          "model": "facebook/blenderbot_small-90M",
+          "error": "Inference error: HTTP 400: {\"error\":{\"message\":\"The requested model 'facebook/blenderbot_small-90M' is not a chat model.\",\"type\":\"invalid_request_error\",\"param\":\"model\",\"code\":\"model_not_supported\"}}"
+        },
+        {
+          "model": "microsoft/DialoGPT-large",
+          "error": "Inference error: HTTP 400: {\"error\":{\"message\":\"The requested model 'microsoft/DialoGPT-large' is not supported by any provider you have enabled.\",\"type\":\"invalid_request_error\",\"param\":\"model\",\"code\":\"model_not_supported\"}}"
+        }
+      ],
+      "code_generation": [
+        {
+          "model": "microsoft/CodeBERT-base",
+          "error": "Inference error: HTTP 400: {\"error\":{\"message\":\"The requested model 'microsoft/CodeBERT-base' does not exist.\",\"type\":\"invalid_request_error\",\"param\":\"model\",\"code\":\"model_not_found\"}}"
+        },
+        {
+          "model": "huggingface/CodeBERTa-small-v1",
+          "error": "Inference error: HTTP 400: {\"error\":{\"message\":\"The requested model 'huggingface/CodeBERTa-small-v1' is not a chat model.\",\"type\":\"invalid_request_error\",\"param\":\"model\",\"code\":\"model_not_supported\"}}"
+        },
+        {
+          "model": "microsoft/codebert-base-mlm",
+          "error": "Inference error: HTTP 400: {\"error\":{\"message\":\"The requested model 'microsoft/codebert-base-mlm' is not a chat model.\",\"type\":\"invalid_request_error\",\"param\":\"model\",\"code\":\"model_not_supported\"}}"
+        },
+        {
+          "model": "microsoft/graphcodebert-base",
+          "error": "Inference error: HTTP 400: {\"error\":{\"message\":\"The requested model 'microsoft/graphcodebert-base' is not a chat model.\",\"type\":\"invalid_request_error\",\"param\":\"model\",\"code\":\"model_not_supported\"}}"
+        },
+        {
+          "model": "EleutherAI/gpt-neo-125m",
+          "error": "Inference error: HTTP 400: {\"error\":{\"message\":\"The requested model 'EleutherAI/gpt-neo-125m' is not a chat model.\",\"type\":\"invalid_request_error\",\"param\":\"model\",\"code\":\"model_not_supported\"}}"
+        },
+        {
+          "model": "gpt2",
+          "error": "Inference error: HTTP 400: {\"error\":{\"message\":\"The requested model 'gpt2' does not exist.\",\"type\":\"invalid_request_error\",\"param\":\"model\",\"code\":\"model_not_found\"}}"
+        }
+      ],
+      "question_answering": [],
+      "summarization": [],
+      "sentiment": [],
+      "text_classification": [],
+      "translation": [],
+      "image": [],
+      "fallback": [
+        {
+          "model": "gpt2",
+          "error": "Inference error: HTTP 400: {\"error\":{\"message\":\"The requested model 'gpt2' does not exist.\",\"type\":\"invalid_request_error\",\"param\":\"model\",\"code\":\"model_not_found\"}}"
+        },
+        {
+          "model": "distilgpt2",
+          "error": "Inference error: HTTP 400: {\"error\":{\"message\":\"The requested model 'distilgpt2' does not exist.\",\"type\":\"invalid_request_error\",\"param\":\"model\",\"code\":\"model_not_found\"}}"
+        },
+        {
+          "model": "distilbert-base-uncased",
+          "error": "Inference error: HTTP 400: {\"error\":{\"message\":\"The requested model 'distilbert-base-uncased' does not exist.\",\"type\":\"invalid_request_error\",\"param\":\"model\",\"code\":\"model_not_found\"}}"
+        }
+      ]
+    },
+    "total_working": 0,
+    "total_tested": 17,
+    "success_rate": 0.0
+  },
+  "working_models_by_category": {
+    "text_generation": [],
+    "code_generation": [],
+    "question_answering": [],
+    "summarization": [],
+    "sentiment": [],
+    "text_classification": [],
+    "translation": [],
+    "image": [],
+    "fallback": []
+  },
+  "failed_models_by_category": {
+    "text_generation": [
+      {
+        "model": "gpt2",
+        "error": "Inference error: HTTP 400: {\"error\":{\"message\":\"The requested model 'gpt2' does not exist.\",\"type\":\"invalid_request_error\",\"param\":\"model\",\"code\":\"model_not_found\"}}"
+      },
+      {
+        "model": "distilgpt2",
+        "error": "Inference error: HTTP 400: {\"error\":{\"message\":\"The requested model 'distilgpt2' does not exist.\",\"type\":\"invalid_request_error\",\"param\":\"model\",\"code\":\"model_not_found\"}}"
+      },
+      {
+        "model": "microsoft/DialoGPT-small",
+        "error": "Inference error: HTTP 400: {\"error\":{\"message\":\"The requested model 'microsoft/DialoGPT-small' is not supported by any provider you have enabled.\",\"type\":\"invalid_request_error\",\"param\":\"model\",\"code\":\"model_not_supported\"}}"
+      },
+      {
+        "model": "microsoft/DialoGPT-medium",
+        "error": "Inference error: HTTP 400: {\"error\":{\"message\":\"The requested model 'microsoft/DialoGPT-medium' is not supported by any provider you have enabled.\",\"type\":\"invalid_request_error\",\"param\":\"model\",\"code\":\"model_not_supported\"}}"
+      },
+      {
+        "model": "EleutherAI/gpt-neo-125m",
+        "error": "Inference error: HTTP 400: {\"error\":{\"message\":\"The requested model 'EleutherAI/gpt-neo-125m' is not a chat model.\",\"type\":\"invalid_request_error\",\"param\":\"model\",\"code\":\"model_not_supported\"}}"
+      },
+      {
+        "model": "EleutherAI/gpt-neo-1.3B",
+        "error": "Inference error: HTTP 400: {\"error\":{\"message\":\"The requested model 'EleutherAI/gpt-neo-1.3B' is not a chat model.\",\"type\":\"invalid_request_error\",\"param\":\"model\",\"code\":\"model_not_supported\"}}"
+      },
+      {
+        "model": "facebook/blenderbot_small-90M",
+        "error": "Inference error: HTTP 400: {\"error\":{\"message\":\"The requested model 'facebook/blenderbot_small-90M' is not a chat model.\",\"type\":\"invalid_request_error\",\"param\":\"model\",\"code\":\"model_not_supported\"}}"
+      },
+      {
+        "model": "microsoft/DialoGPT-large",
+        "error": "Inference error: HTTP 400: {\"error\":{\"message\":\"The requested model 'microsoft/DialoGPT-large' is not supported by any provider you have enabled.\",\"type\":\"invalid_request_error\",\"param\":\"model\",\"code\":\"model_not_supported\"}}"
+      }
+    ],
+    "code_generation": [
+      {
+        "model": "microsoft/CodeBERT-base",
+        "error": "Inference error: HTTP 400: {\"error\":{\"message\":\"The requested model 'microsoft/CodeBERT-base' does not exist.\",\"type\":\"invalid_request_error\",\"param\":\"model\",\"code\":\"model_not_found\"}}"
+      },
+      {
+        "model": "huggingface/CodeBERTa-small-v1",
+        "error": "Inference error: HTTP 400: {\"error\":{\"message\":\"The requested model 'huggingface/CodeBERTa-small-v1' is not a chat model.\",\"type\":\"invalid_request_error\",\"param\":\"model\",\"code\":\"model_not_supported\"}}"
+      },
+      {
+        "model": "microsoft/codebert-base-mlm",
+        "error": "Inference error: HTTP 400: {\"error\":{\"message\":\"The requested model 'microsoft/codebert-base-mlm' is not a chat model.\",\"type\":\"invalid_request_error\",\"param\":\"model\",\"code\":\"model_not_supported\"}}"
+      },
+      {
+        "model": "microsoft/graphcodebert-base",
+        "error": "Inference error: HTTP 400: {\"error\":{\"message\":\"The requested model 'microsoft/graphcodebert-base' is not a chat model.\",\"type\":\"invalid_request_error\",\"param\":\"model\",\"code\":\"model_not_supported\"}}"
+      },
+      {
+        "model": "EleutherAI/gpt-neo-125m",
+        "error": "Inference error: HTTP 400: {\"error\":{\"message\":\"The requested model 'EleutherAI/gpt-neo-125m' is not a chat model.\",\"type\":\"invalid_request_error\",\"param\":\"model\",\"code\":\"model_not_supported\"}}"
+      },
+      {
+        "model": "gpt2",
+        "error": "Inference error: HTTP 400: {\"error\":{\"message\":\"The requested model 'gpt2' does not exist.\",\"type\":\"invalid_request_error\",\"param\":\"model\",\"code\":\"model_not_found\"}}"
+      }
+    ],
+    "question_answering": [],
+    "summarization": [],
+    "sentiment": [],
+    "text_classification": [],
+    "translation": [],
+    "image": [],
+    "fallback": [
+      {
+        "model": "gpt2",
+        "error": "Inference error: HTTP 400: {\"error\":{\"message\":\"The requested model 'gpt2' does not exist.\",\"type\":\"invalid_request_error\",\"param\":\"model\",\"code\":\"model_not_found\"}}"
+      },
+      {
+        "model": "distilgpt2",
+        "error": "Inference error: HTTP 400: {\"error\":{\"message\":\"The requested model 'distilgpt2' does not exist.\",\"type\":\"invalid_request_error\",\"param\":\"model\",\"code\":\"model_not_found\"}}"
+      },
+      {
+        "model": "distilbert-base-uncased",
+        "error": "Inference error: HTTP 400: {\"error\":{\"message\":\"The requested model 'distilbert-base-uncased' does not exist.\",\"type\":\"invalid_request_error\",\"param\":\"model\",\"code\":\"model_not_found\"}}"
+      }
+    ]
+  }
+}

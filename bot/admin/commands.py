@@ -35,6 +35,27 @@ class AdminCommands:
         """
         Bootstrap first admin user (one-time operation)
         Usage: /bootstrap
+        
+        SECURITY ENFORCEMENT:
+        - Authorization: Only OWNER_ID (if configured) can bootstrap, enforced by middleware
+        - One-time operation: Protected by asyncio lock in admin_system.bootstrap_admin()
+        - Race condition prevention: Atomic check-and-set pattern prevents concurrent bootstrap
+        - Rate limiting: Admin rate limiter prevents bootstrap spam/brute force
+        - Security logging: All bootstrap attempts logged as security events
+        
+        Bootstrap Process Flow:
+        1. Middleware validates user authorization (OWNER_ID check or first-user)
+        2. Middleware applies rate limiting to prevent abuse
+        3. This handler checks if bootstrap already completed
+        4. admin_system.bootstrap_admin() uses asyncio lock for atomic operation
+        5. Security event logged on success/failure
+        
+        Security Guarantees:
+        ✓ Bootstrap can only be completed once (atomically enforced)
+        ✓ Only authorized user can bootstrap (OWNER_ID or first-user with warnings)
+        ✓ No race conditions (asyncio lock protection)
+        ✓ Rate limited (prevents brute force)
+        ✓ Full audit trail (security event logging)
         """
         user = update.effective_user
         if user is None:
@@ -47,7 +68,9 @@ class AdminCommands:
         logger.info(f"🔸 Bootstrap command invoked by user_hash {user_hash} (@{username})")
         
         try:
-            # Check if bootstrap already completed
+            # SECURITY CHECK: Verify bootstrap not already completed (belt-and-suspenders approach)
+            # Primary protection is in admin_system.bootstrap_admin() with asyncio lock
+            # This is a secondary check for early exit and user messaging
             if admin_system.is_bootstrap_completed():
                 if update.message is None:
                     logger.error("No message found in update")
@@ -58,9 +81,17 @@ class AdminCommands:
                     "Contact the existing admin for access if needed.",
                     parse_mode='Markdown'
                 )
+                
+                # Log failed attempt (bootstrap already completed)
+                await AdminSecurityLogger.log_security_event(
+                    'bootstrap_already_completed',
+                    {'user_id': user_id, 'username': username}
+                )
                 return
             
-            # Perform bootstrap
+            # CRITICAL: Perform atomic bootstrap operation
+            # The bootstrap_admin() method uses asyncio lock to prevent race conditions
+            # and ensures only one bootstrap can succeed even under concurrent attempts
             success = await admin_system.bootstrap_admin(user_id, username)
             
             if success:

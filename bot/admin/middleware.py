@@ -54,8 +54,65 @@ def admin_required(min_level: str = 'admin', allow_bootstrap: bool = False):
                 # Check if bootstrap is needed and allowed
                 if not admin_system.is_bootstrap_completed():
                     if allow_bootstrap:
+                        # SECURITY ENFORCEMENT: Validate bootstrap authorization
+                        # Only allow bootstrap if user is authorized via OWNER_ID or is first legitimate user
+                        from bot.config import Config
+                        
+                        # Check if OWNER_ID is configured in environment
+                        if Config.OWNER_ID and Config.OWNER_ID > 0:
+                            # SECURITY: If OWNER_ID is set, ONLY that user can bootstrap
+                            if user_id != Config.OWNER_ID:
+                                user_hash = hashlib.sha256(f"{user_id}".encode()).hexdigest()[:8]
+                                owner_hash = hashlib.sha256(f"{Config.OWNER_ID}".encode()).hexdigest()[:8]
+                                logger.critical(f"🚨 SECURITY: Unauthorized bootstrap attempt by user_hash={user_hash} (expected owner_hash={owner_hash})")
+                                
+                                # Log security event for unauthorized bootstrap attempt
+                                await AdminSecurityLogger.log_security_event(
+                                    'unauthorized_bootstrap_attempt',
+                                    {'user_id': user_id, 'username': username, 'expected_owner_id': Config.OWNER_ID}
+                                )
+                                
+                                if update.message:
+                                    await update.message.reply_text(
+                                        "🚫 **Unauthorized Bootstrap Attempt**\n\n"
+                                        "Bootstrap is restricted to the configured bot owner only.\n\n"
+                                        "This incident has been logged.",
+                                        parse_mode='Markdown'
+                                    )
+                                return
+                        else:
+                            # SECURITY WARNING: No OWNER_ID configured - allowing first-come-first-served
+                            # This is a security risk in production environments
+                            user_hash = hashlib.sha256(f"{user_id}".encode()).hexdigest()[:8]
+                            logger.warning(f"⚠️ SECURITY: No OWNER_ID configured - allowing bootstrap by first user user_hash={user_hash}")
+                            logger.warning(f"⚠️ SECURITY: Set OWNER_ID environment variable to restrict bootstrap to specific user")
+                        
+                        # Rate limiting for bootstrap attempts to prevent abuse
+                        # Use admin rate limiter with stricter limits for bootstrap
+                        from bot.security_utils import admin_rate_limiter
+                        is_allowed, wait_time = await admin_system.check_admin_rate_limit(user_id)
+                        if not is_allowed:
+                            user_hash = hashlib.sha256(f"{user_id}".encode()).hexdigest()[:8]
+                            logger.warning(f"🚨 SECURITY: Bootstrap rate limit exceeded for user_hash={user_hash}")
+                            
+                            if update.message:
+                                await update.message.reply_text(
+                                    f"⚠️ **Rate Limit Exceeded**\n\n"
+                                    f"Too many bootstrap attempts. Please wait {wait_time} seconds.",
+                                    parse_mode='Markdown'
+                                )
+                            return
+                        
+                        # Log successful bootstrap access authorization
                         user_hash = hashlib.sha256(f"{user_id}".encode()).hexdigest()[:8]
-                        logger.info(f"🔸 Bootstrap access granted for user_hash={user_hash}")
+                        logger.info(f"🔸 Bootstrap access granted for authorized user_hash={user_hash}")
+                        
+                        # Log security event for authorized bootstrap access
+                        await AdminSecurityLogger.log_security_event(
+                            'bootstrap_access_authorized',
+                            {'user_id': user_id, 'username': username, 'owner_id_configured': bool(Config.OWNER_ID)}
+                        )
+                        
                         return await handler_func(update, context, *args, **kwargs)
                     else:
                         # In test mode, allow test admins to access commands even if bootstrap not completed

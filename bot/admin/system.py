@@ -222,23 +222,47 @@ class AdminSystem:
     async def bootstrap_admin(self, user_id: int, telegram_username: Optional[str] = None) -> bool:
         """
         Bootstrap the first admin user (one-time operation)
-        SECURITY FIX C7: Atomic check-and-set to prevent race conditions
+        
+        SECURITY ENFORCEMENT - MULTI-LAYER PROTECTION:
+        
+        1. ATOMIC OPERATION (Race Condition Prevention):
+           - Uses asyncio.Lock to ensure only ONE bootstrap can succeed
+           - Check-and-set pattern inside lock prevents TOCTOU vulnerabilities
+           - Even with concurrent requests, only first one succeeds atomically
+        
+        2. AUTHORIZATION (Enforced in middleware.py):
+           - If OWNER_ID configured: ONLY that user can call this method
+           - If OWNER_ID not set: First user allowed but with security warnings
+           - Unauthorized attempts blocked before reaching this method
+        
+        3. ONE-TIME GUARANTEE:
+           - _bootstrap_completed flag set atomically inside lock
+           - Persisted to database immediately after setting
+           - All future attempts fail the atomic check
+        
+        4. ROLLBACK ON FAILURE:
+           - If database save fails, all changes rolled back
+           - Ensures consistency between memory and storage
         
         Args:
-            user_id (int): Telegram user ID to make admin
+            user_id (int): Telegram user ID to make admin (pre-authorized by middleware)
             telegram_username (Optional[str]): Username for logging
             
         Returns:
             bool: True if bootstrap successful, False if already completed
         """
-        # SECURITY FIX C7: Atomic check-and-set using asyncio lock
-        # Create lock if it doesn't exist (lazy initialization)
+        # SECURITY: Atomic check-and-set using asyncio lock to prevent race conditions
+        # This ensures only ONE bootstrap operation can succeed even with concurrent attempts
+        # Create lock if it doesn't exist (lazy initialization for singleton pattern)
         if not hasattr(self, '_bootstrap_lock'):
             self._bootstrap_lock = asyncio.Lock()
         
-        # Acquire lock for atomic operation
+        # CRITICAL: Acquire lock for atomic operation
+        # This creates a critical section where only one coroutine can execute
         async with self._bootstrap_lock:
-            # Check again inside lock to prevent race condition
+            # ATOMIC CHECK: Re-check bootstrap status inside lock
+            # This prevents Time-Of-Check-Time-Of-Use (TOCTOU) race conditions
+            # Even if multiple requests passed initial check, only first one succeeds here
             if self._bootstrap_completed:
                 user_hash = hashlib.sha256(f"{user_id}".encode()).hexdigest()[:8]
                 logger.warning(f"🔒 Bootstrap already completed (atomic check) - cannot bootstrap user_hash {user_hash}")

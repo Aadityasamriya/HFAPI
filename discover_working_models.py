@@ -33,82 +33,71 @@ class WorkingModelDiscovery:
         """
         logger.info("🔍 Discovering Working Free-Tier Models...")
         
-        # Carefully selected candidates based on free tier research
+        # 2025 CHAT-COMPATIBLE MODELS - Updated for Inference Providers API
+        # These models work with chat completion format required by the new API
         model_candidates = {
-            # TEXT GENERATION - Lightweight models most likely to work on free tier
+            # TEXT GENERATION - 2025 chat-compatible models
             "text_generation": [
-                "gpt2",                              # Original GPT-2 - free tier standard
-                "distilgpt2",                        # Distilled GPT-2 - lightweight
-                "microsoft/DialoGPT-small",          # Small conversational model
-                "microsoft/DialoGPT-medium",         # Medium conversational model  
-                "EleutherAI/gpt-neo-125m",          # Small GPT-Neo
-                "EleutherAI/gpt-neo-1.3B",          # Larger GPT-Neo (might work)
-                "facebook/blenderbot_small-90M",     # Small BlenderBot
-                "microsoft/DialoGPT-large",          # Large conversational (might work)
+                # Microsoft Phi models - Small but powerful
+                "microsoft/Phi-3-mini-4k-instruct",      # 3.8B, proven reliable
+                "microsoft/Phi-3.5-mini-instruct",       # Updated version
+                "microsoft/Phi-4-mini-instruct",         # Latest Phi model
+                
+                # Qwen models - Alibaba's chat models
+                "Qwen/Qwen2.5-1.5B-Instruct",           # Efficient small model
+                "Qwen/Qwen2.5-7B-Instruct",             # Balanced performance
+                "Qwen/Qwen2.5-72B-Instruct",            # High performance (if available)
+                
+                # Meta Llama models
+                "meta-llama/Llama-3.1-8B-Instruct",     # Latest Llama
+                "meta-llama/Llama-3.3-70B-Instruct",    # Larger Llama (if available)
+                
+                # DeepSeek models - Reasoning capable
+                "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B",  # Small reasoning
+                "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",    # Medium reasoning
+                "deepseek-ai/DeepSeek-V3",                     # Latest DeepSeek
+                
+                # Google models
+                "google/gemma-2-2b-it",                 # Compact instruction model
             ],
             
-            # CODE GENERATION - Smaller code models for free tier
+            # CODE GENERATION - 2025 code-capable chat models
             "code_generation": [
-                "microsoft/CodeBERT-base",           # CodeBERT base model
-                "huggingface/CodeBERTa-small-v1",   # Small CodeBERTa
-                "microsoft/codebert-base-mlm",       # Masked language model for code
-                "microsoft/graphcodebert-base",      # Graph-based code model
-                "EleutherAI/gpt-neo-125m",          # Can be used for simple code
-                "gpt2",                              # GPT-2 for basic code tasks
+                # Qwen code models
+                "Qwen/Qwen2.5-Coder-7B-Instruct",       # Code specialist
+                "Qwen/Qwen2.5-Coder-32B-Instruct",      # Advanced code (if available)
+                
+                # Microsoft Phi for code
+                "microsoft/Phi-3-mini-4k-instruct",      # Good for code
+                "microsoft/Phi-4-mini-instruct",         # Latest, code-capable
+                
+                # DeepSeek code variants
+                "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",  # Reasoning for code
+                
+                # Meta Llama for code
+                "meta-llama/Llama-3.1-8B-Instruct",     # Code capable
             ],
             
-            # QUESTION ANSWERING - Dedicated QA models
-            "question_answering": [
-                "distilbert-base-cased-distilled-squad", # DistilBERT for QA
-                "bert-large-uncased-whole-word-masking-finetuned-squad", # BERT QA
-                "deepset/roberta-base-squad2",        # RoBERTa for QA
-                "distilbert-base-uncased-distilled-squad", # Efficient QA
+            # GENERAL PURPOSE - Multi-task models
+            "general_purpose": [
+                "microsoft/Phi-3-mini-4k-instruct",      # Versatile
+                "Qwen/Qwen2.5-7B-Instruct",             # Multi-task
+                "meta-llama/Llama-3.1-8B-Instruct",     # General purpose
+                "google/gemma-2-2b-it",                 # Compact general
             ],
             
-            # SUMMARIZATION - Specialized summarization models
-            "summarization": [
-                "facebook/bart-large-cnn",           # BART for summarization
-                "sshleifer/distilbart-cnn-12-6",    # Distilled BART
-                "google/pegasus-xsum",               # Pegasus for abstractive summarization
-                "facebook/bart-base",                # Base BART model
+            # REASONING - Models with strong reasoning
+            "reasoning": [
+                "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",   # Reasoning focused
+                "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B", # Efficient reasoning
+                "microsoft/Phi-4-mini-instruct",              # Strong reasoning
             ],
             
-            # SENTIMENT ANALYSIS - Classification models
-            "sentiment": [
-                "cardiffnlp/twitter-roberta-base-sentiment-latest", # Twitter sentiment
-                "distilbert-base-uncased-finetuned-sst-2-english", # SST-2 sentiment
-                "j-hartmann/emotion-english-distilroberta-base",    # Emotion detection
-                "cardiffnlp/twitter-xlm-roberta-base-sentiment",   # Multilingual sentiment
-            ],
-            
-            # TEXT CLASSIFICATION - General classification
-            "text_classification": [
-                "cardiffnlp/twitter-roberta-base-sentiment-latest",
-                "distilbert-base-uncased-finetuned-sst-2-english",
-                "facebook/bart-large-mnli",          # Natural language inference
-            ],
-            
-            # TRANSLATION - Translation models
-            "translation": [
-                "Helsinki-NLP/opus-mt-en-fr",       # English to French
-                "Helsinki-NLP/opus-mt-en-de",       # English to German
-                "Helsinki-NLP/opus-mt-fr-en",       # French to English
-                "Helsinki-NLP/opus-mt-de-en",       # German to English
-            ],
-            
-            # IMAGE MODELS - Vision models that might work
-            "image": [
-                "google/vit-base-patch16-224",       # Vision Transformer
-                "microsoft/resnet-50",               # ResNet for classification
-                "openai/clip-vit-base-patch32",     # CLIP model
-                "nlpconnect/vit-gpt2-image-captioning", # Image captioning
-            ],
-            
-            # FALLBACK MODELS - Ultra-reliable fallbacks
+            # FALLBACK MODELS - Most reliable 2025 options
             "fallback": [
-                "gpt2",                              # Most reliable
-                "distilgpt2",                        # Lightweight reliable
-                "distilbert-base-uncased",           # BERT-based fallback
+                "microsoft/Phi-3-mini-4k-instruct",      # Most reliable
+                "Qwen/Qwen2.5-1.5B-Instruct",           # Efficient backup
+                "google/gemma-2-2b-it",                 # Compact fallback
             ]
         }
         
@@ -132,34 +121,16 @@ class WorkingModelDiscovery:
                 logger.info(f"   Testing: {model_id}")
                 
                 try:
-                    # Simple test prompt appropriate for the model type
-                    if category in ["text_generation", "code_generation", "fallback"]:
-                        test_prompt = "Hello"
-                    elif category == "question_answering":
-                        # QA models need context and question format
-                        continue  # Skip QA for now as they need special format
-                    elif category == "summarization":
-                        # Summarization models need text to summarize
-                        continue  # Skip summarization for now as they need special format
-                    elif category in ["sentiment", "text_classification"]:
-                        # Classification models need text input
-                        continue  # Skip classification for now as they need special format
-                    elif category == "translation":
-                        # Translation models need special format
-                        continue  # Skip translation for now as they need special format
-                    elif category == "image":
-                        # Image models need different API
-                        continue  # Skip image for now as they need different format
-                    else:
-                        test_prompt = "Hello"
+                    # All 2025 models are chat-compatible - use simple test prompt
+                    test_prompt = "Hello, how are you?"
                     
-                    # Test with chat completion format
+                    # Test with chat completion format (2025 Inference Providers API)
                     messages = [ChatMessage(role="user", content=test_prompt)]
                     request = ChatCompletionRequest(
                         messages=messages,
                         model=model_id,
-                        max_tokens=10,
-                        temperature=0.5
+                        max_tokens=20,  # Increased for better response
+                        temperature=0.7
                     )
                     
                     start_time = time.time()

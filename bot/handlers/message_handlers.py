@@ -746,7 +746,21 @@ class MessageHandlers:
         filename = document.file_name or "unknown_document"
         file_size = document.file_size
         
-        logger.info(f"📁 Processing document: {filename} ({file_size:,} bytes)")
+        # SECURITY FIX: Validate file size BEFORE downloading to prevent resource exhaustion
+        if file_size and file_size > AdvancedFileProcessor.MAX_FILE_SIZE:
+            max_size_mb = AdvancedFileProcessor.MAX_FILE_SIZE / (1024 * 1024)
+            actual_size_mb = file_size / (1024 * 1024)
+            await update.message.reply_text(
+                f"🚫 **File Too Large**\n\n"
+                f"Maximum allowed size: {max_size_mb:.1f}MB\n"
+                f"Your file size: {actual_size_mb:.1f}MB\n\n"
+                f"Please upload a smaller file.",
+                parse_mode='Markdown'
+            )
+            logger.warning(f"🚫 Pre-download validation rejected {filename}: {file_size:,} bytes exceeds limit of {AdvancedFileProcessor.MAX_FILE_SIZE:,} bytes")
+            return
+        
+        logger.info(f"📁 Processing document: {filename} ({file_size:,} bytes) - pre-download validation passed")
         
         # Send processing message
         processing_msg = await update.message.reply_text(
@@ -755,7 +769,7 @@ class MessageHandlers:
         )
         
         try:
-            # Download file
+            # Download file (only after size validation)
             file = await context.bot.get_file(document.file_id)
             file_data = await file.download_as_bytearray()
             
@@ -834,7 +848,21 @@ class MessageHandlers:
         photo = update.message.photo[-1]  # Largest size
         file_size = photo.file_size
         
-        logger.info(f"📸 Processing photo: {photo.width}×{photo.height} ({file_size:,} bytes)")
+        # SECURITY FIX: Validate file size BEFORE downloading to prevent resource exhaustion
+        if file_size and file_size > AdvancedFileProcessor.MAX_IMAGE_SIZE:
+            max_size_mb = AdvancedFileProcessor.MAX_IMAGE_SIZE / (1024 * 1024)
+            actual_size_mb = file_size / (1024 * 1024)
+            await update.message.reply_text(
+                f"🚫 **Image Too Large**\n\n"
+                f"Maximum allowed size: {max_size_mb:.1f}MB\n"
+                f"Your image size: {actual_size_mb:.1f}MB\n\n"
+                f"Please upload a smaller image.",
+                parse_mode='Markdown'
+            )
+            logger.warning(f"🚫 Pre-download validation rejected image: {file_size:,} bytes exceeds limit of {AdvancedFileProcessor.MAX_IMAGE_SIZE:,} bytes")
+            return
+        
+        logger.info(f"📸 Processing photo: {photo.width}×{photo.height} ({file_size:,} bytes) - pre-download validation passed")
         
         # Send processing message
         processing_msg = await update.message.reply_text(
@@ -843,7 +871,7 @@ class MessageHandlers:
         )
         
         try:
-            # Download image
+            # Download image (only after size validation)
             file = await context.bot.get_file(photo.file_id)
             image_data = await file.download_as_bytearray()
             
