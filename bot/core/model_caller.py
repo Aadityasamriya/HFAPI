@@ -30,6 +30,7 @@ from .ai_providers import (
 )
 from .math_calculator import MathReasoningEnhancer
 from .types import IntentType
+from .bot_types import PromptComplexity
 from .model_health_monitor import health_monitor
 PROVIDER_SYSTEM_AVAILABLE = True
 
@@ -243,6 +244,35 @@ class ModelCaller:
         
         return True, "AI functionality ready"
     
+    def _get_default_complexity(self, complexity_score: float = 5.0) -> PromptComplexity:
+        """
+        Create a default PromptComplexity object with sensible defaults
+        
+        Args:
+            complexity_score: The complexity score to use (default 5.0)
+            
+        Returns:
+            PromptComplexity: Default complexity object
+        """
+        return PromptComplexity(
+            complexity_score=complexity_score,
+            technical_depth=2,
+            reasoning_required=False,
+            context_length=100,
+            domain_specificity=0.5,
+            creativity_factor=0.5,
+            multi_step=False,
+            uncertainty=0.3,
+            priority_level='medium',
+            estimated_tokens=500,
+            domain_expertise='general',
+            reasoning_chain_length=1,
+            requires_external_knowledge=False,
+            temporal_context='current',
+            user_intent_confidence=0.7,
+            cognitive_load=0.5
+        )
+    
     async def _setup_fallback_chain(self, model_name: str, intent_type: str = "text") -> None:
         """
         CRITICAL FIX: Setup tier-aware fallback chain for systematic model degradation with thread safety
@@ -411,7 +441,7 @@ class ModelCaller:
                 error_type=error_type,
                 failed_model=current_model,
                 intent_type=intent_type,
-                complexity=complexity if complexity is not None else 5.0,
+                complexity=complexity if complexity is not None else self._get_default_complexity(5.0),
                 available_models=available_models,
                 conversation_context=conversation_context.__dict__ if conversation_context else None
             )
@@ -502,7 +532,7 @@ class ModelCaller:
                 response_time=response_time,
                 quality_score=quality_score,
                 intent_type=intent_type,
-                complexity=getattr(self, '_last_complexity', None),
+                complexity=getattr(self, '_last_complexity', self._get_default_complexity()),
                 conversation_id=conversation_id,
                 error_type=None
             )
@@ -530,7 +560,7 @@ class ModelCaller:
                 response_time=response_time,
                 quality_score=0.0,  # Failed attempts get 0 quality
                 intent_type=intent_type,
-                complexity=getattr(self, '_last_complexity', None),
+                complexity=getattr(self, '_last_complexity', self._get_default_complexity()),
                 conversation_id=conversation_id,
                 error_type=error_type_str
             )

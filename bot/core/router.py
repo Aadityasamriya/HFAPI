@@ -8,7 +8,9 @@ import logging
 import hashlib
 import math
 import json
-from typing import Dict, List, Tuple, Any, Optional
+import time
+import asyncio
+from typing import Dict, List, Tuple, Any, Optional, Union
 from collections import defaultdict, deque
 from datetime import datetime, timedelta
 from .bot_types import IntentType, PromptComplexity, ModelPerformance, ContextState, DomainExpertise
@@ -17,6 +19,7 @@ from .performance_predictor import performance_predictor, PredictionContext
 from .dynamic_fallback_strategy import dynamic_fallback_strategy, ErrorType
 from .conversation_context_tracker import conversation_context_tracker, ConversationTurn
 from .model_selection_explainer import model_selection_explainer, ModelSelectionExplanation
+from ..config import Config
 
 logger = logging.getLogger(__name__)
 
@@ -2098,7 +2101,7 @@ class IntelligentRouter:
         return primary_intent, routing_info
     
     def select_optimal_model(self, intent: Optional[str] = None, complexity: Optional[PromptComplexity] = None, context: Optional[ContextState] = None, 
-                           prompt: Optional[str] = None, intent_type: Optional[str] = None, user_context: Optional[Dict] = None):
+                           prompt: Optional[str] = None, intent_type: Optional[str] = None, user_context: Optional[Dict] = None) -> Union[str, Tuple[str, Dict]]:
         """
         CRITICAL FIX: Updated method signature to support both old and new calling patterns
         This method is required by the test suite and provides backward compatibility
@@ -2112,7 +2115,7 @@ class IntelligentRouter:
             user_context (Optional[Dict]): User context (legacy support)
             
         Returns:
-            Tuple[str, Dict]: (selected_model, special_params)
+            Union[str, Tuple[str, Dict]]: Legacy returns just model name (str), new signature returns (selected_model, special_params)
         """
         # Handle legacy calling pattern with prompt parameter
         if prompt is not None:
@@ -3757,11 +3760,18 @@ class IntelligentRouter:
             complexity = self.complexity_analyzer.analyze_complexity(prompt, context)
         
         # Delegate to the sophisticated selection method
-        return self.select_optimal_model(
+        result = self.select_optimal_model(
             intent=intent.value if intent else "text_generation",
             complexity=complexity,
-            context=ContextState() if context else None
+            context=None
         )
+        
+        # Ensure we always return a tuple (select_optimal_model may return str or tuple)
+        if isinstance(result, tuple):
+            return result
+        else:
+            # If it's just a string (legacy return), wrap it in a tuple with empty params
+            return result, {}
 
 # Global router instance
 router = IntelligentRouter()

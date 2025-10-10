@@ -272,8 +272,9 @@ class HFInferenceProvider(AIProvider):
             from ..config import Config
             test_model = Config.FLAGSHIP_TEXT_MODEL  # Qwen/Qwen2.5-7B-Instruct (verified working)
             
-            # Use direct sync call for health check to avoid complications
-            response = self.client.text_generation(
+            # FIXED: Use asyncio.to_thread to properly wrap synchronous call
+            response = await asyncio.to_thread(
+                self.client.text_generation,
                 prompt="Hello",
                 model=test_model,
                 max_new_tokens=5,
@@ -649,7 +650,8 @@ class HFInferenceProvider(AIProvider):
     
     async def _safe_text_generation(self, prompt: str, model: str, **kwargs) -> Any:
         """
-        FIXED: Safe text generation using NEW HuggingFace Inference Providers API
+        FIXED: Safe text generation using InferenceClient with proper async pattern
+        Respects config.api_mode and config.base_url settings
         
         Args:
             prompt (str): Text prompt
@@ -662,59 +664,18 @@ class HFInferenceProvider(AIProvider):
         Raises:
             Various provider errors for different failure modes
         """
+        from .ai_providers import APIMode
+        
         timeout = kwargs.pop('timeout', self.config.timeout)
         
         try:
-            # CRITICAL FIX: Use NEW HuggingFace Inference Providers API endpoint
-            secure_logger.info(f"🔄 Making API call using new Inference Providers endpoint for model {model}")
-            
-            import aiohttp
-            
-            # NEW ENDPOINT: Use Inference Providers API instead of old serverless API
-            api_url = "https://router.huggingface.co/v1/chat/completions"
-            headers = {
-                "Authorization": f"Bearer {self.config.api_key}",
-                "Content-Type": "application/json"
-            }
-            
-            # NEW FORMAT: Use OpenAI-compatible chat completion format
-            payload = {
-                "model": model,  # Model goes in the request body now, not the URL
-                "messages": [
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ],
-                "max_tokens": kwargs.get("max_new_tokens", kwargs.get("max_tokens", 150)),
-                "temperature": kwargs.get("temperature", 0.7),
-                "top_p": kwargs.get("top_p", 0.9),
-                "stream": False
-            }
-            
-            # Make HTTP request to new endpoint
-            async with aiohttp.ClientSession() as session:
-                async with session.post(api_url, headers=headers, json=payload, timeout=timeout) as http_response:
-                    if http_response.status == 200:
-                        response_data = await http_response.json()
-                        
-                        # Extract text from NEW response format
-                        if "choices" in response_data and len(response_data["choices"]) > 0:
-                            choice = response_data["choices"][0]
-                            if "message" in choice and "content" in choice["message"]:
-                                response = choice["message"]["content"]
-                            elif "text" in choice:
-                                response = choice["text"]
-                            else:
-                                response = str(choice)
-                        else:
-                            response = str(response_data)
-                        
-                        secure_logger.info(f"✅ New API request successful for model {model}")
-                        return response
-                    else:
-                        error_text = await http_response.text()
-                        raise Exception(f"HTTP {http_response.status}: {error_text}")
+            # Check API mode from config
+            if self.config.api_mode == APIMode.INFERENCE_PROVIDERS:
+                # Use Inference Providers API (chat completions endpoint)
+                return await self._call_inference_providers_api(prompt, model, timeout, **kwargs)
+            else:
+                # Use standard InferenceClient for INFERENCE_API mode
+                return await self._call_inference_client(prompt, model, **kwargs)
                 
         except Exception as e:
             # Re-raise with proper error classification
@@ -750,6 +711,103 @@ class HFInferenceProvider(AIProvider):
                     "huggingface_inference", 
                     model
                 )
+    
+    async def _call_inference_client(self, prompt: str, model: str, **kwargs) -> Any:
+        """
+        Call InferenceClient.text_generation() properly using asyncio.to_thread()
+        
+        Args:
+            prompt (str): Text prompt
+            model (str): Model name
+            **kwargs: Additional generation parameters
+        
+        Returns:
+            Any: Generated text response
+        """
+        secure_logger.info(f"🔄 Using InferenceClient for model {model}")
+        
+        # Use asyncio.to_thread to make synchronous InferenceClient async
+        response = await asyncio.to_thread(
+            self.client.text_generation,
+            prompt=prompt,
+            model=model,
+            **kwargs
+        )
+        
+        secure_logger.info(f"✅ InferenceClient request successful for model {model}")
+        return response
+    
+    async def _call_inference_providers_api(self, prompt: str, model: str, timeout: int, **kwargs) -> str:
+        """
+        Call Inference Providers API (chat completions endpoint)
+        Respects config.base_url setting
+        
+        Args:
+            prompt (str): Text prompt
+            model (str): Model name
+            timeout (int): Request timeout in seconds
+            **kwargs: Additional generation parameters
+        
+        Returns:
+            str: Generated text response
+        """
+        import aiohttp
+        
+        # FIXED: Respect config.base_url instead of hardcoding
+        if self.config.base_url:
+            api_url = f"{self.config.base_url.rstrip('/')}/v1/chat/completions"
+        else:
+            # Default to Inference Providers router endpoint
+            api_url = "https://router.huggingface.co/v1/chat/completions"
+        
+        secure_logger.info(f"🔄 Using Inference Providers API at {api_url} for model {model}")
+        
+        headers = {
+            "Authorization": f"Bearer {self.config.api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        # Use OpenAI-compatible chat completion format
+        payload = {
+            "model": model,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            "max_tokens": kwargs.get("max_new_tokens", kwargs.get("max_tokens", 150)),
+            "temperature": kwargs.get("temperature", 0.7),
+            "top_p": kwargs.get("top_p", 0.9),
+            "stream": False
+        }
+        
+        # Create ClientTimeout object for aiohttp
+        timeout_obj = aiohttp.ClientTimeout(total=timeout)
+        
+        # Make HTTP request to endpoint
+        async with aiohttp.ClientSession() as session:
+            async with session.post(api_url, headers=headers, json=payload, timeout=timeout_obj) as http_response:
+                if http_response.status == 200:
+                    response_data = await http_response.json()
+                    
+                    # Extract text from response format
+                    if "choices" in response_data and len(response_data["choices"]) > 0:
+                        choice = response_data["choices"][0]
+                        if "message" in choice and "content" in choice["message"]:
+                            response = choice["message"]["content"]
+                        elif "text" in choice:
+                            response = choice["text"]
+                        else:
+                            response = str(choice)
+                    else:
+                        response = str(response_data)
+                    
+                    secure_logger.info(f"✅ Inference Providers API request successful for model {model}")
+                    return response
+                else:
+                    error_text = await http_response.text()
+                    raise Exception(f"HTTP {http_response.status}: {error_text}")
     
     def _get_model_supported_tasks(self, model: str) -> List[str]:
         """Get supported tasks for a specific model"""
