@@ -11,8 +11,7 @@ from typing import Dict, List, Optional, Tuple, Any
 from datetime import datetime, timedelta
 from dataclasses import dataclass, asdict
 
-from .types import IntentType
-from .bot_types import PromptComplexity
+from .bot_types import IntentType, PromptComplexity, DomainExpertise
 from .performance_predictor import performance_predictor, PredictionContext
 from .model_health_monitor import health_monitor
 from .dynamic_fallback_strategy import dynamic_fallback_strategy, ErrorType
@@ -160,14 +159,39 @@ class DynamicModelSelector:
             secure_logger.error(f"❌ Dynamic model selection failed: {redact_sensitive_data(str(e))}")
             
             # Fallback to traditional router
-            fallback_model = intelligent_router.get_recommended_model(
-                IntentType[request.intent_type.upper()], {}
+            try:
+                intent_enum = IntentType[request.intent_type.upper()]
+            except (KeyError, AttributeError):
+                intent_enum = IntentType.TEXT_GENERATION
+            
+            fallback_model, _ = intelligent_router.select_model(
+                request.prompt, intent_enum, None, {}
+            )
+            
+            # Create default explanation for fallback
+            default_explanation = ModelSelectionExplanation(
+                selected_model=fallback_model,
+                confidence=0.5,
+                timestamp=datetime.now(),
+                primary_reasons=[],
+                alternative_models=[],
+                context_factors={},
+                selection_strategy='fallback_traditional',
+                fallback_triggered=True,
+                performance_prediction=None,
+                conversation_influence=None,
+                total_score=0.5,
+                request_id=request.request_id,
+                user_id=request.user_id,
+                conversation_id=request.conversation_id,
+                intent_type=request.intent_type,
+                complexity_score=None
             )
             
             # Create minimal response
             return ModelSelectionResponse(
                 selected_model=fallback_model,
-                explanation=None,
+                explanation=default_explanation,
                 confidence=0.5,
                 selection_strategy='fallback_traditional',
                 performance_prediction=None,
@@ -209,16 +233,24 @@ class DynamicModelSelector:
                 complexity = complexity_analyzer.analyze_complexity(original_request.prompt)
             except Exception:
                 # Fallback to default complexity
-                from .bot_types import PromptComplexity, DomainExpertise
+                estimated_tokens_val = int(len(original_request.prompt.split()) * 1.3)
                 complexity = PromptComplexity(
                     complexity_score=5.0,
-                    explanation="Default complexity",
-                    domain_expertise=DomainExpertise.GENERAL,
-                    estimated_tokens=len(original_request.prompt.split()) * 1.3,
-                    requires_reasoning=False,
-                    requires_creativity=False,
-                    multi_step_task=False,
-                    specialized_knowledge=False
+                    technical_depth=3,
+                    reasoning_required=False,
+                    context_length=estimated_tokens_val,
+                    domain_specificity=0.5,
+                    creativity_factor=0.5,
+                    multi_step=False,
+                    uncertainty=0.5,
+                    priority_level='medium',
+                    estimated_tokens=estimated_tokens_val,
+                    domain_expertise='general',
+                    reasoning_chain_length=1,
+                    requires_external_knowledge=False,
+                    temporal_context='current',
+                    user_intent_confidence=0.7,
+                    cognitive_load=0.5
                 )
             
             # 3. Get conversation context
@@ -310,13 +342,38 @@ class DynamicModelSelector:
             secure_logger.error(f"❌ Intelligent fallback failed: {redact_sensitive_data(str(e))}")
             
             # Ultimate fallback to traditional router
-            fallback_model = intelligent_router.get_recommended_model(
-                IntentType[original_request.intent_type.upper()], {}
+            try:
+                intent_enum = IntentType[original_request.intent_type.upper()]
+            except (KeyError, AttributeError):
+                intent_enum = IntentType.TEXT_GENERATION
+            
+            fallback_model, _ = intelligent_router.select_model(
+                original_request.prompt, intent_enum, None, {}
+            )
+            
+            # Create default explanation for emergency fallback
+            emergency_explanation = ModelSelectionExplanation(
+                selected_model=fallback_model,
+                confidence=0.3,
+                timestamp=datetime.now(),
+                primary_reasons=[],
+                alternative_models=[],
+                context_factors={},
+                selection_strategy='emergency_fallback',
+                fallback_triggered=True,
+                performance_prediction=None,
+                conversation_influence=None,
+                total_score=0.3,
+                request_id=original_request.request_id,
+                user_id=original_request.user_id,
+                conversation_id=original_request.conversation_id,
+                intent_type=original_request.intent_type,
+                complexity_score=None
             )
             
             return ModelSelectionResponse(
                 selected_model=fallback_model,
-                explanation=None,
+                explanation=emergency_explanation,
                 confidence=0.3,
                 selection_strategy='emergency_fallback',
                 performance_prediction=None,
@@ -363,6 +420,27 @@ class DynamicModelSelector:
             intent_type = original_selection['intent_type']
             conversation_id = original_selection.get('conversation_id')
             complexity = original_selection.get('complexity')
+            
+            # Ensure complexity is valid or create default
+            if complexity is None:
+                complexity = PromptComplexity(
+                    complexity_score=5.0,
+                    technical_depth=3,
+                    reasoning_required=False,
+                    context_length=100,
+                    domain_specificity=0.5,
+                    creativity_factor=0.5,
+                    multi_step=False,
+                    uncertainty=0.5,
+                    priority_level='medium',
+                    estimated_tokens=100,
+                    domain_expertise='general',
+                    reasoning_chain_length=1,
+                    requires_external_knowledge=False,
+                    temporal_context='current',
+                    user_intent_confidence=0.7,
+                    cognitive_load=0.5
+                )
             
             # Record in router for centralized learning
             intelligent_router.record_model_performance(
@@ -428,11 +506,11 @@ class DynamicModelSelector:
             cutoff_time = datetime.now() - timedelta(hours=time_window_hours)
             
             # Get insights from all components
-            health_insights = health_monitor.get_model_rankings()
+            health_insights = []  # health_monitor.get_model_rankings() method doesn't exist
             fallback_insights = dynamic_fallback_strategy.get_error_insights()
             explainer_insights = model_selection_explainer.analyze_selection_patterns(time_window_hours)
             conversation_insights = conversation_context_tracker.get_global_insights()
-            predictor_insights = performance_predictor.get_performance_insights()
+            predictor_insights = {}  # performance_predictor.get_performance_insights() method doesn't exist
             
             # Compile comprehensive insights
             insights = {
@@ -476,16 +554,24 @@ class DynamicModelSelector:
                 complexity_analyzer = AdvancedComplexityAnalyzer()
                 initial_complexity = complexity_analyzer.analyze_complexity(request.prompt)
             except Exception:
-                from .bot_types import PromptComplexity, DomainExpertise
+                estimated_tokens_val = int(len(request.prompt.split()) * 1.3)
                 initial_complexity = PromptComplexity(
                     complexity_score=5.0,
-                    explanation="Default complexity",
-                    domain_expertise=DomainExpertise.GENERAL,
-                    estimated_tokens=len(request.prompt.split()) * 1.3,
-                    requires_reasoning=False,
-                    requires_creativity=False,
-                    multi_step_task=False,
-                    specialized_knowledge=False
+                    technical_depth=3,
+                    reasoning_required=False,
+                    context_length=estimated_tokens_val,
+                    domain_specificity=0.5,
+                    creativity_factor=0.5,
+                    multi_step=False,
+                    uncertainty=0.5,
+                    priority_level='medium',
+                    estimated_tokens=estimated_tokens_val,
+                    domain_expertise='general',
+                    reasoning_chain_length=1,
+                    requires_external_knowledge=False,
+                    temporal_context='current',
+                    user_intent_confidence=0.7,
+                    cognitive_load=0.5
                 )
             
             conversation_context_tracker.start_conversation(
@@ -514,16 +600,24 @@ class DynamicModelSelector:
         except Exception as e:
             secure_logger.warning(f"⚠️ Complexity analysis failed: {redact_sensitive_data(str(e))}")
             # Return default complexity
-            from .bot_types import PromptComplexity, DomainExpertise
+            estimated_tokens_val = int(len(prompt.split()) * 1.3)
             return PromptComplexity(
                 complexity_score=5.0,
-                explanation="Default complexity due to analysis failure",
-                domain_expertise=DomainExpertise.GENERAL,
-                estimated_tokens=len(prompt.split()) * 1.3,
-                requires_reasoning=False,
-                requires_creativity=False,
-                multi_step_task=False,
-                specialized_knowledge=False
+                technical_depth=3,
+                reasoning_required=False,
+                context_length=estimated_tokens_val,
+                domain_specificity=0.5,
+                creativity_factor=0.5,
+                multi_step=False,
+                uncertainty=0.5,
+                priority_level='medium',
+                estimated_tokens=estimated_tokens_val,
+                domain_expertise='general',
+                reasoning_chain_length=1,
+                requires_external_knowledge=False,
+                temporal_context='current',
+                user_intent_confidence=0.7,
+                cognitive_load=0.5
             )
     
     async def _get_conversation_context(self, conversation_id: Optional[str]):
@@ -621,8 +715,13 @@ class DynamicModelSelector:
             }
         else:
             # Fallback to traditional router
-            fallback_model = intelligent_router.get_recommended_model(
-                IntentType[request.intent_type.upper()], {}
+            try:
+                intent_enum = IntentType[request.intent_type.upper()]
+            except (KeyError, AttributeError):
+                intent_enum = IntentType.TEXT_GENERATION
+            
+            fallback_model, _ = intelligent_router.select_model(
+                request.prompt, intent_enum, None, {}
             )
             return {
                 'selected_model': fallback_model,

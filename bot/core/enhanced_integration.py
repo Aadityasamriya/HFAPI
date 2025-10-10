@@ -8,8 +8,7 @@ import time
 from typing import Dict, List, Optional, Tuple, Any
 from datetime import datetime
 
-from .types import IntentType
-from .bot_types import PromptComplexity
+from .bot_types import IntentType, PromptComplexity
 from .dynamic_model_selector import dynamic_model_selector, ModelSelectionRequest, ModelSelectionResponse
 from .router import router as intelligent_router, AdvancedComplexityAnalyzer
 from .model_selection_explainer import model_selection_explainer
@@ -161,7 +160,7 @@ class EnhancedModelSelectionIntegration:
         complexity = complexity_analyzer.analyze_complexity(prompt)
         
         # Get model recommendation from traditional router
-        selected_model = intelligent_router.get_recommended_model(intent_enum, {})
+        selected_model, _ = intelligent_router.select_model(prompt, intent_enum, complexity, {})
         
         # Update metrics
         self.integration_metrics['traditional_fallbacks'] += 1
@@ -356,8 +355,27 @@ class EnhancedModelSelectionIntegration:
             except (KeyError, AttributeError):
                 intent_enum = IntentType.TEXT_GENERATION
             
-            # Get complexity if available
+            # Get complexity if available, or create default
             complexity = getattr(intelligent_router, '_last_complexity', None)
+            if complexity is None:
+                complexity = PromptComplexity(
+                    complexity_score=5.0,
+                    technical_depth=3,
+                    reasoning_required=False,
+                    context_length=100,
+                    domain_specificity=0.5,
+                    creativity_factor=0.5,
+                    multi_step=False,
+                    uncertainty=0.5,
+                    priority_level='medium',
+                    estimated_tokens=100,
+                    domain_expertise='general',
+                    reasoning_chain_length=1,
+                    requires_external_knowledge=False,
+                    temporal_context='current',
+                    user_intent_confidence=0.7,
+                    cognitive_load=0.5
+                )
             
             intelligent_router.record_model_performance(
                 model_name=model_name,

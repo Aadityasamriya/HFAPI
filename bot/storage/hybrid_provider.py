@@ -941,6 +941,77 @@ class HybridProvider(StorageProvider):
             }
         }
     
+    # Generic User Data Management (required abstract methods)
+    async def save_user_data(self, user_id: int, data_key: str, data_value: Any) -> bool:
+        """
+        Save generic user data (routed to Supabase)
+        
+        Args:
+            user_id (int): Telegram user ID
+            data_key (str): Data key identifier
+            data_value (Any): Data value to store
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        self._log_routing_decision("save_user_data", "Supabase", user_id)
+        
+        if not self.supabase_provider or not self.supabase_connected:
+            logger.error("❌ Supabase not available for saving user data")
+            return False
+        
+        try:
+            return await self.supabase_provider.save_user_data(user_id, data_key, data_value)
+        except Exception as e:
+            logger.error(f"❌ Error saving user data via Supabase: {e}")
+            return False
+    
+    async def get_user_data(self, user_id: int, data_key: str) -> Optional[Any]:
+        """
+        Get generic user data (routed to Supabase)
+        
+        Args:
+            user_id (int): Telegram user ID
+            data_key (str): Data key identifier
+            
+        Returns:
+            Optional[Any]: Data value if found, None otherwise
+        """
+        self._log_routing_decision("get_user_data", "Supabase", user_id)
+        
+        if not self.supabase_provider or not self.supabase_connected:
+            logger.error("❌ Supabase not available for retrieving user data")
+            return None
+        
+        try:
+            return await self.supabase_provider.get_user_data(user_id, data_key)
+        except Exception as e:
+            logger.error(f"❌ Error retrieving user data via Supabase: {e}")
+            return None
+    
+    async def delete_user_data(self, user_id: int, data_key: str) -> bool:
+        """
+        Delete generic user data (routed to Supabase)
+        
+        Args:
+            user_id (int): Telegram user ID
+            data_key (str): Data key identifier
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        self._log_routing_decision("delete_user_data", "Supabase", user_id)
+        
+        if not self.supabase_provider or not self.supabase_connected:
+            logger.error("❌ Supabase not available for deleting user data")
+            return False
+        
+        try:
+            return await self.supabase_provider.delete_user_data(user_id, data_key)
+        except Exception as e:
+            logger.error(f"❌ Error deleting user data via Supabase: {e}")
+            return False
+    
     async def get_provider_statistics(self) -> Dict[str, Any]:
         """
         Get statistics from both providers for monitoring and debugging
