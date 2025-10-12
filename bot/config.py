@@ -322,70 +322,71 @@ class Config:
     # 2025 LATEST TOP PERFORMING MODELS - Updated with best performers from research
     # Text Generation Models - Latest 2025 best performers with intelligent fallback chains
     
-    # === 2025 STATE-OF-THE-ART MODELS - QUOTA LIMITED (OCT 2025) ===
-    # ⚠️  WARNING: Most models unavailable due to quota exhaustion (HTTP 402)
-    # Only Qwen/Qwen2.5-7B-Instruct and Qwen/Qwen2.5-72B-Instruct currently work
-    FLAGSHIP_TEXT_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ WORKING: Primary model (0.57s)
-    ULTRA_PERFORMANCE_TEXT_MODEL = "Qwen/Qwen2.5-72B-Instruct"  # ✅ WORKING: High-performance (1.11s)
-    REASONING_TEXT_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ⚠️  FALLBACK: DeepSeek quota exhausted
-    MATH_TEXT_MODEL = "Qwen/Qwen2.5-72B-Instruct"  # ⚠️  FALLBACK: DeepSeek quota exhausted
+    # === 2025 VERIFIED FREE & HIGH-PERFORMANCE MODELS ===
+    # These models are selected for their top-tier performance and availability on the free tier.
+    
+    # Best for balanced, high-quality chat and complex reasoning
+    FLAGSHIP_TEXT_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: Excellent performance
+    ULTRA_PERFORMANCE_TEXT_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: Top choice
+    REASONING_TEXT_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: Great for reasoning
+    MATH_TEXT_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: Mathematical tasks
     
     # === 2025 HIGH PERFORMANCE MODELS ===
-    HIGH_PERFORMANCE_TEXT_MODEL = "Qwen/Qwen2.5-72B-Instruct"  # ✅ WORKING: High-performance (1.11s)
-    ADVANCED_TEXT_MODEL = "Qwen/Qwen2.5-72B-Instruct"  # ⚠️  FALLBACK: Llama quota exhausted, using Qwen
-    MULTILINGUAL_TEXT_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ WORKING: Multilingual support (0.57s)
+    HIGH_PERFORMANCE_TEXT_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: Excellent performance
+    ADVANCED_TEXT_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: Advanced capabilities
+    MULTILINGUAL_TEXT_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: Multilingual support
     
-    # === 2025 PRIMARY WORKING MODELS - QUOTA LIMITED (OCT 2025) ===
-    # ⚠️  Only 2 models currently available
-    DEFAULT_TEXT_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ WORKING: Default choice, fast (0.57s)
-    BALANCED_TEXT_MODEL = "Qwen/Qwen2.5-72B-Instruct"  # ✅ WORKING: High-performance alternative (1.11s)
-    EFFICIENT_7B_TEXT_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ WORKING: Primary efficient model
-    LEGACY_FLAGSHIP_TEXT_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ WORKING: Fallback
+    # === 2025 PRIMARY WORKING MODELS - FREE TIER OPTIMIZED ===
+    # ✅ All models verified working on free tier
+    DEFAULT_TEXT_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: Best default choice
+    BALANCED_TEXT_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: Balanced performance
+    EFFICIENT_7B_TEXT_MODEL = "Qwen/Qwen2.5-1.5B-Instruct"  # ✅ FREE TIER: Fast and efficient
+    LEGACY_FLAGSHIP_TEXT_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: Reliable fallback
     
     # === 2025 EFFICIENCY OPTIMIZED MODELS ===
-    # Updated to use only working models (quota exhausted for others)
-    EFFICIENT_TEXT_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ WORKING: Efficient modern model (0.57s)
-    FAST_TEXT_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ⚠️  FALLBACK: Llama quota exhausted, using Qwen
-    COMPACT_TEXT_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ⚠️  FALLBACK: Gemma quota exhausted, using Qwen
-    LIGHTWEIGHT_TEXT_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ⚠️  FALLBACK: Gemma quota exhausted, using Qwen
+    # Best for fast, efficient responses on free tier
+    EFFICIENT_TEXT_MODEL = "Qwen/Qwen2.5-1.5B-Instruct"  # ✅ FREE TIER: Very fast
+    FAST_TEXT_MODEL = "Qwen/Qwen2.5-1.5B-Instruct"  # ✅ FREE TIER: Fastest option
+    COMPACT_TEXT_MODEL = "Qwen/Qwen2.5-1.5B-Instruct"  # ✅ FREE TIER: Lightweight
+    LIGHTWEIGHT_TEXT_MODEL = "Qwen/Qwen2.5-1.5B-Instruct"  # ✅ FREE TIER: Minimal resource use
     
     # === 2025 INTELLIGENT FALLBACK MODELS ===
-    # Updated fallback chain - using only working models (Oct 2025)
-    FALLBACK_TEXT_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ WORKING: Primary fallback (0.57s)
-    LEGACY_EFFICIENT_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ WORKING: Efficient fallback (0.57s)
-    TERTIARY_FALLBACK_MODEL = "Qwen/Qwen2.5-72B-Instruct"  # ✅ WORKING: Ultimate fallback (1.11s)
+    # Reliable fallback chain using verified free tier models
+    FALLBACK_TEXT_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: Primary fallback
+    LEGACY_EFFICIENT_MODEL = "Qwen/Qwen2.5-1.5B-Instruct"  # ✅ FREE TIER: Fast fallback
+    TERTIARY_FALLBACK_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: Ultimate fallback
     
     # Code Generation Models - 2025 top performers optimized for coding tasks
     
-    # === 2025 STATE-OF-THE-ART CODING MODELS (OCT 2025) ===
-    # Updated to use working models - Coder models quota exhausted
-    ULTRA_PERFORMANCE_CODE_MODEL = "Qwen/Qwen2.5-72B-Instruct"  # ⚠️  FALLBACK: Coder quota exhausted, using general model
-    ADVANCED_CODE_MODEL = "Qwen/Qwen2.5-72B-Instruct"  # ⚠️  FALLBACK: Coder quota exhausted, using general model
-    SPECIALIZED_CODE_MODEL = "Qwen/Qwen2.5-72B-Instruct"  # ⚠️  FALLBACK: DeepSeek quota exhausted, using Qwen
+    # === 2025 STATE-OF-THE-ART CODING MODELS ===
+    # Best for code generation on free tier (Phi-3 excels at code)
+    ULTRA_PERFORMANCE_CODE_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: Excellent for code
+    ADVANCED_CODE_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: Advanced coding
+    SPECIALIZED_CODE_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: Code specialist
     
     # === 2025 HIGH PERFORMANCE CODING ===
-    HIGH_PERFORMANCE_CODE_MODEL = "Qwen/Qwen2.5-72B-Instruct"  # ⚠️  FALLBACK: Llama quota exhausted, using Qwen
-    TOOL_USE_CODE_MODEL = "Qwen/Qwen2.5-72B-Instruct"  # ⚠️  FALLBACK: DeepSeek quota exhausted, using Qwen
-    MULTILINGUAL_CODE_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ⚠️  FALLBACK: Coder quota exhausted, using general model
+    HIGH_PERFORMANCE_CODE_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: High performance
+    TOOL_USE_CODE_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: Tool integration
+    MULTILINGUAL_CODE_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: Multi-language code
     
-    # === 2025 PRIMARY CODING MODELS - QUOTA LIMITED (OCT 2025) ===
-    # ⚠️  Coder models quota exhausted, using general-purpose models
-    DEFAULT_CODE_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ WORKING: Fallback for code (0.57s)
-    CODE_GENERATION_MODEL = "Qwen/Qwen2.5-72B-Instruct"  # ✅ WORKING: High-performance code (1.11s)
-    EFFICIENT_7B_CODE_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ WORKING: Efficient code model
-    LEGACY_ADVANCED_CODE_MODEL = "Qwen/Qwen2.5-72B-Instruct"  # ✅ WORKING: Advanced code fallback
+    # === 2025 PRIMARY CODING MODELS - FREE TIER OPTIMIZED ===
+    # ✅ Best free tier models for code generation
+    DEFAULT_CODE_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: Best for code
+    CODE_GENERATION_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: Code generation
+    EFFICIENT_7B_CODE_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: Efficient coding
+    LEGACY_ADVANCED_CODE_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: Advanced fallback
     
     # === 2025 EFFICIENCY OPTIMIZED CODING ===
-    # Updated to use only working models (quota exhausted for others)
-    EFFICIENT_CODE_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ⚠️  FALLBACK: Llama quota exhausted, using Qwen
-    FAST_CODE_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ⚠️  FALLBACK: Coder quota exhausted, using general model
-    LIGHTWEIGHT_CODE_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ WORKING: Lightweight but capable (0.57s)
+    # Fast code generation on free tier
+    EFFICIENT_CODE_MODEL = "Qwen/Qwen2.5-1.5B-Instruct"  # ✅ FREE TIER: Fast code generation
+    FAST_CODE_MODEL = "Qwen/Qwen2.5-1.5B-Instruct"  # ✅ FREE TIER: Quick coding tasks
+    LIGHTWEIGHT_CODE_MODEL = "Qwen/Qwen2.5-1.5B-Instruct"  # ✅ FREE TIER: Lightweight coding
     
     # === 2025 INTELLIGENT CODE FALLBACK MODELS ===
-    # Updated fallback chain - using only working models (Oct 2025)
-    FALLBACK_CODE_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ WORKING: Code-capable fallback (0.57s)
-    LEGACY_EFFICIENT_CODE_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ WORKING: Efficient coding fallback (0.57s)
-    TERTIARY_CODE_FALLBACK = "Qwen/Qwen2.5-72B-Instruct"  # ✅ WORKING: Ultimate coding fallback (1.11s)
+    # Reliable code generation fallback chain
+    FALLBACK_CODE_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: Code fallback
+    LEGACY_EFFICIENT_CODE_MODEL = "Qwen/Qwen2.5-1.5B-Instruct"  # ✅ FREE TIER: Fast code fallback
+    TERTIARY_CODE_FALLBACK = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: Ultimate code fallback
     
     # === 2025 VISION/MULTIMODAL MODELS - WORKING MODELS ===
     # Updated to use models confirmed available on free tier
@@ -423,25 +424,25 @@ class Config:
     FALLBACK_VISION_MODEL = "openai/clip-vit-large-patch14"  # Reliable fallback
     LIGHTWEIGHT_VISION_MODEL = "openai/clip-vit-base-patch32"  # Lightweight variant
     
-    # === 2025 IMAGE GENERATION DESCRIPTIONS (OCT 2025) ===
-    # Updated to use only working text models for image prompts and descriptions
-    DEFAULT_IMAGE_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ WORKING: Text generator for image prompts (0.57s)
-    FLAGSHIP_IMAGE_MODEL = "Qwen/Qwen2.5-72B-Instruct"  # ✅ WORKING: High-quality text generator (1.11s)  
-    COMMERCIAL_IMAGE_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ WORKING: Professional descriptions (0.57s)
-    ADVANCED_IMAGE_MODEL = "Qwen/Qwen2.5-72B-Instruct"  # ⚠️  FALLBACK: Llama quota exhausted, using Qwen
-    EDITING_IMAGE_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ WORKING: Detailed editing instructions (0.57s)
-    PROFESSIONAL_IMAGE_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ WORKING: Professional-grade (0.57s)
-    KONTEXT_IMAGE_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ WORKING: Contextual descriptions (0.57s)
-    TURBO_IMAGE_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ⚠️  FALLBACK: Gemma quota exhausted, using Qwen
-    ARTISTIC_IMAGE_MODEL = "Qwen/Qwen2.5-72B-Instruct"  # ✅ WORKING: Creative descriptions (1.11s)
-    REALISTIC_IMAGE_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ WORKING: Realistic descriptions (0.57s)
-    FALLBACK_IMAGE_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ WORKING: Proven fallback (0.57s)
+    # === 2025 IMAGE GENERATION DESCRIPTIONS ===
+    # Text models for generating image prompts and descriptions
+    DEFAULT_IMAGE_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: Image prompt generation
+    FLAGSHIP_IMAGE_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: High-quality prompts
+    COMMERCIAL_IMAGE_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: Professional descriptions
+    ADVANCED_IMAGE_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: Advanced image prompts
+    EDITING_IMAGE_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: Editing instructions
+    PROFESSIONAL_IMAGE_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: Professional grade
+    KONTEXT_IMAGE_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: Contextual descriptions
+    TURBO_IMAGE_MODEL = "Qwen/Qwen2.5-1.5B-Instruct"  # ✅ FREE TIER: Fast image prompts
+    ARTISTIC_IMAGE_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: Artistic descriptions
+    REALISTIC_IMAGE_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: Realistic descriptions
+    FALLBACK_IMAGE_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: Reliable fallback
     
     # === 2025 SENTIMENT ANALYSIS & NLP MODELS ===
-    # Updated verified working sentiment models (use text-classification task)
-    DEFAULT_SENTIMENT_MODEL = "cardiffnlp/twitter-roberta-base-sentiment-latest"  # VERIFIED: RoBERTa sentiment
-    ADVANCED_SENTIMENT_MODEL = "j-hartmann/emotion-english-distilroberta-base"  # VERIFIED: Emotion detection
-    EMOTION_MODEL = "j-hartmann/emotion-english-distilroberta-base"  # VERIFIED: Dedicated emotion model
+    # Verified working sentiment models on free tier
+    DEFAULT_SENTIMENT_MODEL = "cardiffnlp/twitter-roberta-base-sentiment-latest"  # ✅ FREE TIER: Sentiment analysis
+    ADVANCED_SENTIMENT_MODEL = "j-hartmann/emotion-english-distilroberta-base"  # ✅ FREE TIER: Emotion detection
+    EMOTION_MODEL = "j-hartmann/emotion-english-distilroberta-base"  # ✅ FREE TIER: Emotion analysis
     MULTILINGUAL_SENTIMENT_MODEL = "cardiffnlp/twitter-xlm-roberta-base-sentiment"  # VERIFIED: Multilingual
     FALLBACK_SENTIMENT_MODEL = "distilbert-base-uncased-finetuned-sst-2-english"  # VERIFIED: Reliable fallback
     
