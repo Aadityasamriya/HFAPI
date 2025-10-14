@@ -60,6 +60,7 @@ class DynamicModelSelector:
         """Initialize the Dynamic Model Selector"""
         self.selection_history: List[Dict] = []
         self.active_conversations: Dict[str, Any] = {}
+        self._last_complexity: Optional[PromptComplexity] = None
         
         # Performance tracking
         self.selection_metrics = {
@@ -104,6 +105,7 @@ class DynamicModelSelector:
             
             # 2. Analyze prompt complexity with enhanced analysis
             complexity = await self._analyze_enhanced_complexity(request.prompt, request.intent_type)
+            self._last_complexity = complexity  # Store for response time estimation
             
             # 3. Get conversation context and state
             conversation_context = await self._get_conversation_context(request.conversation_id)
@@ -855,7 +857,7 @@ class DynamicModelSelector:
                 base_time *= 0.5
             
             # Adjust based on task complexity
-            if hasattr(self, '_last_complexity'):
+            if self._last_complexity is not None:
                 complexity_factor = self._last_complexity.complexity_score / 5.0
                 base_time *= complexity_factor
             
