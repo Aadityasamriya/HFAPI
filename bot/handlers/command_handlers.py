@@ -16,7 +16,7 @@ except ImportError as e:
     raise
 from bot.storage_manager import db
 from bot.config import Config
-from bot.security_utils import escape_markdown, safe_markdown_format, check_rate_limit
+from bot.security_utils import escape_markdown, safe_markdown_format, check_rate_limit, secure_logger, DataRedactionEngine
 from bot.admin import AdminCommands, admin_system
 
 logger = logging.getLogger(__name__)
@@ -30,7 +30,7 @@ class CommandHandlers:
         HF_TOKEN setup guidance command
         """
         if update.message is None:
-            logger.error("No message found in update")
+            secure_logger.error("No message found in update")
             return
         
         user = update.effective_user
@@ -76,7 +76,7 @@ class CommandHandlers:
         Check AI functionality status
         """
         if update.message is None:
-            logger.error("No message found in update")
+            secure_logger.error("No message found in update")
             return
         
         user = update.effective_user
@@ -141,7 +141,7 @@ class CommandHandlers:
         Immediately prompt first-time users for their Hugging Face API key
         """
         if update.message is None:
-            logger.error("No message found in update")
+            secure_logger.error("No message found in update")
             return
         
         user = update.effective_user
@@ -200,7 +200,7 @@ To unlock unlimited AI power, I need your **Hugging Face API key**.
             logger.info(f"✅ Immediate API key setup prompt sent to user_id:{user_id}")
             
         except Exception as e:
-            logger.error(f"❌ Error prompting immediate API key setup for user_id:{user_id}: {e}")
+            secure_logger.error(f"❌ Error prompting immediate API key setup for user_id:{user_id}: {e}")
             
             # Fallback message without formatting
             await update.message.reply_text(
@@ -217,7 +217,7 @@ To unlock unlimited AI power, I need your **Hugging Face API key**.
         Enhanced welcome with immediate API key onboarding for first-time users
         """
         if update.message is None:
-            logger.error("No message found in update")
+            secure_logger.error("No message found in update")
             return
         
         user = update.effective_user
@@ -254,7 +254,7 @@ To unlock unlimited AI power, I need your **Hugging Face API key**.
             has_api_key = api_key is not None and len(api_key.strip()) > 0
             logger.info(f"🔍 User {user_id} API key check: {'✅ Found' if has_api_key else '❌ Not found'}")
         except Exception as e:
-            logger.error(f"🔍 Database error checking API key for user_id:{user_id}: {e}")
+            secure_logger.error(f"🔍 Database error checking API key for user_id:{user_id}: {e}")
             has_api_key = False
         
         # NEW: For first-time users without API key, immediately prompt for setup
@@ -302,8 +302,8 @@ To unlock unlimited AI power, I need your **Hugging Face API key**.
             logger.info(f"\ud83d\udce4 Welcome message delivered with {len(keyboard)} inline buttons")
             
         except Exception as e:
-            logger.error(f"\u274c START command failed for user_id:{user_id} (@{username}): {e}")
-            logger.error(f"\ud83d\udd0d Error type: {type(e).__name__}")
+            secure_logger.error(f"\u274c START command failed for user_id:{user_id} (@{username}): {e}")
+            secure_logger.error(f"\ud83d\udd0d Error type: {type(e).__name__}")
             raise
         finally:
             logger.info(f"\ud83c\udfc1 START command completed for user_id:{user_id}")
@@ -314,7 +314,7 @@ To unlock unlimited AI power, I need your **Hugging Face API key**.
         Clear chat history with professional confirmation and comprehensive logging
         """
         if update.message is None:
-            logger.error("No message found in update")
+            secure_logger.error("No message found in update")
             return
         
         user = update.effective_user
@@ -375,8 +375,8 @@ Your conversation history has been reset. You're starting fresh with a clean sla
             logger.info(f"\ud83d\uddd1\ufe0f Chat history cleared: {current_history_size} messages removed")
             
         except Exception as e:
-            logger.error(f"\u274c NEWCHAT command failed for user_id:{user_id} (@{username}): {e}")
-            logger.error(f"\ud83d\udd0d Error type: {type(e).__name__}")
+            secure_logger.error(f"\u274c NEWCHAT command failed for user_id:{user_id} (@{username}): {e}")
+            secure_logger.error(f"\ud83d\udd0d Error type: {type(e).__name__}")
             raise
         finally:
             logger.info(f"\ud83c\udfc1 NEWCHAT command completed for user_id:{user_id}")
@@ -387,7 +387,7 @@ Your conversation history has been reset. You're starting fresh with a clean sla
         Professional settings menu with comprehensive options and detailed logging
         """
         if update.message is None:
-            logger.error("No message found in update")
+            secure_logger.error("No message found in update")
             return
         
         user = update.effective_user
@@ -419,7 +419,7 @@ Your conversation history has been reset. You're starting fresh with a clean sla
             else:
                 logger.info(f"\u274c No API key found for user_id:{user_id}")
         except Exception as e:
-            logger.error(f"\ud83d\udd0d Database error checking API key for user_id:{user_id}: {e}")
+            secure_logger.error(f"\ud83d\udd0d Database error checking API key for user_id:{user_id}: {e}")
             api_key = None
         
         status_emoji = "✅" if api_key else "❌"
@@ -466,8 +466,8 @@ Your conversation history has been reset. You're starting fresh with a clean sla
             logger.info(f"\ud83d\udccb Settings menu displayed with {len(keyboard)} button options")
             
         except Exception as e:
-            logger.error(f"\u274c SETTINGS command failed for user_id:{user_id} (@{username}): {e}")
-            logger.error(f"\ud83d\udd0d Error type: {type(e).__name__}")
+            secure_logger.error(f"\u274c SETTINGS command failed for user_id:{user_id} (@{username}): {e}")
+            secure_logger.error(f"\ud83d\udd0d Error type: {type(e).__name__}")
             raise
         finally:
             logger.info(f"\ud83c\udfc1 SETTINGS command completed for user_id:{user_id}")
@@ -478,7 +478,7 @@ Your conversation history has been reset. You're starting fresh with a clean sla
         Comprehensive help system with examples and detailed logging
         """
         if update.message is None:
-            logger.error("No message found in update")
+            secure_logger.error("No message found in update")
             return
         
         user = update.effective_user
@@ -557,7 +557,7 @@ Your conversation history has been reset. You're starting fresh with a clean sla
         Reset user database command with comprehensive confirmation and security logging
         """
         if update.message is None:
-            logger.error("No message found in update")
+            secure_logger.error("No message found in update")
             return
         
         user = update.effective_user
@@ -568,12 +568,12 @@ Your conversation history has been reset. You're starting fresh with a clean sla
         # Enhanced entry logging with user details for security audit
         logger.info(f"🗑️ RESETDB command invoked by user_id:{user_id} (@{username}) '{full_name}'")
         logger.info(f"🔐 SECURITY AUDIT: Database reset request from {update.effective_chat.type} chat")
-        logger.warning(f"⚠️ CRITICAL ACTION: User {user_id} requesting complete data deletion")
+        secure_logger.warning(f"⚠️ CRITICAL ACTION: User {user_id} requesting complete data deletion")
         
         # Check rate limit (critical for security)
         is_allowed, wait_time = check_rate_limit(user_id)
         if not is_allowed:
-            logger.warning(f"🚨 RATE LIMIT: RESETDB blocked for user_id:{user_id} - {wait_time}s remaining")
+            secure_logger.warning(f"🚨 RATE LIMIT: RESETDB blocked for user_id:{user_id} - {wait_time}s remaining")
             await update.message.reply_text(
                 f"⚠️ **Rate Limit Exceeded**\n\nPlease wait {wait_time} seconds before sending another command.",
                 parse_mode='Markdown'
@@ -634,10 +634,10 @@ Only continue if you absolutely understand the consequences.
             logger.info(f"📋 Confirmation UI presented with {len(keyboard)} safety options")
             
         except Exception as e:
-            logger.error(f"❌ RESETDB command failed for user_id:{user_id} (@{username}): {e}")
-            logger.error(f"🔍 Error type: {type(e).__name__}")
+            secure_logger.error(f"❌ RESETDB command failed for user_id:{user_id} (@{username}): {e}")
+            secure_logger.error(f"🔍 Error type: {type(e).__name__}")
             # Security: Log the full error for debugging but don't expose it to user
-            logger.error(f"🐛 Full error details: {str(e)}")
+            secure_logger.error(f"🐛 Full error details: {str(e)}")
             
             # Send user-friendly error message
             await update.message.reply_text(
@@ -708,25 +708,25 @@ Ready to experience AI that actually works? Let's get you set up! 🚀
                 user_id = query.from_user.id
                 data = query.data
             except Exception as entity_error:
-                logger.warning(f"Entity parsing error in button handler: {entity_error}")
+                secure_logger.warning(f"Entity parsing error in button handler: {entity_error}")
                 # Try alternative extraction methods
                 try:
                     raw_query = update.to_dict().get('callback_query', {})
                     user_id = raw_query.get('from', {}).get('id', 0)
                     data = raw_query.get('data', '')
                 except Exception:
-                    logger.error("Failed to extract callback query data, ignoring request")
+                    secure_logger.error("Failed to extract callback query data, ignoring request")
                     return
                     
             if not data:
-                logger.warning("Empty callback data received")
+                secure_logger.warning("Empty callback data received")
                 return
             
             # Check rate limit for callback queries
             is_allowed, wait_time = check_rate_limit(user_id)
             if not is_allowed:
                 await query.answer(f"⚠️ Please wait {wait_time}s", show_alert=True)
-                logger.warning(f"Rate limit exceeded for user {user_id} on callback query")
+                secure_logger.warning(f"Rate limit exceeded for user {user_id} on callback query")
                 return
             
             # Process the button click
@@ -820,7 +820,7 @@ Ready to experience AI that actually works? Let's get you set up! 🚀
                 await query.edit_message_text("🔄 Processing your request...")
                 
         except Exception as e:
-            logger.error(f"Error in button handler: {e}")
+            secure_logger.error(f"Error in button handler: {e}")
             # Try to respond to user even if there's an error
             try:
                 if hasattr(update, 'callback_query') and update.callback_query:
@@ -1031,7 +1031,7 @@ There was an issue resetting your data. Please try again or contact support if t
         username = query.from_user.username or "No username" 
         
         # Enhanced security audit logging
-        logger.warning(f"🗑️ CRITICAL: Database reset EXECUTION requested by user_id:{user_id} (@{username})")
+        secure_logger.warning(f"🗑️ CRITICAL: Database reset EXECUTION requested by user_id:{user_id} (@{username})")
         logger.info(f"🔐 SECURITY AUDIT: Beginning database purge for user {user_id}")
         
         # Reset all user data in database using existing method
@@ -1068,8 +1068,8 @@ Your data has been permanently removed from our secure database as requested. Th
 Thank you for using our secure database reset feature!
             """
         else:
-            logger.error(f"❌ Database reset FAILED for user_id:{user_id}")
-            logger.error(f"🔐 SECURITY AUDIT: Reset operation failed - user {user_id} data may still exist")
+            secure_logger.error(f"❌ Database reset FAILED for user_id:{user_id}")
+            secure_logger.error(f"🔐 SECURITY AUDIT: Reset operation failed - user {user_id} data may still exist")
             
             text = """
 ❌ **Database Reset Failed** 
@@ -1578,7 +1578,7 @@ Ready to stop overpaying for inferior AI? 🚀
         Display user's conversation history with professional UI and pagination
         """
         if update.message is None:
-            logger.error("No message found in update")
+            secure_logger.error("No message found in update")
             return
         
         user = update.effective_user
@@ -1633,7 +1633,7 @@ Your conversations are stored securely, but we need your API key to verify your 
                 return
                 
         except Exception as e:
-            logger.error(f"🔍 Database error checking API key for user_id:{user_id}: {e}")
+            secure_logger.error(f"🔍 Database error checking API key for user_id:{user_id}: {e}")
             await update.message.reply_text(
                 "❌ **Database Error**\n\nSorry, there was a problem accessing your data. Please try again later.",
                 parse_mode='Markdown'
@@ -1657,7 +1657,7 @@ Your conversations are stored securely, but we need your API key to verify your 
             logger.info(f"📚 User {user_id} has {conversation_count} total conversations, displaying first {len(conversations)}")
             
         except Exception as e:
-            logger.error(f"🔍 Database error fetching conversations for user_id:{user_id}: {e}")
+            secure_logger.error(f"🔍 Database error fetching conversations for user_id:{user_id}: {e}")
             await update.message.reply_text(
                 "❌ **Database Error**\n\nSorry, there was a problem retrieving your conversation history. Please try again later.",
                 parse_mode='Markdown'
@@ -1757,7 +1757,7 @@ Found **{total_count}** saved conversations:
 """
                 
             except Exception as e:
-                logger.error(f"Error formatting conversation summary: {e}")
+                secure_logger.error(f"Error formatting conversation summary: {e}")
                 history_text += f"\n**{i + 1 + (page * items_per_page)}.** Conversation (formatting error)\n"
         
         # Build inline keyboard
@@ -1813,7 +1813,7 @@ Found **{total_count}** saved conversations:
                 )
                 
         except Exception as e:
-            logger.error(f"Error displaying conversation history: {e}")
+            secure_logger.error(f"Error displaying conversation history: {e}")
             error_text = "❌ **Display Error**\n\nSorry, there was a problem showing your conversation history. Please try again."
             
             try:
@@ -1918,7 +1918,7 @@ Found **{total_count}** saved conversations:
             logger.info(f"✅ Conversation details displayed successfully for user_id:{user_id}, conv:{conversation_id}")
             
         except Exception as e:
-            logger.error(f"Error viewing conversation for user_id:{user_id}, conv:{conversation_id}: {e}")
+            secure_logger.error(f"Error viewing conversation for user_id:{user_id}, conv:{conversation_id}: {e}")
             await query.edit_message_text(
                 "❌ **Error Loading Conversation**\n\nSorry, there was a problem loading this conversation. Please try again.",
                 parse_mode='Markdown'
@@ -1951,7 +1951,7 @@ Found **{total_count}** saved conversations:
             logger.info(f"✅ History pagination displayed successfully for user_id:{user_id}, page:{page_number}")
             
         except Exception as e:
-            logger.error(f"Error in history pagination for user_id:{user_id}, page:{page_number}: {e}")
+            secure_logger.error(f"Error in history pagination for user_id:{user_id}, page:{page_number}: {e}")
             await query.edit_message_text(
                 "❌ **Pagination Error**\n\nSorry, there was a problem loading that page. Please try again.",
                 parse_mode='Markdown'
@@ -1981,7 +1981,7 @@ Found **{total_count}** saved conversations:
             logger.info(f"✅ History refreshed successfully for user_id:{user_id}")
             
         except Exception as e:
-            logger.error(f"Error refreshing history for user_id:{user_id}: {e}")
+            secure_logger.error(f"Error refreshing history for user_id:{user_id}: {e}")
             await query.edit_message_text(
                 "❌ **Refresh Error**\n\nSorry, there was a problem refreshing your history. Please try again.",
                 parse_mode='Markdown'
@@ -2083,10 +2083,10 @@ Your API key and settings remain unchanged.
                     "❌ **Clear Failed**\n\nThere was a problem clearing your conversation history. Please try again later.",
                     parse_mode='Markdown'
                 )
-                logger.error(f"Failed to clear conversation history for user_id:{user_id}")
+                secure_logger.error(f"Failed to clear conversation history for user_id:{user_id}")
                 
         except Exception as e:
-            logger.error(f"Error clearing conversation history for user_id:{user_id}: {e}")
+            secure_logger.error(f"Error clearing conversation history for user_id:{user_id}: {e}")
             await query.edit_message_text(
                 "❌ **Clear Error**\n\nSorry, there was a problem clearing your history. Please try again later.",
                 parse_mode='Markdown'
@@ -2200,7 +2200,7 @@ Go ahead and send your next message! 👇
             logger.info(f"✅ Conversation continued successfully for user_id:{user_id}, conv:{conversation_id}, loaded {message_count} messages")
             
         except Exception as e:
-            logger.error(f"Error continuing conversation for user_id:{user_id}, conv:{conversation_id}: {e}")
+            secure_logger.error(f"Error continuing conversation for user_id:{user_id}, conv:{conversation_id}: {e}")
             await query.edit_message_text(
                 "❌ **Continue Error**\n\nSorry, there was a problem continuing this conversation. Please try again.",
                 parse_mode='Markdown'
@@ -2256,7 +2256,7 @@ The conversation will be permanently removed from your history.
             logger.info(f"🗑️ Delete conversation confirmation shown to user_id:{user_id} for conv:{conversation_id}")
             
         except Exception as e:
-            logger.error(f"Error showing delete confirmation for user_id:{user_id}, conv:{conversation_id}: {e}")
+            secure_logger.error(f"Error showing delete confirmation for user_id:{user_id}, conv:{conversation_id}: {e}")
             await query.edit_message_text(
                 "❌ **Error**\n\nSorry, there was a problem processing your request. Please try again.",
                 parse_mode='Markdown'
@@ -2308,10 +2308,10 @@ The conversation has been permanently removed from your history.
                     "❌ **Delete Failed**\n\nThere was a problem deleting this conversation. It may have already been removed.",
                     parse_mode='Markdown'
                 )
-                logger.warning(f"Failed to delete conversation for user_id:{user_id}, conv:{conversation_id}")
+                secure_logger.warning(f"Failed to delete conversation for user_id:{user_id}, conv:{conversation_id}")
                 
         except Exception as e:
-            logger.error(f"Error deleting conversation for user_id:{user_id}, conv:{conversation_id}: {e}")
+            secure_logger.error(f"Error deleting conversation for user_id:{user_id}, conv:{conversation_id}: {e}")
             await query.edit_message_text(
                 "❌ **Delete Error**\n\nSorry, there was a problem deleting this conversation. Please try again.",
                 parse_mode='Markdown'
@@ -2371,7 +2371,7 @@ You have {len(conversations)} saved conversation(s). Click any conversation to v
             )
             
         except Exception as e:
-            logger.error(f"Error displaying history for user_id:{user_id}: {e}")
+            secure_logger.error(f"Error displaying history for user_id:{user_id}: {e}")
             await query.edit_message_text(
                 "❌ **History Error**\n\nSorry, there was a problem loading your conversation history. Please try again.",
                 parse_mode='Markdown'

@@ -29,22 +29,17 @@ dependsOn = ["setup"]
 cmds = ["pip install --no-cache-dir --upgrade pip setuptools wheel", "pip install --no-cache-dir -r requirements.txt"]
 
 [deploy]
-# Start command for the Telegram bot with health server
+# Start command for the Telegram bot (background worker)
 startCommand = "python main.py"
 
 # Restart policy for production reliability
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 3
 
-# Zero-downtime deployment with 60 second overlap
-overlapSeconds = 60
-
 # Graceful shutdown timing for proper cleanup
 terminationGracePeriodSeconds = 30
 
-# Health check configuration for Railway's modern infrastructure
-healthcheckPath = "/health"
-healthcheckTimeout = 30
+# Note: No healthcheck configuration - this is a background worker, not a web service
 
 # Environment-specific configurations
 [environments.production]

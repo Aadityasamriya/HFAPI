@@ -16,6 +16,8 @@ from pathlib import Path
 from dataclasses import dataclass
 from datetime import datetime
 
+from bot.security_utils import secure_logger, DataRedactionEngine
+
 # PDF processing
 try:
     import fitz  # PyMuPDF
@@ -100,6 +102,135 @@ class FileSecurityError(Exception):
 class FileSizeError(Exception):
     """Raised when file size exceeds limits"""
     pass
+
+class FileProcessingTimeoutError(Exception):
+    """Raised when file processing exceeds timeout limit"""
+    pass
+
+class FileConcurrencyLimitError(Exception):
+    """Raised when concurrent file processing limit is exceeded"""
+    pass
+
+
+class FileProcessingSemaphore:
+    """
+    CRITICAL SECURITY: Concurrency control for file processing to prevent DoS attacks
+    
+    Implements:
+    - Global semaphore: max 10 concurrent file operations system-wide
+    - Per-user semaphore: max 2 concurrent file operations per user
+    - Automatic cleanup of completed operations
+    """
+    
+    def __init__(self):
+        from bot.config import Config
+        
+        # Global semaphore - prevents system-wide resource exhaustion
+        self.global_limit = Config.MAX_CONCURRENT_FILES_GLOBAL
+        self.global_semaphore = asyncio.Semaphore(self.global_limit)
+        
+        # Per-user semaphores - prevents individual user abuse
+        self.user_limit = Config.MAX_CONCURRENT_FILES_PER_USER
+        self.user_semaphores: Dict[int, asyncio.Semaphore] = {}
+        
+        # Track active operations for monitoring
+        self.active_operations = 0
+        self.user_active_operations: Dict[int, int] = {}
+        
+        secure_logger.info(f"🔒 FileProcessingSemaphore initialized: Global limit={self.global_limit}, Per-user limit={self.user_limit}")
+    
+    def _get_user_semaphore(self, user_id: int) -> asyncio.Semaphore:
+        """Get or create semaphore for specific user"""
+        if user_id not in self.user_semaphores:
+            self.user_semaphores[user_id] = asyncio.Semaphore(self.user_limit)
+            self.user_active_operations[user_id] = 0
+        return self.user_semaphores[user_id]
+    
+    async def acquire(self, user_id: int) -> Tuple[bool, Optional[str]]:
+        """
+        Acquire both global and user-specific semaphores
+        
+        Args:
+            user_id: User ID requesting file processing
+            
+        Returns:
+            (success, error_message): Tuple indicating if acquisition succeeded
+        """
+        # Check global limit first (non-blocking check)
+        if self.active_operations >= self.global_limit:
+            secure_logger.warning(f"🚫 Global file processing limit reached ({self.active_operations}/{self.global_limit})")
+            return False, f"System is currently processing {self.global_limit} files. Please wait and try again."
+        
+        # Check user limit (non-blocking check)
+        user_active = self.user_active_operations.get(user_id, 0)
+        if user_active >= self.user_limit:
+            secure_logger.warning(f"🚫 User {user_id} file processing limit reached ({user_active}/{self.user_limit})")
+            return False, f"You can only process {self.user_limit} files at a time. Please wait for your current files to finish."
+        
+        # Acquire global semaphore
+        await self.global_semaphore.acquire()
+        self.active_operations += 1
+        
+        # Acquire user semaphore
+        user_semaphore = self._get_user_semaphore(user_id)
+        await user_semaphore.acquire()
+        self.user_active_operations[user_id] = self.user_active_operations.get(user_id, 0) + 1
+        
+        secure_logger.info(f"✅ File processing semaphore acquired for user {user_id} (Global: {self.active_operations}/{self.global_limit}, User: {self.user_active_operations[user_id]}/{self.user_limit})")
+        return True, None
+    
+    def release(self, user_id: int):
+        """Release both global and user-specific semaphores"""
+        # Release user semaphore
+        if user_id in self.user_semaphores:
+            self.user_semaphores[user_id].release()
+            self.user_active_operations[user_id] = max(0, self.user_active_operations.get(user_id, 1) - 1)
+        
+        # Release global semaphore
+        self.global_semaphore.release()
+        self.active_operations = max(0, self.active_operations - 1)
+        
+        secure_logger.info(f"✅ File processing semaphore released for user {user_id} (Global: {self.active_operations}/{self.global_limit}, User: {self.user_active_operations.get(user_id, 0)}/{self.user_limit})")
+    
+    async def __aenter__(self, user_id: int):
+        """Context manager entry - acquire semaphores"""
+        success, error = await self.acquire(user_id)
+        if not success:
+            raise FileConcurrencyLimitError(error)
+        return self
+    
+    async def __aexit__(self, user_id: int, exc_type, exc_val, exc_tb):
+        """Context manager exit - release semaphores"""
+        self.release(user_id)
+
+
+# Global file processing semaphore instance
+file_processing_semaphore = FileProcessingSemaphore()
+
+
+async def with_file_processing_timeout(coro, timeout_seconds: int = 30, operation_name: str = "File processing"):
+    """
+    CRITICAL SECURITY: Timeout wrapper for file processing operations to prevent DoS
+    
+    Args:
+        coro: Coroutine to execute with timeout
+        timeout_seconds: Maximum execution time in seconds
+        operation_name: Name of operation for error messages
+        
+    Returns:
+        Result of the coroutine
+        
+    Raises:
+        FileProcessingTimeoutError: If operation exceeds timeout
+    """
+    try:
+        result = await asyncio.wait_for(coro, timeout=timeout_seconds)
+        return result
+    except asyncio.TimeoutError:
+        error_msg = f"{operation_name} exceeded {timeout_seconds}s timeout"
+        secure_logger.error(f"⏱️ TIMEOUT: {error_msg}")
+        raise FileProcessingTimeoutError(error_msg)
+
 
 @dataclass
 class ProcessedFile:
@@ -326,7 +457,7 @@ class AdvancedFileProcessor:
                         elif expected_type == 'zip' and detected_mime not in AdvancedFileProcessor.ALLOWED_ZIP_MIMES:
                             return False, f"File is not a valid ZIP archive (detected: {detected_mime})"
                 except Exception as e:
-                    logger.warning(f"File type detection failed: {e}")
+                    secure_logger.warning(f"File type detection failed: {e}")
             
             # Enhanced ZIP-specific security checks with comprehensive bomb detection
             if expected_type == 'zip':
@@ -468,13 +599,13 @@ class AdvancedFileProcessor:
                 except MemoryError:
                     return False, "ZIP file requires too much memory to process safely"
                 except Exception as e:
-                    logger.error(f"ZIP validation error: {e}")
+                    secure_logger.error(f"ZIP validation error: {e}")
                     return False, f"ZIP validation failed: {str(e)}"
             
             return True, ""
             
         except Exception as e:
-            logger.error(f"File security validation error: {e}")
+            secure_logger.error(f"File security validation error: {e}")
             return False, f"Security validation failed: {str(e)}"
     
     @staticmethod
@@ -573,7 +704,7 @@ class AdvancedFileProcessor:
             return None  # File appears clean
             
         except Exception as e:
-            logger.error(f"Malware scanning error: {e}")
+            secure_logger.error(f"Malware scanning error: {e}")
             # If scanning fails, err on the side of caution
             return "Malware scan failed - file rejected for safety"
     
@@ -592,7 +723,7 @@ class AdvancedFileProcessor:
         # SECURITY: Check file size BEFORE processing begins
         file_size = len(pdf_data)
         if file_size > AdvancedFileProcessor.MAX_FILE_SIZE:
-            logger.error(f"PDF file size exceeds limit: {file_size:,} bytes (limit: {AdvancedFileProcessor.MAX_FILE_SIZE:,} bytes)")
+            secure_logger.error(f"PDF file size exceeds limit: {file_size:,} bytes (limit: {AdvancedFileProcessor.MAX_FILE_SIZE:,} bytes)")
             raise FileSizeError(f"PDF file too large: {file_size:,} bytes (limit: {AdvancedFileProcessor.MAX_FILE_SIZE:,} bytes)")
         
         if not PYMUPDF_AVAILABLE:
@@ -671,7 +802,7 @@ class AdvancedFileProcessor:
             }
             
         except Exception as e:
-            logger.error(f"PDF extraction error: {e}")
+            secure_logger.error(f"PDF extraction error: {e}")
             return {
                 'success': False,
                 'error': f"Failed to extract PDF content: {str(e)}"
@@ -683,7 +814,7 @@ class AdvancedFileProcessor:
                     pdf_document.close()
                     logger.debug("✅ PDF document resource cleaned up")
                 except Exception as cleanup_error:
-                    logger.warning(f"⚠️ Failed to close PDF document during cleanup: {cleanup_error}")
+                    secure_logger.warning(f"⚠️ Failed to close PDF document during cleanup: {cleanup_error}")
     
     @staticmethod
     async def analyze_zip_archive(zip_data: bytes, filename: str) -> Dict[str, Any]:
@@ -700,7 +831,7 @@ class AdvancedFileProcessor:
         # SECURITY: Check ZIP file size BEFORE processing begins
         file_size = len(zip_data)
         if file_size > AdvancedFileProcessor.MAX_FILE_SIZE:
-            logger.error(f"ZIP file size exceeds limit: {file_size:,} bytes (limit: {AdvancedFileProcessor.MAX_FILE_SIZE:,} bytes)")
+            secure_logger.error(f"ZIP file size exceeds limit: {file_size:,} bytes (limit: {AdvancedFileProcessor.MAX_FILE_SIZE:,} bytes)")
             raise FileSizeError(f"ZIP file too large: {file_size:,} bytes (limit: {AdvancedFileProcessor.MAX_FILE_SIZE:,} bytes)")
         
         try:
@@ -722,7 +853,7 @@ class AdvancedFileProcessor:
                     
                     # SECURITY: Check individual ZIP member size BEFORE any extraction/reading
                     if zinfo.file_size > AdvancedFileProcessor.MAX_FILE_SIZE:
-                        logger.error(f"ZIP member '{zinfo.filename}' exceeds size limit: {zinfo.file_size:,} bytes (limit: {AdvancedFileProcessor.MAX_FILE_SIZE:,} bytes)")
+                        secure_logger.error(f"ZIP member '{zinfo.filename}' exceeds size limit: {zinfo.file_size:,} bytes (limit: {AdvancedFileProcessor.MAX_FILE_SIZE:,} bytes)")
                         raise FileSizeError(f"ZIP member too large: '{zinfo.filename}' ({zinfo.file_size:,} bytes, limit: {AdvancedFileProcessor.MAX_FILE_SIZE:,} bytes)")
                     
                     try:
@@ -778,7 +909,7 @@ class AdvancedFileProcessor:
                         file_contents.append(file_info)
                         
                     except Exception as e:
-                        logger.warning(f"Error processing file {zinfo.filename} in ZIP: {e}")
+                        secure_logger.warning(f"Error processing file {zinfo.filename} in ZIP: {e}")
                         file_contents.append({
                             'name': zinfo.filename,
                             'error': f'Processing failed: {str(e)}'
@@ -801,7 +932,7 @@ class AdvancedFileProcessor:
                 'error': 'Invalid ZIP file format'
             }
         except Exception as e:
-            logger.error(f"ZIP analysis error: {e}")
+            secure_logger.error(f"ZIP analysis error: {e}")
             return {
                 'success': False,
                 'error': f'ZIP analysis failed: {str(e)}'
@@ -823,7 +954,7 @@ class AdvancedFileProcessor:
         # SECURITY: Check file size BEFORE processing begins
         file_size = len(image_data)
         if file_size > AdvancedFileProcessor.MAX_FILE_SIZE:
-            logger.error(f"Image file size exceeds limit: {file_size:,} bytes (limit: {AdvancedFileProcessor.MAX_FILE_SIZE:,} bytes)")
+            secure_logger.error(f"Image file size exceeds limit: {file_size:,} bytes (limit: {AdvancedFileProcessor.MAX_FILE_SIZE:,} bytes)")
             raise FileSizeError(f"Image file too large: {file_size:,} bytes (limit: {AdvancedFileProcessor.MAX_FILE_SIZE:,} bytes)")
         
         if not PIL_AVAILABLE:
@@ -941,7 +1072,7 @@ class AdvancedFileProcessor:
                             }
                         
                     except Exception as e:
-                        logger.warning(f"Advanced color analysis failed: {e}")
+                        secure_logger.warning(f"Advanced color analysis failed: {e}")
                         results['color_analysis'] = {
                             'error': f'Advanced analysis failed: {str(e)}',
                             'fallback': 'Basic analysis only'
@@ -957,7 +1088,7 @@ class AdvancedFileProcessor:
             return results
             
         except Exception as e:
-            logger.error(f"Image processing error: {e}")
+            secure_logger.error(f"Image processing error: {e}")
             return {
                 'success': False,
                 'error': f'Image processing failed: {str(e)}',
@@ -973,7 +1104,7 @@ class AdvancedFileProcessor:
         # SECURITY: Check file size BEFORE processing begins
         file_size = len(pdf_data)
         if file_size > AdvancedFileProcessor.MAX_FILE_SIZE:
-            logger.error(f"PDF file size exceeds limit: {file_size:,} bytes (limit: {AdvancedFileProcessor.MAX_FILE_SIZE:,} bytes)")
+            secure_logger.error(f"PDF file size exceeds limit: {file_size:,} bytes (limit: {AdvancedFileProcessor.MAX_FILE_SIZE:,} bytes)")
             raise FileSizeError(f"PDF file too large: {file_size:,} bytes (limit: {AdvancedFileProcessor.MAX_FILE_SIZE:,} bytes)")
         
         start_time = time.time()
@@ -1098,7 +1229,7 @@ class AdvancedFileProcessor:
             )
             
         except Exception as e:
-            logger.error(f"Enhanced PDF analysis failed: {e}")
+            secure_logger.error(f"Enhanced PDF analysis failed: {e}")
             return DocumentStructure(
                 title="Analysis Failed",
                 sections=[],
@@ -1119,7 +1250,7 @@ class AdvancedFileProcessor:
                     pdf_document.close()
                     logger.debug("✅ PDF document resource cleaned up in enhanced analysis")
                 except Exception as cleanup_error:
-                    logger.warning(f"⚠️ Failed to close PDF document during enhanced analysis cleanup: {cleanup_error}")
+                    secure_logger.warning(f"⚠️ Failed to close PDF document during enhanced analysis cleanup: {cleanup_error}")
     
     @staticmethod
     async def advanced_image_analysis(image_data: bytes, filename: str) -> ImageAnalysis:
@@ -1130,7 +1261,7 @@ class AdvancedFileProcessor:
         # SECURITY: Check file size BEFORE processing begins
         file_size = len(image_data)
         if file_size > AdvancedFileProcessor.MAX_FILE_SIZE:
-            logger.error(f"Image file size exceeds limit: {file_size:,} bytes (limit: {AdvancedFileProcessor.MAX_FILE_SIZE:,} bytes)")
+            secure_logger.error(f"Image file size exceeds limit: {file_size:,} bytes (limit: {AdvancedFileProcessor.MAX_FILE_SIZE:,} bytes)")
             raise FileSizeError(f"Image file too large: {file_size:,} bytes (limit: {AdvancedFileProcessor.MAX_FILE_SIZE:,} bytes)")
         
         start_time = time.time()
@@ -1192,7 +1323,7 @@ class AdvancedFileProcessor:
                     ocr_text = ' '.join(words).strip()
                     
                 except Exception as e:
-                    logger.warning(f"OCR failed: {e}")
+                    secure_logger.warning(f"OCR failed: {e}")
                     ocr_text = "OCR processing failed"
             
             # Basic object detection using OpenCV (if available)
@@ -1262,7 +1393,7 @@ class AdvancedFileProcessor:
                         dominant_colors = [f"rgb({c[0]},{c[1]},{c[2]})" for c in unique_colors[:5]]
                     
                 except Exception as e:
-                    logger.warning(f"NumPy color analysis failed: {e}")
+                    secure_logger.warning(f"NumPy color analysis failed: {e}")
                     quality_assessment = {'analysis_failed': True, 'error': str(e)}
             else:
                 # Fallback analysis using PIL only
@@ -1289,7 +1420,7 @@ class AdvancedFileProcessor:
                             dominant_colors = ['analysis_failed']
                     
                 except Exception as e:
-                    logger.warning(f"Basic color analysis failed: {e}")
+                    secure_logger.warning(f"Basic color analysis failed: {e}")
                     quality_assessment = {'basic_analysis_failed': True, 'error': str(e)}
             
             # Generate intelligent content description
@@ -1318,7 +1449,7 @@ class AdvancedFileProcessor:
             )
             
         except Exception as e:
-            logger.error(f"Advanced image analysis failed: {e}")
+            secure_logger.error(f"Advanced image analysis failed: {e}")
             return ImageAnalysis(
                 ocr_text="",
                 detected_objects=[],
@@ -1408,7 +1539,7 @@ class AdvancedFileProcessor:
         # SECURITY: Check ZIP file size BEFORE processing begins
         file_size = len(zip_data)
         if file_size > AdvancedFileProcessor.MAX_FILE_SIZE:
-            logger.error(f"ZIP file size exceeds limit: {file_size:,} bytes (limit: {AdvancedFileProcessor.MAX_FILE_SIZE:,} bytes)")
+            secure_logger.error(f"ZIP file size exceeds limit: {file_size:,} bytes (limit: {AdvancedFileProcessor.MAX_FILE_SIZE:,} bytes)")
             raise FileSizeError(f"ZIP file too large: {file_size:,} bytes (limit: {AdvancedFileProcessor.MAX_FILE_SIZE:,} bytes)")
         
         start_time = time.time()
@@ -1432,7 +1563,7 @@ class AdvancedFileProcessor:
                     
                     # SECURITY: Check individual ZIP member size BEFORE any extraction/reading
                     if zinfo.file_size > AdvancedFileProcessor.MAX_FILE_SIZE:
-                        logger.error(f"ZIP member '{zinfo.filename}' exceeds size limit: {zinfo.file_size:,} bytes (limit: {AdvancedFileProcessor.MAX_FILE_SIZE:,} bytes)")
+                        secure_logger.error(f"ZIP member '{zinfo.filename}' exceeds size limit: {zinfo.file_size:,} bytes (limit: {AdvancedFileProcessor.MAX_FILE_SIZE:,} bytes)")
                         raise FileSizeError(f"ZIP member too large: '{zinfo.filename}' ({zinfo.file_size:,} bytes, limit: {AdvancedFileProcessor.MAX_FILE_SIZE:,} bytes)")
                     
                     # Build directory structure
@@ -1508,7 +1639,7 @@ class AdvancedFileProcessor:
                 )
                 
         except Exception as e:
-            logger.error(f"Intelligent ZIP analysis failed: {e}")
+            secure_logger.error(f"Intelligent ZIP analysis failed: {e}")
             return ZipArchiveAnalysis(
                 filename=filename,
                 total_files=0,
@@ -1614,7 +1745,7 @@ class AdvancedFileProcessor:
                 }
                 
         except Exception as e:
-            logger.error(f"Vision model call failed: {e}")
+            secure_logger.error(f"Vision model call failed: {e}")
             return {
                 'success': False,
                 'error': f'Vision model call exception: {str(e)}',
@@ -1759,7 +1890,7 @@ class AdvancedFileProcessor:
                 }
                 
         except Exception as e:
-            logger.error(f"Text model call failed: {e}")
+            secure_logger.error(f"Text model call failed: {e}")
             return {
                 'success': False,
                 'error': f'Text model call exception: {str(e)}',

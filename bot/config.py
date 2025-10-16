@@ -280,6 +280,20 @@ class Config:
     MAX_CHAT_HISTORY = int(os.getenv('MAX_CHAT_HISTORY', '20'))
     MAX_RESPONSE_LENGTH = int(os.getenv('MAX_RESPONSE_LENGTH', '4000'))
     
+    # ===== FILE PROCESSING SECURITY (DoS Prevention) =====
+    # CRITICAL: Prevent Denial of Service attacks via file processing
+    
+    # File processing timeout (seconds) - prevents slow file processing DoS
+    FILE_PROCESSING_TIMEOUT = int(os.getenv('FILE_PROCESSING_TIMEOUT', '30'))
+    
+    # File upload rate limiting - prevents file upload spam
+    FILE_UPLOAD_MAX_FILES = int(os.getenv('FILE_UPLOAD_MAX_FILES', '5'))  # Max files per time window
+    FILE_UPLOAD_TIME_WINDOW = int(os.getenv('FILE_UPLOAD_TIME_WINDOW', '300'))  # 5 minutes in seconds
+    
+    # Concurrent file processing limits - prevents resource exhaustion
+    MAX_CONCURRENT_FILES_PER_USER = int(os.getenv('MAX_CONCURRENT_FILES_PER_USER', '2'))  # Max 2 files per user
+    MAX_CONCURRENT_FILES_GLOBAL = int(os.getenv('MAX_CONCURRENT_FILES_GLOBAL', '10'))  # Max 10 files system-wide
+    
     # ===== AI MODEL PARAMETERS =====
     # Optional fine-tuning parameters for advanced users
     

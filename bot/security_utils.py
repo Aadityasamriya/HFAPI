@@ -1383,6 +1383,14 @@ admin_rate_limiter = RateLimiter(max_requests=30, time_window=60, strict_mode=Tr
 # Fallback rate limiters with less strict limits for database failures
 fallback_rate_limiter = RateLimiter(max_requests=20, time_window=60, strict_mode=False)  # Fallback mode
 
+# CRITICAL SECURITY: File upload rate limiter - prevents DoS via file upload spam
+from bot.config import Config
+file_upload_rate_limiter = RateLimiter(
+    max_requests=Config.FILE_UPLOAD_MAX_FILES,  # 5 files
+    time_window=Config.FILE_UPLOAD_TIME_WINDOW,  # 300 seconds (5 minutes)
+    strict_mode=True  # Immediate blocking
+)
+
 # Convenience functions for easy import
 def escape_markdown(text: str) -> str:
     """Convenience function to escape Markdown text"""
@@ -1441,6 +1449,36 @@ def check_rate_limit(user_id: int, user_ip: Optional[str] = None) -> tuple[bool,
     
     return is_allowed, wait_time or 0
 
+def check_file_upload_rate_limit(user_id: int, user_ip: Optional[str] = None) -> tuple[bool, int]:
+    """
+    CRITICAL SECURITY: File upload rate limiting to prevent DoS via file spam
+    
+    Limits: 5 files per 5 minutes per user (strict enforcement)
+    
+    Args:
+        user_id (int): Telegram user ID
+        user_ip (str): User IP address for additional tracking
+        
+    Returns:
+        tuple[bool, int]: (is_allowed, seconds_until_reset)
+    """
+    # TESTING BYPASS: Disable rate limiting in test mode
+    from bot.config import Config
+    if Config.is_test_mode():
+        logger.info(f"TEST MODE: Bypassing file upload rate limit for user {user_id} (testing)")
+        return True, 0
+    
+    is_allowed, wait_time = file_upload_rate_limiter.is_allowed(user_id, user_ip)
+    
+    # Security logging for file upload rate limit violations
+    if not is_allowed:
+        logger.warning(
+            f"SECURITY: File upload rate limit exceeded for user {user_id} (IP: {user_ip}), "
+            f"blocking for {wait_time} seconds - Limit: {Config.FILE_UPLOAD_MAX_FILES} files per {Config.FILE_UPLOAD_TIME_WINDOW//60} minutes"
+        )
+    
+    return is_allowed, wait_time or 0
+
 # Convenience functions for input validation
 def validate_user_input(text: str, max_length: int = 10000, strict_mode: bool = True) -> Tuple[bool, str, Dict[str, Any]]:
     """Convenience function for comprehensive input validation"""
@@ -1453,3 +1491,5 @@ def safe_filename(filename: str) -> Tuple[bool, str]:
 def get_security_stats() -> Dict[str, Any]:
     """Get comprehensive security statistics from rate limiter"""
     return rate_limiter.get_security_stats()
+
+secure_logger = SecureLogger(logger)

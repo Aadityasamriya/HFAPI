@@ -1,5 +1,5 @@
-# Railway.com Procfile for Hugging Face By AadityaLabs AI  
-# Modern Railway deployment with health monitoring and Railpack builder
-# Port-aware deployment for health check endpoints
+# Deployment configuration for Hugging Face By AadityaLabs AI  
+# Background worker deployment for Telegram bot
+# No web port needed - bot uses Telegram polling
 
-web: python main.py
+worker: python main.py

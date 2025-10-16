@@ -709,6 +709,8 @@ class MessageHandlers:
         """
         Enhanced document handler with superior analysis capabilities
         Supports PDF and ZIP files with intelligent processing
+        
+        SECURITY: DoS Prevention - Rate limiting, concurrency limits, and timeouts
         """
         user = update.effective_user
         user_id = user.id
@@ -716,11 +718,15 @@ class MessageHandlers:
         
         logger.info(f"📄 DOCUMENT UPLOAD from user_id:{user_id} (@{username})")
         
-        # Check rate limit
-        is_allowed, wait_time = check_rate_limit(user_id)
+        # CRITICAL SECURITY: Check file upload rate limit (5 files per 5 minutes)
+        from bot.security_utils import check_file_upload_rate_limit
+        is_allowed, wait_time = check_file_upload_rate_limit(user_id)
         if not is_allowed:
             await update.message.reply_text(
-                f"⚠️ **Rate Limit Exceeded**\n\nPlease wait {wait_time} seconds before uploading another file.",
+                f"🚫 **File Upload Limit Exceeded**\n\n"
+                f"You've uploaded too many files recently.\n"
+                f"Please wait {wait_time} seconds before uploading another file.\n\n"
+                f"📋 Limit: 5 files per 5 minutes",
                 parse_mode='Markdown'
             )
             return
@@ -768,6 +774,19 @@ class MessageHandlers:
             parse_mode='Markdown'
         )
         
+        # CRITICAL SECURITY: Acquire semaphore for concurrent file processing control
+        from bot.file_processors import file_processing_semaphore, with_file_processing_timeout, FileProcessingTimeoutError, FileConcurrencyLimitError
+        from bot.config import Config
+        
+        # Check if we can process this file (concurrency limits)
+        can_process, limit_error = await file_processing_semaphore.acquire(user_id)
+        if not can_process:
+            await update.message.reply_text(
+                f"🚫 **Processing Limit Reached**\n\n{limit_error}",
+                parse_mode='Markdown'
+            )
+            return
+        
         try:
             # Download file (only after size validation)
             file = await context.bot.get_file(document.file_id)
@@ -785,8 +804,12 @@ class MessageHandlers:
                     await processing_msg.edit_text(f"🚫 **Security Check Failed**\n\n{error_msg}")
                     return
                 
-                # Enhanced PDF analysis
-                doc_structure = await AdvancedFileProcessor.enhanced_pdf_analysis(bytes(file_data), filename)
+                # SECURITY: Enhanced PDF analysis with 30s timeout
+                doc_structure = await with_file_processing_timeout(
+                    AdvancedFileProcessor.enhanced_pdf_analysis(bytes(file_data), filename),
+                    timeout_seconds=Config.FILE_PROCESSING_TIMEOUT,
+                    operation_name=f"PDF analysis for {filename}"
+                )
                 formatted_response = await response_formatter.format_document_analysis_response(doc_structure, filename)
                 
             elif file_ext == 'zip':
@@ -798,8 +821,12 @@ class MessageHandlers:
                     await processing_msg.edit_text(f"🚫 **Security Check Failed**\n\n{error_msg}")
                     return
                 
-                # Intelligent ZIP analysis
-                zip_analysis = await AdvancedFileProcessor.intelligent_zip_analysis(bytes(file_data), filename)
+                # SECURITY: Intelligent ZIP analysis with 30s timeout
+                zip_analysis = await with_file_processing_timeout(
+                    AdvancedFileProcessor.intelligent_zip_analysis(bytes(file_data), filename),
+                    timeout_seconds=Config.FILE_PROCESSING_TIMEOUT,
+                    operation_name=f"ZIP analysis for {filename}"
+                )
                 formatted_response = await response_formatter.format_zip_analysis_response(zip_analysis, filename)
                 
             else:
@@ -817,17 +844,31 @@ class MessageHandlers:
             
             logger.info(f"✅ Document analysis completed for {filename}")
             
+        except FileProcessingTimeoutError as e:
+            logger.error(f"⏱️ Document processing timeout for user {user_id}: {e}")
+            await processing_msg.edit_text(
+                f"⏱️ **Processing Timeout**\n\n"
+                f"Your file took too long to process (>{Config.FILE_PROCESSING_TIMEOUT}s).\n"
+                f"This usually happens with very large or complex files.\n\n"
+                f"💡 Try uploading a smaller file or splitting it into parts.",
+                parse_mode='Markdown'
+            )
         except Exception as e:
             logger.error(f"❌ Document processing failed for user {user_id}: {e}")
             await processing_msg.edit_text(
                 f"❌ **Processing Failed**\n\nSorry, I couldn't process your document. Please try again or contact support."
             )
+        finally:
+            # CRITICAL: Always release semaphore, even if processing fails
+            file_processing_semaphore.release(user_id)
     
     @staticmethod
     async def photo_handler(update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """
         Enhanced photo handler with superior image analysis
         Features: Advanced OCR, object detection, intelligent content description
+        
+        SECURITY: DoS Prevention - Rate limiting, concurrency limits, and timeouts
         """
         user = update.effective_user
         user_id = user.id
@@ -835,11 +876,15 @@ class MessageHandlers:
         
         logger.info(f"🖼️ PHOTO UPLOAD from user_id:{user_id} (@{username})")
         
-        # Check rate limit
-        is_allowed, wait_time = check_rate_limit(user_id)
+        # CRITICAL SECURITY: Check file upload rate limit (5 files per 5 minutes)
+        from bot.security_utils import check_file_upload_rate_limit
+        is_allowed, wait_time = check_file_upload_rate_limit(user_id)
         if not is_allowed:
             await update.message.reply_text(
-                f"⚠️ **Rate Limit Exceeded**\n\nPlease wait {wait_time} seconds before uploading another image.",
+                f"🚫 **File Upload Limit Exceeded**\n\n"
+                f"You've uploaded too many files recently.\n"
+                f"Please wait {wait_time} seconds before uploading another file.\n\n"
+                f"📋 Limit: 5 files per 5 minutes",
                 parse_mode='Markdown'
             )
             return
@@ -870,6 +915,19 @@ class MessageHandlers:
             parse_mode='Markdown'
         )
         
+        # CRITICAL SECURITY: Acquire semaphore for concurrent file processing control
+        from bot.file_processors import file_processing_semaphore, with_file_processing_timeout, FileProcessingTimeoutError, FileConcurrencyLimitError
+        from bot.config import Config
+        
+        # Check if we can process this file (concurrency limits)
+        can_process, limit_error = await file_processing_semaphore.acquire(user_id)
+        if not can_process:
+            await update.message.reply_text(
+                f"🚫 **Processing Limit Reached**\n\n{limit_error}",
+                parse_mode='Markdown'
+            )
+            return
+        
         try:
             # Download image (only after size validation)
             file = await context.bot.get_file(photo.file_id)
@@ -884,8 +942,12 @@ class MessageHandlers:
                 await processing_msg.edit_text(f"🚫 **Security Check Failed**\n\n{error_msg}")
                 return
             
-            # Advanced image analysis
-            image_analysis = await AdvancedFileProcessor.advanced_image_analysis(bytes(image_data), "uploaded_image.jpg")
+            # SECURITY: Advanced image analysis with 30s timeout
+            image_analysis = await with_file_processing_timeout(
+                AdvancedFileProcessor.advanced_image_analysis(bytes(image_data), "uploaded_image.jpg"),
+                timeout_seconds=Config.FILE_PROCESSING_TIMEOUT,
+                operation_name="Image analysis"
+            )
             formatted_response = await response_formatter.format_image_analysis_response(image_analysis, "uploaded_image.jpg")
             
             # Send the formatted analysis result
@@ -897,11 +959,23 @@ class MessageHandlers:
             
             logger.info(f"✅ Image analysis completed - OCR: {len(image_analysis.ocr_text)} chars, Objects: {len(image_analysis.detected_objects)}")
             
+        except FileProcessingTimeoutError as e:
+            logger.error(f"⏱️ Image processing timeout for user {user_id}: {e}")
+            await processing_msg.edit_text(
+                f"⏱️ **Processing Timeout**\n\n"
+                f"Your image took too long to process (>{Config.FILE_PROCESSING_TIMEOUT}s).\n"
+                f"This usually happens with very large or complex images.\n\n"
+                f"💡 Try uploading a smaller or simpler image.",
+                parse_mode='Markdown'
+            )
         except Exception as e:
             logger.error(f"❌ Image processing failed for user {user_id}: {e}")
             await processing_msg.edit_text(
                 f"❌ **Analysis Failed**\n\nSorry, I couldn't analyze your image. Please try again or contact support."
             )
+        finally:
+            # CRITICAL: Always release semaphore, even if processing fails
+            file_processing_semaphore.release(user_id)
     
     @staticmethod
     async def error_handler(update, context: ContextTypes.DEFAULT_TYPE) -> None:

@@ -1,6 +1,6 @@
 # Hugging Face By AadityaLabs AI - Production Dependencies
 # Optimized for Python 3.12.2 deployment with latest security patches
-# Updated September 2025 for Railway.com Railpack deployment infrastructure
+# Updated October 2025 for Replit background worker deployment
 
 # Core Telegram Bot Dependencies - ESSENTIAL  
 # Latest stable version with full Python 3.12.2 support and security fixes
@@ -8,7 +8,7 @@ python-telegram-bot[ext]==22.4
 
 # AI and ML Dependencies - ESSENTIAL
 # Latest version with security patches and Python 3.12.2 compatibility
-huggingface_hub==0.35.0
+huggingface-hub==0.35.0
 
 # Environment and Configuration - ESSENTIAL
 # Latest stable version for secure .env file handling
@@ -22,7 +22,7 @@ httpx==0.28.1
 
 # Database Dependencies - ESSENTIAL
 # pymongo: Latest version with security patches and Python 3.13 support
-# motor: Corrected to latest stable version (3.7.1) - 3.8.0 does not exist
+# motor: Latest stable version for async MongoDB operations
 # asyncpg: PostgreSQL async driver for Supabase connections
 pymongo==4.15.1
 motor==3.7.1
@@ -84,32 +84,3 @@ requests==2.32.5
 
 # Testing Dependencies (for development only)
 pytest==8.3.4
-aiofiles==24.1.0
-aiohttp==3.12.15
-asyncio-throttle==1.0.2
-asyncpg==0.30.0
-cryptography==46.0.1
-filetype==1.2.0
-httpx==0.28.1
-huggingface_hub==0.35.0
-motor==3.7.1
-nest-asyncio==1.6.0
-numpy>=2.0.0,<2.3.0
-opencv-python-headless==4.12.0.88
-orjson==3.11.3
-packaging>=24.0
-Pillow==11.3.0
-psutil==7.1.0
-pydantic==2.11.9
-pymongo==4.15.1
-PyMuPDF==1.26.4
-pytesseract==0.3.13
-pytest==8.3.4
-python-dotenv>=1.0.0
-python-magic==0.4.27
-python-telegram-bot[ext]==22.4
-requests==2.32.5
-tenacity==9.1.2
-typing-extensions==4.12.2
-uvloop==0.20.0
-huggingface-hub
