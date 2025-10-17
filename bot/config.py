@@ -340,67 +340,67 @@ class Config:
     # These models are selected for their top-tier performance and availability on the free tier.
     
     # Best for balanced, high-quality chat and complex reasoning
-    FLAGSHIP_TEXT_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: Excellent performance
-    ULTRA_PERFORMANCE_TEXT_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: Top choice
-    REASONING_TEXT_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: Great for reasoning
-    MATH_TEXT_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: Mathematical tasks
+    FLAGSHIP_TEXT_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ 2025 FREE TIER: Excellent for conversation & tasks
+    ULTRA_PERFORMANCE_TEXT_MODEL = "Qwen/Qwen2.5-72B-Instruct"  # ✅ 2025 FREE TIER: Highest quality (slower)
+    REASONING_TEXT_MODEL = "meta-llama/Meta-Llama-3.1-8B-Instruct"  # ✅ 2025 FREE TIER: Great reasoning
+    MATH_TEXT_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ 2025 FREE TIER: Mathematical tasks
     
     # === 2025 HIGH PERFORMANCE MODELS ===
-    HIGH_PERFORMANCE_TEXT_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: Excellent performance
-    ADVANCED_TEXT_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: Advanced capabilities
-    MULTILINGUAL_TEXT_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: Multilingual support
+    HIGH_PERFORMANCE_TEXT_MODEL = "Qwen/Qwen2.5-72B-Instruct"  # ✅ 2025 FREE TIER: Best quality
+    ADVANCED_TEXT_MODEL = "meta-llama/Meta-Llama-3.1-8B-Instruct"  # ✅ 2025 FREE TIER: Advanced capabilities
+    MULTILINGUAL_TEXT_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ 2025 FREE TIER: Multilingual support
     
     # === 2025 PRIMARY WORKING MODELS - FREE TIER OPTIMIZED ===
-    # ✅ All models verified working on free tier
-    DEFAULT_TEXT_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: Best default choice
-    BALANCED_TEXT_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: Balanced performance
-    EFFICIENT_7B_TEXT_MODEL = "Qwen/Qwen2.5-1.5B-Instruct"  # ✅ FREE TIER: Fast and efficient
-    LEGACY_FLAGSHIP_TEXT_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: Reliable fallback
+    # ✅ All models verified working on free tier (2025 updates)
+    DEFAULT_TEXT_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ 2025 FREE TIER: Best default choice
+    BALANCED_TEXT_MODEL = "meta-llama/Meta-Llama-3.1-8B-Instruct"  # ✅ 2025 FREE TIER: Balanced performance
+    EFFICIENT_7B_TEXT_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ 2025 FREE TIER: Efficient 7B
+    LEGACY_FLAGSHIP_TEXT_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ 2025 FREE TIER: Legacy fallback
     
     # === 2025 EFFICIENCY OPTIMIZED MODELS ===
     # Best for fast, efficient responses on free tier
-    EFFICIENT_TEXT_MODEL = "Qwen/Qwen2.5-1.5B-Instruct"  # ✅ FREE TIER: Very fast
-    FAST_TEXT_MODEL = "Qwen/Qwen2.5-1.5B-Instruct"  # ✅ FREE TIER: Fastest option
-    COMPACT_TEXT_MODEL = "Qwen/Qwen2.5-1.5B-Instruct"  # ✅ FREE TIER: Lightweight
-    LIGHTWEIGHT_TEXT_MODEL = "Qwen/Qwen2.5-1.5B-Instruct"  # ✅ FREE TIER: Minimal resource use
+    EFFICIENT_TEXT_MODEL = "google/gemma-2-2b-it"  # ✅ 2025 FREE TIER: Very fast
+    FAST_TEXT_MODEL = "google/gemma-2-2b-it"  # ✅ 2025 FREE TIER: Fastest option
+    COMPACT_TEXT_MODEL = "google/gemma-2-2b-it"  # ✅ 2025 FREE TIER: Lightweight
+    LIGHTWEIGHT_TEXT_MODEL = "google/gemma-2-2b-it"  # ✅ 2025 FREE TIER: Minimal resource use
     
     # === 2025 INTELLIGENT FALLBACK MODELS ===
     # Reliable fallback chain using verified free tier models
-    FALLBACK_TEXT_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: Primary fallback
-    LEGACY_EFFICIENT_MODEL = "Qwen/Qwen2.5-1.5B-Instruct"  # ✅ FREE TIER: Fast fallback
-    TERTIARY_FALLBACK_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: Ultimate fallback
+    FALLBACK_TEXT_MODEL = "meta-llama/Meta-Llama-3.1-8B-Instruct"  # ✅ 2025 FREE TIER: Primary fallback
+    LEGACY_EFFICIENT_MODEL = "google/gemma-2-2b-it"  # ✅ 2025 FREE TIER: Fast fallback
+    TERTIARY_FALLBACK_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ 2025 FREE TIER: Ultimate fallback
     
     # Code Generation Models - 2025 top performers optimized for coding tasks
     
     # === 2025 STATE-OF-THE-ART CODING MODELS ===
-    # Best for code generation on free tier (Phi-3 excels at code)
-    ULTRA_PERFORMANCE_CODE_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: Excellent for code
-    ADVANCED_CODE_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: Advanced coding
-    SPECIALIZED_CODE_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: Code specialist
+    # Best for code generation on free tier (updated 2025)
+    ULTRA_PERFORMANCE_CODE_MODEL = "Qwen/Qwen2.5-72B-Instruct"  # ✅ 2025 FREE TIER: Excellent for code
+    ADVANCED_CODE_MODEL = "meta-llama/Meta-Llama-3.1-8B-Instruct"  # ✅ 2025 FREE TIER: Advanced coding
+    SPECIALIZED_CODE_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ 2025 FREE TIER: Code specialist
     
     # === 2025 HIGH PERFORMANCE CODING ===
-    HIGH_PERFORMANCE_CODE_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: High performance
-    TOOL_USE_CODE_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: Tool integration
-    MULTILINGUAL_CODE_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: Multi-language code
+    HIGH_PERFORMANCE_CODE_MODEL = "Qwen/Qwen2.5-72B-Instruct"  # ✅ 2025 FREE TIER: High performance
+    TOOL_USE_CODE_MODEL = "meta-llama/Meta-Llama-3.1-8B-Instruct"  # ✅ 2025 FREE TIER: Tool integration
+    MULTILINGUAL_CODE_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ 2025 FREE TIER: Multi-language code
     
     # === 2025 PRIMARY CODING MODELS - FREE TIER OPTIMIZED ===
-    # ✅ Best free tier models for code generation
-    DEFAULT_CODE_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: Best for code
-    CODE_GENERATION_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: Code generation
-    EFFICIENT_7B_CODE_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: Efficient coding
-    LEGACY_ADVANCED_CODE_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: Advanced fallback
+    # ✅ Best free tier models for code generation (2025)
+    DEFAULT_CODE_MODEL = "meta-llama/Meta-Llama-3.1-8B-Instruct"  # ✅ 2025 FREE TIER: Best for code
+    CODE_GENERATION_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ 2025 FREE TIER: Code generation
+    EFFICIENT_7B_CODE_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ 2025 FREE TIER: Efficient coding
+    LEGACY_ADVANCED_CODE_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ 2025 FREE TIER: Legacy fallback
     
     # === 2025 EFFICIENCY OPTIMIZED CODING ===
     # Fast code generation on free tier
-    EFFICIENT_CODE_MODEL = "Qwen/Qwen2.5-1.5B-Instruct"  # ✅ FREE TIER: Fast code generation
-    FAST_CODE_MODEL = "Qwen/Qwen2.5-1.5B-Instruct"  # ✅ FREE TIER: Quick coding tasks
-    LIGHTWEIGHT_CODE_MODEL = "Qwen/Qwen2.5-1.5B-Instruct"  # ✅ FREE TIER: Lightweight coding
+    EFFICIENT_CODE_MODEL = "google/gemma-2-2b-it"  # ✅ 2025 FREE TIER: Fast code generation
+    FAST_CODE_MODEL = "google/gemma-2-2b-it"  # ✅ 2025 FREE TIER: Quick coding tasks
+    LIGHTWEIGHT_CODE_MODEL = "google/gemma-2-2b-it"  # ✅ 2025 FREE TIER: Lightweight coding
     
     # === 2025 INTELLIGENT CODE FALLBACK MODELS ===
     # Reliable code generation fallback chain
-    FALLBACK_CODE_MODEL = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: Code fallback
-    LEGACY_EFFICIENT_CODE_MODEL = "Qwen/Qwen2.5-1.5B-Instruct"  # ✅ FREE TIER: Fast code fallback
-    TERTIARY_CODE_FALLBACK = "microsoft/Phi-3-mini-4k-instruct"  # ✅ FREE TIER: Ultimate code fallback
+    FALLBACK_CODE_MODEL = "meta-llama/Meta-Llama-3.1-8B-Instruct"  # ✅ 2025 FREE TIER: Code fallback
+    LEGACY_EFFICIENT_CODE_MODEL = "google/gemma-2-2b-it"  # ✅ 2025 FREE TIER: Fast code fallback
+    TERTIARY_CODE_FALLBACK = "microsoft/Phi-3-mini-4k-instruct"  # ✅ 2025 FREE TIER: Ultimate code fallback
     
     # === 2025 VISION/MULTIMODAL MODELS - WORKING MODELS ===
     # Updated to use models confirmed available on free tier
