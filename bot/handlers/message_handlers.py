@@ -1221,7 +1221,7 @@ class MessageHandlers:
                 
                 safe_error_response = safe_markdown_format(str(response))
                 await update.message.reply_text(
-                    f"❌ **Generation Failed**\n\n{safe_error_response}\n\nPlease try again or use `/newchat` to start fresh\.",
+                    f"❌ **Generation Failed**\n\n{safe_error_response}\n\nPlease try again or use `/newchat` to start fresh.",
                     parse_mode='Markdown'
                 )
                 
@@ -1273,7 +1273,7 @@ class MessageHandlers:
             else:
                 safe_error_response = safe_markdown_format(str(code_response))
                 await update.message.reply_text(
-                    f"❌ **Code Generation Failed**\n\n{safe_error_response}\n\nTry rephrasing your request or specify the programming language\.",
+                    f"❌ **Code Generation Failed**\n\n{safe_error_response}\n\nTry rephrasing your request or specify the programming language.",
                     parse_mode='Markdown'
                 )
                 
