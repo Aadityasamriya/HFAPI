@@ -353,6 +353,8 @@ class TelegramBotApplication:
                             filters.TEXT & ~filters.COMMAND)
         safe_register_handler("message", "photo_handler", MessageHandlers.photo_handler, filters.PHOTO)
         safe_register_handler("message", "document_handler", MessageHandlers.document_handler, filters.Document.ALL)
+        safe_register_handler("message", "voice_handler", MessageHandlers.voice_handler, filters.VOICE)
+        safe_register_handler("message", "audio_handler", MessageHandlers.audio_handler, filters.AUDIO)
         
         # FIXED: Dynamic handler count calculation instead of hardcoded value
         # Count total handlers attempted (sum of all safe_register_handler calls)

@@ -1391,11 +1391,11 @@ class ModelCaller:
         # Smart serverless-aware model selection (prefer stable models)
         is_complex_request = len(prompt) > 100 or any(word in prompt.lower() for word in ['detailed', 'complex', 'professional', 'artistic', 'photorealistic'])
         
-        # Try a few known working image generation models
+        # OCT 2025: Use latest high-performance image generation models
         test_models = [
-            "runwayml/stable-diffusion-v1-5",
-            "CompVis/stable-diffusion-v1-4", 
-            "stabilityai/stable-diffusion-2-1"
+            Config.FAST_IMAGE_GENERATION_MODEL,  # FLUX.1-schnell: ultra-fast, free, Apache 2.0
+            Config.DEFAULT_IMAGE_GENERATION_MODEL,  # Primary choice
+            Config.FALLBACK_IMAGE_GENERATION_MODEL  # Stable Diffusion XL fallback
         ]
         
         for model_name in test_models:
@@ -1446,7 +1446,7 @@ class ModelCaller:
             model_name = Config.FLAGSHIP_IMAGE_MODEL  # Use advanced model for complex descriptions
             max_tokens = 1500
         else:
-            model_name = Config.DEFAULT_IMAGE_MODEL   # Use standard model for simple descriptions
+            model_name = Config.DEFAULT_IMAGE_PROMPT_MODEL   # Use standard model for simple descriptions
             max_tokens = 1000
         
         # Create comprehensive description prompt
@@ -1553,6 +1553,134 @@ class ModelCaller:
         
         error_message = result if isinstance(result, str) else "Failed to analyze sentiment"
         return False, {'error': error_message}
+    
+    async def transcribe_audio(self, audio_data: bytes, api_key: Optional[str] = None, audio_format: str = "mp3") -> Tuple[bool, Dict]:
+        """
+        Transcribe audio to text using OCT 2025 Whisper models
+        
+        Args:
+            audio_data (bytes): Audio file data
+            api_key (str): Hugging Face API key
+            audio_format (str): Audio format (mp3, ogg, wav, etc.)
+            
+        Returns:
+            Tuple[bool, Dict]: (success, {transcription: str, confidence: float, language: str, model_used: str})
+        """
+        secure_logger.info(f"🎤 Starting audio transcription (format: {audio_format}, size: {len(audio_data)} bytes)")
+        
+        # OCT 2025: Use latest Whisper models for superior transcription
+        # Try models in order: DEFAULT (best quality) -> FAST (6x faster) -> FALLBACK
+        asr_models = [
+            Config.DEFAULT_ASR_MODEL,  # openai/whisper-large-v3: 96+ languages, 10-20% WER
+            Config.FAST_ASR_MODEL,     # distil-whisper/distil-large-v3: 6x faster
+            Config.FALLBACK_ASR_MODEL  # Fallback option
+        ]
+        
+        for model_name in asr_models:
+            try:
+                secure_logger.info(f"🔊 Attempting transcription with {model_name}")
+                
+                # Prepare audio data for API call
+                # HF API expects audio as bytes
+                success, result = await self._make_api_call_with_audio(
+                    model_name, 
+                    audio_data, 
+                    api_key,
+                    endpoint_type="automatic-speech-recognition"
+                )
+                
+                if success and result:
+                    # Extract transcription from response
+                    transcription_text = ""
+                    confidence = 0.0
+                    language = "unknown"
+                    
+                    if isinstance(result, dict):
+                        transcription_text = result.get('text', '').strip()
+                        # Some ASR models return chunks with timestamps
+                        if 'chunks' in result:
+                            transcription_text = ' '.join([chunk.get('text', '') for chunk in result['chunks']])
+                        # Extract language if available
+                        language = result.get('language', 'unknown')
+                        # Confidence score (if available)
+                        confidence = result.get('confidence', 0.85)
+                    elif isinstance(result, str):
+                        transcription_text = result.strip()
+                        confidence = 0.85  # Default confidence
+                    
+                    if transcription_text:
+                        secure_logger.info(f"✅ Audio transcribed successfully: {len(transcription_text)} chars, language: {language}")
+                        return True, {
+                            'transcription': transcription_text,
+                            'confidence': confidence,
+                            'language': language,
+                            'model_used': model_name,
+                            'audio_format': audio_format,
+                            'audio_size_bytes': len(audio_data)
+                        }
+                    else:
+                        secure_logger.warning(f"⚠️ {model_name} returned empty transcription")
+                        
+            except Exception as e:
+                safe_error = redact_sensitive_data(str(e))
+                secure_logger.warning(f"⚠️ Transcription failed with {model_name}: {safe_error}")
+                continue
+        
+        # All models failed
+        secure_logger.error("❌ All ASR models failed to transcribe audio")
+        return False, {
+            'error': 'Audio transcription failed with all available models',
+            'attempted_models': asr_models,
+            'audio_format': audio_format,
+            'audio_size_bytes': len(audio_data)
+        }
+    
+    async def _make_api_call_with_audio(self, model_name: str, audio_data: bytes, api_key: Optional[str], endpoint_type: str = "automatic-speech-recognition") -> Tuple[bool, Any]:
+        """
+        Make API call with audio data for transcription
+        
+        Args:
+            model_name (str): ASR model to use
+            audio_data (bytes): Audio file bytes
+            api_key (str): API key
+            endpoint_type (str): Type of endpoint
+            
+        Returns:
+            Tuple[bool, Any]: (success, result)
+        """
+        try:
+            # Ensure session is initialized
+            if not self.session:
+                self.session = aiohttp.ClientSession(timeout=self.timeout)
+            
+            # Get effective API key
+            effective_api_key = api_key or Config.get_hf_token()
+            if not effective_api_key:
+                return False, "API key not available"
+            
+            # Prepare headers
+            headers = {
+                "Authorization": f"Bearer {effective_api_key}",
+                "Content-Type": "application/octet-stream"  # Send raw audio bytes
+            }
+            
+            # Build API URL
+            api_url = f"https://api-inference.huggingface.co/models/{model_name}"
+            
+            # Make the request
+            async with self.session.post(api_url, data=audio_data, headers=headers) as response:
+                if response.status == 200:
+                    result = await response.json()
+                    return True, result
+                else:
+                    error_text = await response.text()
+                    secure_logger.warning(f"ASR API returned status {response.status}: {error_text[:200]}")
+                    return False, f"API error: {response.status}"
+                    
+        except Exception as e:
+            safe_error = redact_sensitive_data(str(e))
+            secure_logger.error(f"Audio API call exception: {safe_error}")
+            return False, str(e)
     
     def _build_detailed_description_prompt(self, original_prompt: str, special_params: Dict) -> str:
         """
@@ -3151,7 +3279,7 @@ class SuperiorModelCaller(ModelCaller):
         elif intent_type == 'creative_writing':
             models = [Config.DEFAULT_TEXT_MODEL, Config.ADVANCED_TEXT_MODEL]
         elif intent_type == 'image_generation':
-            models = [Config.DEFAULT_IMAGE_MODEL]
+            models = [Config.DEFAULT_IMAGE_GENERATION_MODEL]
         else:
             # General text generation
             if complexity_score > 7:
@@ -3166,7 +3294,7 @@ class SuperiorModelCaller(ModelCaller):
         if intent_type == 'code_generation':
             return Config.DEFAULT_CODE_MODEL or Config.ADVANCED_TEXT_MODEL
         elif intent_type == 'image_generation':
-            return Config.DEFAULT_IMAGE_MODEL
+            return Config.DEFAULT_IMAGE_GENERATION_MODEL
         elif complexity_score > 7:
             return Config.ADVANCED_TEXT_MODEL
         else:

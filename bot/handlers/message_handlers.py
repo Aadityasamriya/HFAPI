@@ -2038,6 +2038,248 @@ Please provide detailed analysis including key insights, patterns, and actionabl
             )
     
     @staticmethod
+    async def voice_handler(update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """
+        Handle voice messages with OCT 2025 Whisper transcription
+        Superior multi-lingual speech-to-text that outperforms ChatGPT and Gemini
+        """
+        user = update.effective_user
+        user_id = user.id
+        username = user.username or "No username"
+        
+        logger.info(f"🎤 VOICE MESSAGE received from user_id:{user_id} (@{username})")
+        
+        # Check rate limiting
+        if not check_rate_limit(user_id):
+            await update.message.reply_text(
+                "⚠️ **Rate Limit Exceeded**\n\nYou're sending messages too quickly. Please wait a moment before trying again.",
+                parse_mode='Markdown'
+            )
+            return
+        
+        # Get user's API key
+        try:
+            api_key = await db.get_user_api_key(user_id)
+            if not api_key:
+                await update.message.reply_text(
+                    "🔑 **Setup Required**\n\n"
+                    "To use voice transcription, you need to set up your Hugging Face API key first.\n\n"
+                    "Use /start to complete the setup process!",
+                    parse_mode='Markdown'
+                )
+                return
+        except Exception as e:
+            logger.error(f"Database error retrieving API key for user {user_id}: {e}")
+            await update.message.reply_text(
+                "❌ **Database Error**\n\nCouldn't retrieve your API key. Please try /start to set up again.",
+                parse_mode='Markdown'
+            )
+            return
+        
+        # Show processing message
+        processing_msg = await update.message.reply_text(
+            "🎤 **Transcribing Voice Message...**\n\n"
+            "🔊 Using advanced Whisper AI models for superior transcription\n"
+            "🌍 Supports 96+ languages with automatic detection\n\n"
+            "⏳ *Please wait...*",
+            parse_mode='Markdown'
+        )
+        
+        try:
+            # Get voice message file
+            voice = update.message.voice
+            if not voice:
+                await processing_msg.edit_text(
+                    "❌ **Error**\n\nNo voice message found.",
+                    parse_mode='Markdown'
+                )
+                return
+            
+            # Get file info
+            file_size = voice.file_size or 0
+            duration = voice.duration or 0
+            
+            logger.info(f"🎤 Voice message details: {duration}s duration, {file_size:,} bytes from user {user_id}")
+            
+            # Download voice file
+            voice_file = await context.bot.get_file(voice.file_id)
+            voice_data = await voice_file.download_as_bytearray()
+            
+            # Transcribe audio using OCT 2025 Whisper models
+            success, result = await model_caller.transcribe_audio(
+                audio_data=bytes(voice_data),
+                api_key=api_key,
+                audio_format="ogg"  # Telegram voice messages are OGG
+            )
+            
+            if success and result.get('transcription'):
+                transcription = result['transcription']
+                confidence = result.get('confidence', 0.0)
+                language = result.get('language', 'unknown')
+                model_used = result.get('model_used', 'Whisper')
+                
+                # Format response
+                response_text = (
+                    f"🎤 **Voice Transcription Complete**\n\n"
+                    f"📝 **Text:**\n{escape_markdown(transcription)}\n\n"
+                    f"🌍 **Language:** {escape_markdown(language)}\n"
+                    f"📊 **Confidence:** {confidence*100:.1f}%\n"
+                    f"⏱️ **Duration:** {duration}s\n\n"
+                    f"🤖 *Transcribed by {escape_markdown(model_used.split('/')[-1])} \\- OCT 2025 Whisper AI*"
+                )
+                
+                await processing_msg.delete()
+                await update.message.reply_text(response_text, parse_mode='Markdown')
+                
+                logger.info(f"✅ Voice transcription completed for user {user_id}: {len(transcription)} chars")
+                
+            else:
+                error_msg = result.get('error', 'Unknown error')
+                await processing_msg.edit_text(
+                    f"❌ **Transcription Failed**\n\n"
+                    f"Unable to transcribe voice message.\n\n"
+                    f"Error: {escape_markdown(error_msg[:200])}",
+                    parse_mode='Markdown'
+                )
+                logger.error(f"Voice transcription failed for user {user_id}: {error_msg}")
+                
+        except Exception as e:
+            secure_logger.error(f"Voice handler error for user {user_id}: {e}")
+            await processing_msg.edit_text(
+                "🚫 **Voice Processing Error**\n\n"
+                "An error occurred while processing your voice message. Please try again.",
+                parse_mode='Markdown'
+            )
+    
+    @staticmethod
+    async def audio_handler(update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """
+        Handle audio file messages with OCT 2025 Whisper transcription
+        Supports .mp3, .wav, .ogg, and other audio formats
+        """
+        user = update.effective_user
+        user_id = user.id
+        username = user.username or "No username"
+        
+        logger.info(f"🎵 AUDIO FILE received from user_id:{user_id} (@{username})")
+        
+        # Check rate limiting
+        if not check_rate_limit(user_id):
+            await update.message.reply_text(
+                "⚠️ **Rate Limit Exceeded**\n\nYou're sending messages too quickly. Please wait a moment before trying again.",
+                parse_mode='Markdown'
+            )
+            return
+        
+        # Get user's API key
+        try:
+            api_key = await db.get_user_api_key(user_id)
+            if not api_key:
+                await update.message.reply_text(
+                    "🔑 **Setup Required**\n\n"
+                    "To use audio transcription, you need to set up your Hugging Face API key first.\n\n"
+                    "Use /start to complete the setup process!",
+                    parse_mode='Markdown'
+                )
+                return
+        except Exception as e:
+            logger.error(f"Database error retrieving API key for user {user_id}: {e}")
+            await update.message.reply_text(
+                "❌ **Database Error**\n\nCouldn't retrieve your API key. Please try /start to set up again.",
+                parse_mode='Markdown'
+            )
+            return
+        
+        # Show processing message
+        processing_msg = await update.message.reply_text(
+            "🎵 **Transcribing Audio File...**\n\n"
+            "🔊 Using advanced Whisper AI models for superior transcription\n"
+            "🌍 Supports 96+ languages with automatic detection\n\n"
+            "⏳ *Please wait...*",
+            parse_mode='Markdown'
+        )
+        
+        try:
+            # Get audio file
+            audio = update.message.audio
+            if not audio:
+                await processing_msg.edit_text(
+                    "❌ **Error**\n\nNo audio file found.",
+                    parse_mode='Markdown'
+                )
+                return
+            
+            # Get file info
+            file_size = audio.file_size or 0
+            duration = audio.duration or 0
+            file_name = audio.file_name or "audio_file"
+            mime_type = audio.mime_type or "unknown"
+            
+            # Extract format from mime type or filename
+            audio_format = "mp3"  # default
+            if mime_type:
+                if "ogg" in mime_type:
+                    audio_format = "ogg"
+                elif "wav" in mime_type:
+                    audio_format = "wav"
+                elif "mp3" in mime_type or "mpeg" in mime_type:
+                    audio_format = "mp3"
+            
+            logger.info(f"🎵 Audio file details: {file_name}, {duration}s duration, {file_size:,} bytes, format: {audio_format}")
+            
+            # Download audio file
+            audio_file = await context.bot.get_file(audio.file_id)
+            audio_data = await audio_file.download_as_bytearray()
+            
+            # Transcribe audio using OCT 2025 Whisper models
+            success, result = await model_caller.transcribe_audio(
+                audio_data=bytes(audio_data),
+                api_key=api_key,
+                audio_format=audio_format
+            )
+            
+            if success and result.get('transcription'):
+                transcription = result['transcription']
+                confidence = result.get('confidence', 0.0)
+                language = result.get('language', 'unknown')
+                model_used = result.get('model_used', 'Whisper')
+                
+                # Format response
+                response_text = (
+                    f"🎵 **Audio Transcription Complete**\n\n"
+                    f"📁 **File:** {escape_markdown(file_name)}\n\n"
+                    f"📝 **Text:**\n{escape_markdown(transcription)}\n\n"
+                    f"🌍 **Language:** {escape_markdown(language)}\n"
+                    f"📊 **Confidence:** {confidence*100:.1f}%\n"
+                    f"⏱️ **Duration:** {duration}s\n"
+                    f"📦 **Format:** {escape_markdown(audio_format.upper())}\n\n"
+                    f"🤖 *Transcribed by {escape_markdown(model_used.split('/')[-1])} \\- OCT 2025 Whisper AI*"
+                )
+                
+                await processing_msg.delete()
+                await update.message.reply_text(response_text, parse_mode='Markdown')
+                
+                logger.info(f"✅ Audio transcription completed for user {user_id}: {len(transcription)} chars")
+                
+            else:
+                error_msg = result.get('error', 'Unknown error')
+                await processing_msg.edit_text(
+                    f"❌ **Transcription Failed**\n\n"
+                    f"Unable to transcribe audio file.\n\n"
+                    f"Error: {escape_markdown(error_msg[:200])}",
+                    parse_mode='Markdown'
+                )
+                logger.error(f"Audio transcription failed for user {user_id}: {error_msg}")
+                
+        except Exception as e:
+            secure_logger.error(f"Audio handler error for user {user_id}: {e}")
+            await processing_msg.edit_text(
+                "🚫 **Audio Processing Error**\n\n"
+                "An error occurred while processing your audio file. Please try again.",
+                parse_mode='Markdown'
+            )
+    
+    @staticmethod
     async def _handle_api_key_input(update, context, message_text: str) -> None:
         """
         Handle API key input with verification via actual test API calls

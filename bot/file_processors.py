@@ -1686,8 +1686,17 @@ class AdvancedFileProcessor:
             }
         
         try:
-            # Use specified model or default vision model
-            selected_model = model_name or Config.DEFAULT_VISION_MODEL
+            # OCT 2025: Use latest VLM models with intelligent fallback chain
+            # Try models in order: DEFAULT (Qwen2-VL) -> ADVANCED (Llama-3.2-Vision) -> LIGHTWEIGHT (SmolVLM)
+            vlm_models = [
+                model_name or Config.DEFAULT_VLM_MODEL,      # Qwen2-VL-7B-Instruct: best multimodal
+                Config.ADVANCED_VLM_MODEL,                    # Llama-3.2-11B-Vision: excellent VQA
+                Config.LIGHTWEIGHT_VLM_MODEL                   # SmolVLM-Instruct: fast fallback
+            ]
+            
+            # Remove duplicates while preserving order
+            seen = set()
+            vlm_models = [m for m in vlm_models if not (m in seen or seen.add(m))]
             
             # Convert image to base64 for API call
             import base64
@@ -1697,7 +1706,6 @@ class AdvancedFileProcessor:
             if not prompt:
                 prompt = "Analyze this image and describe what you see. Include details about objects, text, people, and any notable features."
             
-            # Call the vision model through the model caller
             # Get HF token for API call
             hf_token = Config.get_hf_token()
             if not hf_token:
@@ -1710,39 +1718,58 @@ class AdvancedFileProcessor:
                     }
                 }
             
-            # Use the async context manager for model caller
-            async with model_caller as caller:
-                # Create a vision analysis prompt that includes image description
-                vision_prompt = f"Analyze this image and {prompt}. Provide a detailed description including objects, text, people, colors, and notable features."
-                success, response = await caller.generate_text(
-                    prompt=vision_prompt,
-                    api_key=hf_token,
-                    model_override=selected_model
-                )
+            # Try each VLM model in the fallback chain
+            last_error = None
+            for vlm_model in vlm_models:
+                try:
+                    logger.info(f"🔍 Attempting vision analysis with {vlm_model}")
+                    
+                    # Use the async context manager for model caller
+                    async with model_caller as caller:
+                        # Create a vision analysis prompt that includes image description
+                        vision_prompt = f"Analyze this image and {prompt}. Provide a detailed description including objects, text, people, colors, and notable features."
+                        success, response = await caller.generate_text(
+                            prompt=vision_prompt,
+                            api_key=hf_token,
+                            model_override=vlm_model
+                        )
+                    
+                    if success and response:
+                        logger.info(f"✅ Vision analysis successful with {vlm_model}")
+                        return {
+                            'success': True,
+                            'model_used': vlm_model,
+                            'analysis': {
+                                'description': str(response.get('description', '')) if isinstance(response, dict) else str(response),
+                                'confidence': response.get('confidence', 0.8) if isinstance(response, dict) else 0.8,
+                                'model_response': str(response),
+                                'processing_time': 0
+                            }
+                        }
+                    else:
+                        error_msg = str(response) if response else 'No response from model'
+                        logger.warning(f"⚠️ Vision model {vlm_model} failed: {error_msg}")
+                        last_error = error_msg
+                        continue
+                        
+                except Exception as e:
+                    safe_error = str(e)
+                    logger.warning(f"⚠️ Vision analysis failed with {vlm_model}: {safe_error}")
+                    last_error = safe_error
+                    continue
             
-            if success and response:
-                return {
-                    'success': True,
-                    'model_used': selected_model,
-                    'analysis': {
-                        'description': str(response.get('description', '')) if isinstance(response, dict) else str(response),
-                        'confidence': response.get('confidence', 0.8) if isinstance(response, dict) else 0.8,
-                        'model_response': str(response),
-                        'processing_time': 0
-                    }
+            # All VLM models failed
+            logger.error("❌ All VLM models failed for vision analysis")
+            return {
+                'success': False,
+                'error': f'Vision model call failed with all models: {last_error}',
+                'attempted_models': vlm_models,
+                'analysis': {
+                    'description': 'Vision analysis failed - all models unavailable',
+                    'confidence': 0.0,
+                    'error_details': last_error
                 }
-            else:
-                error_msg = str(response) if response else 'No response from model'
-                return {
-                    'success': False,
-                    'error': f'Vision model call failed: {error_msg}',
-                    'model_used': selected_model,
-                    'analysis': {
-                        'description': 'Vision analysis failed',
-                        'confidence': 0.0,
-                        'error_details': error_msg
-                    }
-                }
+            }
                 
         except Exception as e:
             secure_logger.error(f"Vision model call failed: {e}")
