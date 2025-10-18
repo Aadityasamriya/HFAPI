@@ -453,6 +453,19 @@ class Config:
     FALLBACK_VISION_MODEL = "openai/clip-vit-large-patch14"  # ✅ OCT 2025: CLIP fallback
     LIGHTWEIGHT_VISION_MODEL = "HuggingFaceTB/SmolVLM-Instruct"  # ✅ OCT 2025: Lightweight 2B VLM
     
+    # === 2025 PDF & DOCUMENT PROCESSING MODELS (OCT 2025 RESEARCH) ===
+    # Best free tier models for PDF analysis, text extraction, and document understanding
+    # Nougat: Scientific PDFs, math formulas, converts to Markdown (MIT license)
+    # Donut: Receipts, invoices, forms, OCR-free architecture (MIT license)
+    # LayoutLM: Form understanding with layout information (v1 is MIT licensed)
+    
+    DEFAULT_PDF_MODEL = "facebook/nougat-base"  # ✅ OCT 2025: Best for scientific PDFs, math formulas, MIT license
+    ADVANCED_PDF_MODEL = "Qwen/Qwen2-VL-7B-Instruct"  # ✅ OCT 2025: Advanced document understanding with VLM
+    RECEIPT_INVOICE_MODEL = "naver-clova-ix/donut-base-finetuned-cord-v2"  # ✅ OCT 2025: Receipts & invoices, MIT license
+    FORM_EXTRACTION_MODEL = "microsoft/layoutlm-base-uncased"  # ✅ OCT 2025: Form understanding, MIT license (v1 only)
+    DOCUMENT_QA_MODEL = "Qwen/Qwen2-VL-7B-Instruct"  # ✅ OCT 2025: Document Q&A with vision model
+    FALLBACK_PDF_MODEL = "Qwen/Qwen2.5-7B-Instruct"  # ✅ OCT 2025: Text-based PDF analysis fallback
+    
     # === 2025 IMAGE GENERATION MODELS (OCT 2025 RESEARCH) ===
     # FLUX.1-schnell: FREE (Apache 2.0), ultra-fast (1-4 steps), 12B params, high quality
     # SDXL-Turbo: 1-step generation, photorealistic, but non-commercial license

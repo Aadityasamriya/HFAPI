@@ -1458,7 +1458,7 @@ Create a high-quality image of: {prompt}. Style: photorealistic, highly detailed
 **All Detected Emotions:**
 {safe_emotions_list}
 
-🎯 *Analyzed with go\_emotions \- 28 emotion categories*
+🎯 *Analyzed with go_emotions - 28 emotion categories*
                         """
                 else:
                     # Standard sentiment analysis
@@ -1794,7 +1794,7 @@ Please provide detailed analysis including key insights, patterns, and actionabl
 
 {safe_analysis}
 
-🎯 *Analyzed by {escape_markdown(analysis_result.get('model_used', 'AI'))} \- Advanced 2025 document processing*"""
+🎯 *Analyzed by {escape_markdown(analysis_result.get('model_used', 'AI'))} - Advanced 2025 document processing*"""
                 
                 # Delete processing message and send result
                 await processing_msg.delete()
