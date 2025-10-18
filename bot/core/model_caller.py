@@ -2039,16 +2039,19 @@ Description:"""
         if not pdf_text.strip():
             return False, {'error': 'No text content found in PDF'}
         
-        # Choose appropriate model based on content length and complexity
+        # Choose appropriate PDF model based on content length and complexity
+        # UPGRADED OCT 2025: Use text-capable models for extracted PDF text analysis
+        # Note: Nougat/Donut are OCR models for images; since PDF text is already extracted,
+        # we use advanced text models optimized for document understanding
         content_length = len(pdf_text)
-        if content_length > 50000:  # Long documents
-            model_name = Config.DEFAULT_TEXT_MODEL  # Qwen2.5-72B for complex analysis
+        if content_length > 50000:  # Long documents - use advanced model
+            model_name = Config.DOCUMENT_QA_MODEL  # Qwen2-VL-7B-Instruct for advanced document understanding
             max_tokens = min(2000, Config.QWEN_MAX_TOKENS)
-        elif content_length > 10000:  # Medium documents
-            model_name = Config.ADVANCED_TEXT_MODEL  # Qwen2.5-7B
+        elif content_length > 10000:  # Medium documents - use flagship model
+            model_name = Config.FALLBACK_PDF_MODEL  # Qwen2.5-7B-Instruct for comprehensive analysis
             max_tokens = 1500
-        else:  # Short documents
-            model_name = Config.FALLBACK_TEXT_MODEL  # Llama-3.2-3B
+        else:  # Short documents - use efficient model
+            model_name = Config.FALLBACK_PDF_MODEL  # Qwen2.5-7B-Instruct for text-based analysis
             max_tokens = 1000
         
         # Create analysis prompt based on type
