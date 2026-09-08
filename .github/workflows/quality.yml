@@ -29,15 +29,17 @@ jobs:
       - name: Compile all Python files
         run: python -m compileall -q bot *.py
 
-      - name: Run test suite
+      - name: Discover and run test suite
         shell: bash
         run: |
           set -euo pipefail
-          mapfile -t TEST_FILES < <(find . -type f \( -name 'test_*.py' -o -name '*_test.py' \) -not -path './.git/*' | sort)
+          mapfile -t TEST_FILES < <(git ls-files -- '*test*.py' 'test_*.py' '*_test.py' | sort -u)
           if ((${#TEST_FILES[@]} == 0)); then
-            echo 'No test files found.'
+            echo 'ERROR: No repository test files found.'
+            echo 'Tracked Python files:'
+            git ls-files -- '*.py' | sed -n '1,120p'
             exit 1
           fi
           printf 'Running %s test files:\n' "${#TEST_FILES[@]}"
           printf ' - %s\n' "${TEST_FILES[@]}"
-          python -m pytest -q
+          python -m pytest -q "${TEST_FILES[@]}"
