@@ -2,6 +2,10 @@
 
 from pathlib import Path
 
+import pytest
+
+from health_server import HealthServer
+
 
 ROOT = Path(__file__).resolve().parents[1]
 UI = ROOT / "web" / "index.html"
@@ -35,6 +39,32 @@ def test_shared_server_exposes_ui_and_safe_status():
         '"Permissions-Policy": "camera=(), microphone=(), geolocation=()"',
     ):
         assert header in source
+
+
+def test_port_validation_rejects_invalid_values():
+    for value in (0, -1, 65536, True):
+        with pytest.raises(ValueError):
+            HealthServer._validate_port(value)
+
+
+def test_configured_port_rejects_invalid_environment(monkeypatch):
+    monkeypatch.setenv("PORT", "not-a-port")
+    with pytest.raises(ValueError, match="Invalid PORT"):
+        HealthServer()
+
+
+def test_configured_port_is_normalized(monkeypatch):
+    monkeypatch.setenv("PORT", "  9000  ")
+    server = HealthServer()
+    assert server.port == 9000
+
+
+def test_platform_port_is_not_silently_replaced(monkeypatch):
+    monkeypatch.setenv("PORT", "9000")
+    server = HealthServer()
+    monkeypatch.setattr(server, "_is_port_available", lambda port: False)
+    with pytest.raises(OSError, match="Configured PORT 9000 is not available"):
+        server._find_available_port(9000)
 
 
 def test_ui_does_not_render_known_secret_names():
