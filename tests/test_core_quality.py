@@ -6,10 +6,13 @@ in CI and catch structural regressions before deployment.
 
 from pathlib import Path
 
+import pytest
+
 from bot.core.bot_types import IntentType as CanonicalIntentType
 from bot.core.types import IntentType as CompatibilityIntentType
 from bot.core.ai_providers import APIMode, ProviderConfig
 from bot.core.hf_inference_provider import HFInferenceProvider
+from bot.core.provider_factory import ProviderFactory
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -72,3 +75,9 @@ def test_hf_generation_parameter_sanitization():
     assert "top_k" not in params
     assert params["repetition_penalty"] == 1.1
     assert params["return_full_text"] is False
+
+
+def test_provider_factory_rejects_unknown_api_mode():
+    """Explicitly invalid modes must fail fast instead of silently changing modes."""
+    with pytest.raises(ValueError, match="Invalid HF API mode"):
+        ProviderFactory.create_provider(api_mode="unsupported-mode", api_key="hf_test_token")
