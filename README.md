@@ -13,7 +13,7 @@ A production-oriented Telegram AI assistant built around Hugging Face inference,
 - **File processing** for supported documents, PDFs, images, archives, and OCR workflows.
 - **Admin tooling** for operational management and controlled bot administration.
 - **Production health checks** and Railway-friendly deployment support.
-- **Automated quality gates** for Python compilation and the test suite.
+- **Automated quality gates** for dependency consistency, Python compilation, and the deterministic test suite.
 
 ## Architecture
 
@@ -85,13 +85,19 @@ Run the complete test suite:
 python -m pytest -q
 ```
 
-Compile-check the Python source tree:
+Compile-check both application and test Python files:
 
 ```bash
-python -m compileall -q bot *.py
+python -m compileall -q bot tests *.py
 ```
 
-GitHub Actions runs the repository quality gate on pushes to `main` and pull requests targeting `main`.
+Check dependency consistency:
+
+```bash
+python -m pip check
+```
+
+GitHub Actions runs these quality checks on pushes to `main` and pull requests targeting `main`.
 
 ## Deployment
 
@@ -118,7 +124,3 @@ HFAPI is actively improved as a long-lived project. Changes should:
 ## Project documentation
 
 The repository contains additional operational, API, security, architecture, and verification documentation. Treat executable code and automated tests as the source of truth when older reports disagree with current behavior.
-
-## License
-
-HFAPI is released under the [MIT License](LICENSE).
