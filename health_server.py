@@ -2,7 +2,6 @@
 """Shared web server for HFAPI health endpoints and browser control center."""
 
 import asyncio
-import json
 import logging
 import os
 import socket
@@ -30,6 +29,16 @@ class HealthServer:
         self.site: Optional[web.TCPSite] = None
         self.actual_port: Optional[int] = None
 
+    @staticmethod
+    def _response_headers() -> dict[str, str]:
+        """Return conservative browser security headers for the public control center."""
+        return {
+            "X-Content-Type-Options": "nosniff",
+            "X-Frame-Options": "DENY",
+            "Referrer-Policy": "no-referrer",
+            "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+        }
+
     async def health_endpoint(self, request: Request) -> Response:
         """Return a lightweight health response suitable for platform probes."""
         try:
@@ -45,13 +54,18 @@ class HealthServer:
                 text=text,
                 status=status_code,
                 headers={
+                    **self._response_headers(),
                     "X-Health-Status": status,
                     "X-Health-Message": health_status.get("message", ""),
                 },
             )
         except Exception:
             logger.exception("Health check endpoint error")
-            return web.Response(text="ERROR - Health check system failure", status=500)
+            return web.Response(
+                text="ERROR - Health check system failure",
+                status=500,
+                headers=self._response_headers(),
+            )
 
     async def health_json_endpoint(self, request: Request) -> Response:
         """Return detailed machine-readable health information."""
@@ -62,6 +76,7 @@ class HealthServer:
                 health_status,
                 status=200 if status in {"healthy", "degraded"} else 503,
                 headers={
+                    **self._response_headers(),
                     "X-Health-Status": status,
                     "X-Health-Message": health_status.get("message", ""),
                 },
@@ -77,24 +92,43 @@ class HealthServer:
                     "timestamp": datetime.utcnow().isoformat(),
                 },
                 status=500,
+                headers=self._response_headers(),
             )
 
     async def api_status_endpoint(self, request: Request) -> Response:
         """Expose only safe status data to the browser UI; never expose secrets."""
-        health_status = await health_checker.get_health_status()
-        safe = {
-            "status": health_status.get("status", "unknown"),
-            "message": health_status.get("message", ""),
-            "uptime_seconds": round(float(health_status.get("uptime", 0)), 1),
-            "timestamp": health_status.get("timestamp"),
-            "environment": "railway" if os.getenv("RAILWAY_ENVIRONMENT") else "development",
-            "checks": {
-                name: {"healthy": bool(value.get("healthy", False))}
-                for name, value in health_status.get("checks", {}).items()
-                if isinstance(value, dict)
-            },
-        }
-        return web.json_response(safe, headers={"Cache-Control": "no-store"})
+        try:
+            health_status = await health_checker.get_health_status()
+            safe = {
+                "status": health_status.get("status", "unknown"),
+                "message": health_status.get("message", ""),
+                "uptime_seconds": round(float(health_status.get("uptime", 0)), 1),
+                "timestamp": health_status.get("timestamp"),
+                "environment": "railway" if os.getenv("RAILWAY_ENVIRONMENT") else "development",
+                "checks": {
+                    name: {"healthy": bool(value.get("healthy", False))}
+                    for name, value in health_status.get("checks", {}).items()
+                    if isinstance(value, dict)
+                },
+            }
+            return web.json_response(
+                safe,
+                headers={**self._response_headers(), "Cache-Control": "no-store"},
+            )
+        except Exception:
+            logger.exception("Status API endpoint error")
+            return web.json_response(
+                {
+                    "status": "error",
+                    "message": "Status temporarily unavailable",
+                    "uptime_seconds": 0,
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "environment": "unknown",
+                    "checks": {},
+                },
+                status=503,
+                headers={**self._response_headers(), "Cache-Control": "no-store"},
+            )
 
     async def root_endpoint(self, request: Request) -> Response:
         """Serve the browser control center from the same HTTP server as health probes."""
@@ -102,8 +136,11 @@ class HealthServer:
             return web.json_response(
                 {"service": "HFAPI", "status": "running", "ui": "not installed"},
                 status=200,
+                headers=self._response_headers(),
             )
-        return web.FileResponse(UI_FILE)
+        response = web.FileResponse(UI_FILE, headers=self._response_headers())
+        response.headers["Cache-Control"] = "no-store"
+        return response
 
     def setup_routes(self) -> None:
         assert self.app is not None
