@@ -12,42 +12,22 @@ A production-oriented Telegram AI assistant built around Hugging Face inference,
 - **Encrypted user-sensitive data handling** with authenticated encryption and per-user derivation context.
 - **File processing** for supported documents, PDFs, images, archives, and OCR workflows.
 - **Admin tooling** for operational management and controlled bot administration.
+- **Shared browser control center** served by the same HTTP process and platform-assigned `PORT` as the Telegram bot.
 - **Production health checks** and Railway-friendly deployment support.
 - **Automated quality gates** for dependency consistency, Python compilation, and the deterministic test suite.
 
 ## Architecture
 
 ```text
-Telegram user
-    │
-    ▼
-Telegram handlers
-    │
-    ├── authentication / rate limiting
-    ├── conversation context
-    ├── file processing
-    └── intent classification
-    │
-    ▼
-Intelligent router
-    │
-    ├── complexity analysis
-    ├── domain / reasoning signals
-    ├── model health
-    └── fallback strategy
-    │
-    ▼
-Dynamic model selector
-    │
-    ▼
-Provider abstraction
-    │
-    ▼
-Hugging Face inference
-    │
-    ▼
-Response processing → Telegram
+Telegram user ──▶ Telegram handlers ──▶ Router ──▶ Model selector ──▶ Provider abstraction ──▶ Hugging Face
+       │                    │                 │              │                 │
+       └────────────────────┴─────────────────┴──────────────┴─────────────────┘
+                         persistent storage, security, health checks
+
+Browser ──▶ shared HTTP server ──▶ control center + /api/status + health endpoints
 ```
+
+The browser control center and Telegram bot intentionally run in the same deployed process. On platforms that provide `PORT`, HFAPI binds that exact port instead of silently moving to a different local port.
 
 ## Requirements
 
@@ -75,7 +55,7 @@ For production, configure a stable `ENCRYPTION_SEED`; do not rely on generated d
 python main.py
 ```
 
-The application validates dependencies, configuration, security requirements, and database connectivity during startup. A health server is also started for deployment monitoring.
+The application validates dependencies, configuration, security requirements, and database connectivity during startup. A health server is also started for deployment monitoring. When running locally without a platform-provided `PORT`, the server uses the configured/default development port.
 
 ## Testing
 
@@ -101,11 +81,11 @@ GitHub Actions runs these quality checks on pushes to `main` and pull requests t
 
 ## Deployment
 
-The repository includes Railway-oriented deployment configuration and health monitoring. Keep production secrets in the deployment platform's secret/environment-variable store rather than in Git.
+The repository includes Railway-oriented deployment configuration and health monitoring. Keep production secrets in the deployment platform's secret/environment-variable store rather than in Git. Configure the platform's assigned `PORT` as-is; do not hard-code a competing public port.
 
 ## Security
 
-Security-sensitive behavior includes encrypted user data handling, secret redaction in logging utilities, production configuration validation, and admin controls. Security issues should **not** be disclosed publicly in an issue before maintainers have had an opportunity to assess them.
+Security-sensitive behavior includes encrypted user data handling, secret redaction in logging utilities, production configuration validation, admin controls, and safe health/status responses. Security issues should **not** be disclosed publicly in an issue before maintainers have had an opportunity to assess them.
 
 See [`SECURITY.md`](SECURITY.md) for the reporting policy.
 
@@ -124,3 +104,5 @@ HFAPI is actively improved as a long-lived project. Changes should:
 ## Project documentation
 
 The repository contains additional operational, API, security, architecture, and verification documentation. Treat executable code and automated tests as the source of truth when older reports disagree with current behavior.
+
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the development workflow, testing expectations, commit guidance, and architecture boundaries.
