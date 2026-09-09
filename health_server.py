@@ -17,17 +17,38 @@ from health_check import health_checker
 
 logger = logging.getLogger(__name__)
 UI_FILE = Path(__file__).resolve().parent / "web" / "index.html"
+DEFAULT_PORT = 8080
+MIN_PORT = 1
+MAX_PORT = 65535
 
 
 class HealthServer:
-    """Serve the HFAPI web UI and operational endpoints on the same PORT as the bot process."""
+    """Serve the HFAPI UI and health endpoints from the bot's shared HTTP process."""
 
     def __init__(self, port: Optional[int] = None):
-        self.port = port if port is not None else int(os.getenv("PORT", "8080"))
+        self.port = port if port is not None else self._configured_port()
         self.app: Optional[web.Application] = None
         self.runner: Optional[web.AppRunner] = None
         self.site: Optional[web.TCPSite] = None
         self.actual_port: Optional[int] = None
+
+    @staticmethod
+    def _validate_port(value: int) -> int:
+        """Validate a TCP port before attempting to bind it."""
+        if not isinstance(value, int) or isinstance(value, bool) or not MIN_PORT <= value <= MAX_PORT:
+            raise ValueError(f"Port must be an integer between {MIN_PORT} and {MAX_PORT}")
+        return value
+
+    @classmethod
+    def _configured_port(cls) -> int:
+        """Read PORT safely and fail with a useful error instead of a raw ValueError."""
+        raw_port = os.getenv("PORT")
+        if raw_port is None or not raw_port.strip():
+            return DEFAULT_PORT
+        try:
+            return cls._validate_port(int(raw_port.strip()))
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"Invalid PORT environment variable: {raw_port!r}") from exc
 
     @staticmethod
     def _response_headers() -> dict[str, str]:
@@ -152,6 +173,7 @@ class HealthServer:
         self.app.router.add_get("/status", self.health_endpoint)
 
     def _is_port_available(self, port: int) -> bool:
+        self._validate_port(port)
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
                 sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -161,12 +183,16 @@ class HealthServer:
             return False
 
     def _find_available_port(self, preferred_port: int, max_attempts: int = 10) -> Optional[int]:
-        """Find a bindable port, preferring the platform-assigned PORT."""
+        """Choose a bindable port, preserving the platform-assigned PORT when provided."""
+        preferred_port = self._validate_port(preferred_port)
         if "PORT" in os.environ:
-            railway_port = int(os.environ["PORT"])
-            if self._is_port_available(railway_port):
-                return railway_port
-            logger.warning("Assigned PORT %s is not available", railway_port)
+            configured_port = self._configured_port()
+            if self._is_port_available(configured_port):
+                return configured_port
+            # Never silently move away from a platform-assigned port: the reverse proxy
+            # routes traffic to that port, so an alternate port would make the service
+            # appear healthy locally but unreachable externally.
+            raise OSError(f"Configured PORT {configured_port} is not available")
         if self._is_port_available(preferred_port):
             return preferred_port
         alternatives = [8080, 8000, 8081, 8082, 8083, 8084, 8085, 8086, 8087, 8088][:max_attempts]
