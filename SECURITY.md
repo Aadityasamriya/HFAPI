@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-The `main` branch is the actively maintained version of HFAPI.
+The `main` branch is the actively maintained version of HFAPI. Security fixes are applied to the latest `main` revision first.
 
 ## Reporting a vulnerability
 
@@ -13,10 +13,12 @@ When private security reporting is available for this repository, use GitHub's p
 Include:
 
 - A concise description of the vulnerability.
-- The affected component or file.
+- The affected component, endpoint, command, or deployment path.
 - Reproduction steps that do not expose real secrets or user data.
 - Security impact and likely attack surface.
 - Any suggested mitigation, if known.
+
+Please test only systems and accounts you own or are explicitly authorized to assess, and allow reasonable time for triage and remediation before public disclosure.
 
 ## Secret handling
 
@@ -26,10 +28,15 @@ Never commit:
 - Hugging Face tokens
 - Database credentials or connection strings containing credentials
 - Encryption seeds or keys
+- Session cookies or webhook secrets
 - User personal data
 - Production logs containing sensitive information
 
-Use environment variables or the deployment platform's secret manager instead.
+Use environment variables or the deployment platform's secret manager instead. Redact secrets before sharing logs, screenshots, traces, or bug reports.
+
+## Deployment safety
+
+HFAPI serves Telegram and the web control center from the same process. Keep the control-center endpoints private unless public access is intentional, and use the platform-assigned `PORT` value in deployment. Review provider access controls, logs, and environment-variable permissions before enabling production traffic.
 
 ## Response expectations
 
