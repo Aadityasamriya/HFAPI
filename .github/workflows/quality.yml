@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [main]
 
+# Avoid spending runner time on stale runs when several commits land quickly.
+concurrency:
+  group: hfapi-quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
