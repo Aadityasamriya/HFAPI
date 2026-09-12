@@ -9,15 +9,16 @@ from bot.telegram_utils import reply_text_safe
 
 
 class FakeMessage:
-    def __init__(self, failures=0):
+    def __init__(self, failures=0, error_message="Can't parse entities"):
         self.failures = failures
+        self.error_message = error_message
         self.calls = []
 
     async def reply_text(self, text, **kwargs):
         self.calls.append((text, kwargs))
         if self.failures:
             self.failures -= 1
-            raise BadRequest("Can't parse entities")
+            raise BadRequest(self.error_message)
         return "sent"
 
 
@@ -39,6 +40,17 @@ def test_reply_text_safe_preserves_non_markup_bad_request():
 
     with pytest.raises(BadRequest, match="Can't parse entities"):
         asyncio.run(reply_text_safe(message, "plain text"))
+
+    assert len(message.calls) == 1
+
+
+def test_reply_text_safe_does_not_retry_unrelated_bad_request():
+    message = FakeMessage(failures=1, error_message="Message is too long")
+
+    with pytest.raises(BadRequest, match="Message is too long"):
+        asyncio.run(
+            reply_text_safe(message, "**large response**", parse_mode="MarkdownV2")
+        )
 
     assert len(message.calls) == 1
 
