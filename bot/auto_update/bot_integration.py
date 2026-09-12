@@ -8,6 +8,7 @@ import logging
 from typing import Optional
 from telegram import Update
 from telegram.ext import ContextTypes, CommandHandler
+from ..telegram_utils import reply_text_safe
 from .scheduler import AutoUpdateScheduler
 
 logger = logging.getLogger(__name__)
@@ -100,7 +101,7 @@ async def cmd_auto_update_status(update: Update, context: ContextTypes.DEFAULT_T
             status_icon = '✅' if success else '❌'
             message += f"  {i}\\. {status_icon} {timestamp[:19]}\\n"
     
-    await update.message.reply_text(message, parse_mode='MarkdownV2')
+    await reply_text_safe(update.message, message, parse_mode='MarkdownV2')
 
 
 async def cmd_run_manual_update(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -114,7 +115,7 @@ async def cmd_run_manual_update(update: Update, context: ContextTypes.DEFAULT_TY
         if result.get('last_update'):
             message += f"• Completed: {result['last_update']}\\n"
         
-        await update.message.reply_text(message, parse_mode='MarkdownV2')
+        await reply_text_safe(update.message, message, parse_mode='MarkdownV2')
         
     except Exception as e:
         logger.error(f"Manual update failed: {e}")
@@ -131,7 +132,7 @@ async def cmd_test_update(update: Update, context: ContextTypes.DEFAULT_TYPE):
         message = "✅ **Test Update Completed**\\n\\n"
         message += "No changes were applied \\(dry run mode\\)\\n"
         
-        await update.message.reply_text(message, parse_mode='MarkdownV2')
+        await reply_text_safe(update.message, message, parse_mode='MarkdownV2')
         
     except Exception as e:
         logger.error(f"Test update failed: {e}")
